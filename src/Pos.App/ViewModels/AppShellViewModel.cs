@@ -18,6 +18,7 @@ public sealed partial class AppShellViewModel : ObservableObject
     private readonly DatabaseInfo _databaseInfo;
     private readonly ProductService _products;
     private readonly SaleService _sales;
+    private readonly UnitService _units;
 
     private CompanyInfo? _company;
 
@@ -35,7 +36,8 @@ public sealed partial class AppShellViewModel : ObservableObject
         DatabaseOptions databaseOptions,
         DatabaseInfo databaseInfo,
         ProductService products,
-        SaleService sales)
+        SaleService sales,
+        UnitService units)
     {
         _auth = auth;
         _theme = theme;
@@ -45,6 +47,7 @@ public sealed partial class AppShellViewModel : ObservableObject
         _databaseInfo = databaseInfo;
         _products = products;
         _sales = sales;
+        _units = units;
     }
 
     public async Task InitializeAsync()
@@ -121,7 +124,8 @@ public sealed partial class AppShellViewModel : ObservableObject
             _backups,
             _databaseOptions,
             _products,
-            _sales);
+            _sales,
+            _units);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
         shell.FullScreenRequested += (_, _) => ToggleFullScreen();

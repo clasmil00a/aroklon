@@ -44,6 +44,10 @@
                 <views:PosView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:UnitViewModel}">
+                <views:UnitView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>

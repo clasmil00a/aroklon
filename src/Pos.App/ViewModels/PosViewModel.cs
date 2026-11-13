@@ -67,7 +67,6 @@ public sealed partial class PosViewModel : ObservableObject
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
     private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0;
-
     [RelayCommand]
     private async Task SearchAsync()
     {

@@ -82,6 +82,10 @@ public partial class App : Application
                     services.AddSingleton<BackupService>();
                     services.AddSingleton<ProductService>();
                     services.AddSingleton<SaleService>();
+                    services.AddSingleton<UnitService>();
+                    services.AddSingleton<PriceListService>();
+                    services.AddSingleton<CustomerService>();
+                    services.AddSingleton<RegisterService>();
                     services.AddSingleton<ThemeService>();
                     services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })

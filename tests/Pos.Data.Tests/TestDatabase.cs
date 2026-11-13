@@ -52,6 +52,14 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public ProductService Product { get; private set; } = null!;
 
+    public UnitService Unit { get; private set; } = null!;
+
+    public PriceListService PriceList { get; private set; } = null!;
+
+    public CustomerService Customer { get; private set; } = null!;
+
+    public RegisterService Register { get; private set; } = null!;
+
     public static async Task<TestDatabase> CreateAsync()
     {
         var database = new TestDatabase();
@@ -86,6 +94,22 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Sessions,
             database.Clock);
         database.Product = new ProductService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Unit = new UnitService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.PriceList = new PriceListService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Customer = new CustomerService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Register = new RegisterService(
             database.Factory,
             database.Sessions,
             database.Clock);
