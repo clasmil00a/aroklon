@@ -123,7 +123,7 @@ public sealed class SaleService
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             return new SaleResult(
-                saleId, number, "open", totals.Subtotal, totals.Discount, 0,
+                saleId, number, "open", totals.Subtotal, totals.Discount, totals.Tax,
                 totals.Total, 0, 0, false);
         }
         catch
@@ -448,8 +448,8 @@ public sealed class SaleService
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             return new SaleResult(
-                saleId, number, "closed", totals.Subtotal, totals.Discount, 0,
-                totals.Total, paid, change, false);
+                saleId, number, "closed", totals.Subtotal, totalDiscount, totals.Tax,
+                totalWithCartDiscount, paid, change, false);
         }
         catch (SqliteException exception) when (
             exception.SqliteErrorCode == 19 &&
@@ -893,10 +893,24 @@ public sealed class SaleService
             var unitCost = MoneyMath.RoundDiv(row.BaseCostMinor * row.UnitFactorMilli, 1000);
 
             // Resolve tax rate: input override, then product's default tax rate.
-            var taxRateId = input.TaxRateId ?? await ResolveDefaultTaxRateAsync(
-                connection, transaction, row.ProductId, cancellationToken).ConfigureAwait(false);
+            var taxRateId = (await connection.QueryFirstOrDefaultAsync<string>(new CommandDefinition(
+                """
+                SELECT tr.id
+                FROM product_taxes pt
+                JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
+                WHERE pt.product_id = @productId
+                ORDER BY tr.rate_bp DESC
+                LIMIT 1;
+                """,
+                new { productId = row.ProductId },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false));
             var rateBp = taxRateId is not null
-                ? await GetTaxRateBpAsync(connection, transaction, taxRateId, cancellationToken).ConfigureAwait(false)
+                ? (await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+                    "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
+                    new { id = taxRateId },
+                    transaction,
+                    cancellationToken: cancellationToken)).ConfigureAwait(false))
                 : 0;
             var taxableBase = gross - discount;
             var tax = rateBp > 0 ? MoneyMath.PercentOf(taxableBase, rateBp) : 0;
@@ -1350,39 +1364,6 @@ public sealed class SaleService
 
     private static string? EmptyToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private async Task<string?> ResolveDefaultTaxRateAsync(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        string productId,
-        CancellationToken cancellationToken)
-    {
-        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
-            """
-            SELECT tr.id
-            FROM product_taxes pt
-            JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
-            WHERE pt.product_id = @productId
-            ORDER BY tr.rate_bp DESC
-            LIMIT 1;
-            """,
-            new { productId },
-            transaction,
-            cancellationToken: cancellationToken)).ConfigureAwait(false);
-    }
-
-    private async Task<int> GetTaxRateBpAsync(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        string taxRateId,
-        CancellationToken cancellationToken)
-    {
-        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
-            new { id = taxRateId },
-            transaction,
-            cancellationToken: cancellationToken)).ConfigureAwait(false);
-    }
 
     private static TimeZoneInfo ResolveTimezone(string? timezone)
     {

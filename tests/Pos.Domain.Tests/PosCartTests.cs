@@ -183,3 +183,49 @@ public sealed class CartMathTests
         Assert.Equal(2, totals.LineCount);
     }
 }
+
+public sealed class CartDiscountTests
+{
+    [Fact]
+    public void Cart_discount_percent_applies_to_subtotal()
+    {
+        var cart = new PosCart();
+        var product = Lookup("p-1", "Beras", "pcs", 1000, 10_000);
+        cart.Add(product, 2000); // 20_000 gross
+
+        cart.SetCartDiscount(DiscountKind.Percent, 1000); // 10%
+
+        Assert.Equal(2_000, cart.Totals.DiscountMinor);
+        Assert.Equal(18_000, cart.Totals.TotalMinor);
+    }
+
+    [Fact]
+    public void Cart_discount_amount_capped_at_subtotal()
+    {
+        var cart = new PosCart();
+        var product = Lookup("p-1", "Beras", "pcs", 1000, 10_000);
+        cart.Add(product, 1000); // 10_000 gross
+
+        cart.SetCartDiscount(DiscountKind.Amount, 50_000); // capped at 10_000
+
+        Assert.Equal(10_000, cart.Totals.DiscountMinor);
+        Assert.Equal(0, cart.Totals.TotalMinor);
+    }
+
+    [Fact]
+    public void Clear_cart_discount_resets_totals()
+    {
+        var cart = new PosCart();
+        var product = Lookup("p-1", "Beras", "pcs", 1000, 10_000);
+        cart.Add(product, 2000);
+        cart.SetCartDiscount(DiscountKind.Percent, 500);
+
+        cart.ClearCartDiscount();
+
+        Assert.Equal(0, cart.Totals.DiscountMinor);
+        Assert.Equal(20_000, cart.Totals.TotalMinor);
+    }
+
+    private static ProductLookup Lookup(string id, string name, string unit, long factor, long price) =>
+        new(id, name, null, id, "unit-base", unit, factor, price, 0, 0, false, true, null, null);
+}

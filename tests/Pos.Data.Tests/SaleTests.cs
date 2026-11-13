@@ -234,3 +234,184 @@ public sealed class SaleTests : IAsyncLifetime
         Assert.Equal("closed", result.Status);
     }
 }
+
+public sealed class SaleTaxTests : IAsyncLifetime
+{
+    private TestDatabase _db = null!;
+    private string _productId = null!;
+    private string _unitId = null!;
+    private string _taxRateId = null!;
+
+    public Task InitializeAsync() => SetUpAsync();
+    public async Task DisposeAsync() => await _db.DisposeAsync();
+
+    private async Task SetUpAsync()
+    {
+        _db = await TestDatabase.CreateAsync();
+        await _db.CreateAdminAsync();
+
+        await using var connection = await _db.OpenAsync();
+        var now = SqlText.Now(_db.Clock.UtcNow);
+        _productId = Ids.NewId();
+        _unitId = Ids.NewId();
+        _taxRateId = Ids.NewId();
+
+        await connection.ExecuteAsync(
+            """
+            INSERT OR IGNORE INTO units (id, name, symbol, active) VALUES ('unit-pcs', 'pcs', 'pcs', 1);
+            INSERT OR IGNORE INTO tax_rates (id, name, rate_bp, active, is_default) VALUES
+              (@taxId, 'PPN 11% M3 Test', 1100, 1, 0);
+            INSERT INTO products (id, name, code, active, default_qty_milli, cost_minor, price_minor, price_change_allowed, created_at, updated_at)
+            VALUES (@id, 'Beras 5kg', 'BER-001', 1, 1000, 8000, 12000, 1, @now, @now);
+            INSERT INTO product_units (id, product_id, unit_id, factor_to_base_milli, is_base, is_default_sale, price_minor, sort_order, active, created_at, updated_at)
+            VALUES (@unitId, @id, 'unit-pcs', 1000, 1, 1, 12000, 0, 1, @now, @now);
+            INSERT INTO product_taxes (product_id, tax_rate_id) VALUES (@id, @taxId);
+            INSERT INTO stock_movements (id, product_id, type, qty_delta_base_milli, unit_cost_minor, reference_type, reference_id, note, user_id, created_at)
+            VALUES ('sm-1', @id, 'opening', 10_000, 8000, 'product', @id, 'Stok awal', (SELECT id FROM users WHERE username = 'admin'), @now);
+            """,
+            new { id = _productId, unitId = _unitId, taxId = _taxRateId, now });
+    }
+
+    [Fact]
+    public async Task Checkout_calculates_tax_per_line()
+    {
+        var result = await _db.Sale.CheckoutAsync(new CheckoutRequest(
+            [
+                new SaleLineInput(_productId, _unitId, 10_000, null,
+                    DiscountKind.None, 0)
+            ],
+            "pmt-cash",
+            150_000));
+
+        Assert.Equal("closed", result.Status);
+        // 10 * 12_000 = 120_000 gross, tax 11% = 13_200, total = 133_200
+        Assert.Equal(120_000, result.SubtotalMinor);
+        Assert.Equal(13_200, result.TaxMinor);
+        Assert.Equal(133_200, result.TotalMinor);
+    }
+
+    [Fact]
+    public async Task Checkout_with_cart_discount_applies_before_tax()
+    {
+        var result = await _db.Sale.CheckoutAsync(new CheckoutRequest(
+            [
+                new SaleLineInput(_productId, _unitId, 10_000, null,
+                    DiscountKind.None, 0)
+            ],
+            "pmt-cash",
+            130_000,
+            CartDiscountKind: DiscountKind.Percent,
+            CartDiscountValue: 1000)); // 10% cart discount
+
+        // 120_000 gross, tax 11% = 13_200, cart discount 10% = 12_000
+        // total = 120_000 - 12_000 + 13_200 = 121_200
+        Assert.Equal(12_000, result.DiscountMinor);
+        Assert.Equal(13_200, result.TaxMinor);
+        Assert.Equal(121_200, result.TotalMinor);
+    }
+
+    [Fact]
+    public async Task Receipt_includes_tax()
+    {
+        await _db.Sale.CheckoutAsync(new CheckoutRequest(
+            [
+                new SaleLineInput(_productId, _unitId, 5_000, null,
+                    DiscountKind.None, 0)
+            ],
+            "pmt-cash",
+            100_000));
+
+        var history = await _db.Sale.ListAsync(new SaleFilter { Limit = 10 });
+        Assert.Single(history);
+
+        var document = await _db.Sale.GetReceiptAsync(history[0].Id);
+        var text = SaleService.RenderReceipt(document);
+
+        Assert.Contains("Pajak", text);
+        Assert.Contains("6.600", text); // 60_000 * 11% = 6_600, format ID: 6.600
+        Assert.Contains("TOTAL", text);
+    }
+
+    [Fact]
+    public async Task Sale_item_taxes_stored()
+    {
+        await _db.Sale.CheckoutAsync(new CheckoutRequest(
+            [
+                new SaleLineInput(_productId, _unitId, 10_000, null,
+                    DiscountKind.None, 0)
+            ],
+            "pmt-cash",
+            150_000));
+
+        var history = await _db.Sale.ListAsync(new SaleFilter { Limit = 10 });
+        var detail = await _db.Sale.GetAsync(history[0].Id);
+
+        await using var connection = await _db.OpenAsync();
+        var taxCount = await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sale_item_taxes WHERE sale_item_id = @id;",
+            new { id = detail.Lines[0].Id });
+        Assert.Equal(1, taxCount);
+
+        var taxRow = await connection.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT rate_bp, amount_minor FROM sale_item_taxes WHERE sale_item_id = @id;",
+            new { id = detail.Lines[0].Id });
+        Assert.Equal(1100, (int)taxRow.rate_bp);
+        Assert.Equal(13_200, (long)taxRow.amount_minor);
+    }
+}
+
+public sealed class SaleTaxDebugTests : IAsyncLifetime
+{
+    private TestDatabase _db = null!;
+    private string _productId = null!;
+    private string _taxRateId = null!;
+
+    public Task InitializeAsync() => SetUpAsync();
+    public async Task DisposeAsync() => await _db.DisposeAsync();
+
+    private async Task SetUpAsync()
+    {
+        _db = await TestDatabase.CreateAsync();
+        await _db.CreateAdminAsync();
+
+        await using var connection = await _db.OpenAsync();
+        var now = SqlText.Now(_db.Clock.UtcNow);
+        _productId = Ids.NewId();
+        _taxRateId = Ids.NewId();
+
+        await connection.ExecuteAsync(
+            """
+            INSERT OR IGNORE INTO units (id, name, symbol, active) VALUES ('unit-pcs', 'pcs', 'pcs', 1);
+            INSERT OR IGNORE INTO tax_rates (id, name, rate_bp, active, is_default) VALUES
+              (@taxId, 'PPN 11% Debug', 1100, 1, 0);
+            INSERT INTO products (id, name, code, active, default_qty_milli, cost_minor, price_minor, price_change_allowed, created_at, updated_at)
+            VALUES (@id, 'Debug Product', 'DBG-001', 1, 1000, 8000, 12000, 1, @now, @now);
+            INSERT INTO product_units (id, product_id, unit_id, factor_to_base_milli, is_base, is_default_sale, price_minor, sort_order, active, created_at, updated_at)
+            VALUES ('unit-db', @id, 'unit-pcs', 1000, 1, 1, 12000, 0, 1, @now, @now);
+            INSERT INTO product_taxes (product_id, tax_rate_id) VALUES (@id, @taxId);
+            """,
+            new { id = _productId, taxId = _taxRateId, now });
+    }
+
+    [Fact]
+    public async Task Debug_tax_rate_resolution()
+    {
+        await using var connection = await _db.OpenAsync();
+        var rateId = await connection.ExecuteScalarAsync<string?>(
+            """
+            SELECT tr.id FROM product_taxes pt
+            JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
+            WHERE pt.product_id = @productId
+            ORDER BY tr.rate_bp DESC LIMIT 1;
+            """,
+            new { productId = _productId });
+        var rateBp = rateId is not null
+            ? await connection.ExecuteScalarAsync<int>(
+                "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
+                new { id = rateId })
+            : 0;
+        
+        Assert.Equal(_taxRateId, rateId);
+        Assert.Equal(1100, rateBp);
+    }
+}
