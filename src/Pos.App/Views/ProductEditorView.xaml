@@ -1,0 +1,164 @@
+<UserControl
+    x:Class="Pos.App.Views.ProductEditorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Editor Produk" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kelola satuan jual (isi) dan harga tiap varian. Stok selalu dihitung dalam satuan dasar." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S16 · M2" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Product info -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding Detail.Name, TargetNullValue='Produk'}" />
+                    <TextBlock
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Detail.Code, TargetNullValue='—'}" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding Detail.BaseUnitName, StringFormat='Satuan dasar: {} {0}'}" />
+                    <TextBlock
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding Detail.PriceMinor, StringFormat='Harga dasar: Rp {} {0:N0}'}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke daftar produk"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,16,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Variants -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Varian satuan jual" />
+                    <ItemsControl ItemsSource="{Binding Detail.Variants}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding UnitName}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding Symbol, TargetNullValue='—'}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Secondary}"
+                                                Text="{Binding FactorToBaseMilli, StringFormat='1 = {} {0:N0} base milli'}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource Text.Secondary}"
+                                                Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit'}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="{Binding StockInSellingUnitMilli, StringFormat='Stok: {} {0:N0}'}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="10"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.BorderInput}"
+                        BorderThickness="{StaticResource Border.Width}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Tambah varian" />
+                            <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Satuan" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding NewUnitName, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Faktor (1 satuan = X base milli)" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding NewFactor, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Hual jual (opsional, kosong = inherit)" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding NewPrice, UpdateSourceTrigger=PropertyChanged}" />
+                            <CheckBox
+                                Margin="0,10,0,0"
+                                IsChecked="{Binding NewIsDefaultSale, Mode=TwoWay}"
+                                Content="Jadikan satuan jual default" />
+                            <Button
+                                Margin="0,14,0,0"
+                                Command="{Binding AddVariantCommand}"
+                                Content="Tambah Varian"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Style="{StaticResource Button.Primary}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Masukkan nama satuan yang sudah ada di Master Satuan, misalnya renteng, dus, kg."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

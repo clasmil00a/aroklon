@@ -48,6 +48,14 @@
                 <views:UnitView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:ProductListViewModel}">
+                <views:ProductListView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ProductEditorViewModel}">
+                <views:ProductEditorView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>

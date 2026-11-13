@@ -26,6 +26,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private SettingsViewModel? _settings;
     private PosViewModel? _pos;
     private UnitViewModel? _unit;
+    private ProductListViewModel? _productList;
+    private ProductEditorViewModel? _productEditor;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -142,6 +144,25 @@ public sealed partial class ShellViewModel : ObservableObject
                 _unit ??= new UnitViewModel(_units);
                 _unit.BackRequested += () => Navigate("home");
                 CurrentPage = _unit;
+                ActiveRoute = "home";
+                break;
+
+            case "S15":
+                _productList ??= new ProductListViewModel(_products);
+                _productList.ProductSelected += pid =>
+                {
+                    _productEditor ??= new ProductEditorViewModel(_products);
+                    _productEditor.SetProduct(pid);
+                    Navigate("S16");
+                };
+                CurrentPage = _productList;
+                ActiveRoute = "home";
+                break;
+
+            case "S16":
+                _productEditor ??= new ProductEditorViewModel(_products);
+                _productEditor.BackRequested += () => Navigate("S15");
+                CurrentPage = _productEditor;
                 ActiveRoute = "home";
                 break;
 
