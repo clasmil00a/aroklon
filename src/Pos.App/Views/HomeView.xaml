@@ -1,0 +1,209 @@
+<UserControl
+    x:Class="Pos.App.Views.HomeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid
+            MaxWidth="1160"
+            Margin="24"
+            HorizontalAlignment="Center">
+            <StackPanel>
+                <Grid Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                Style="{StaticResource Text.PageTitle}"
+                                Text="{Binding Greeting}" />
+                            <Border
+                                Margin="12,6,0,0"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource Badge}">
+                                <TextBlock Style="{StaticResource Text.Caption}" Text="M0 · Fondasi" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource Text.Secondary}"
+                            Text="{Binding Today}" />
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        MinWidth="168"
+                        VerticalAlignment="Center"
+                        Command="{Binding StartSaleCommand}"
+                        Content="Mulai penjualan"
+                        Style="{StaticResource Button.Primary}" />
+                </Grid>
+
+                <TextBlock
+                    Margin="0,0,0,4"
+                    Style="{StaticResource Text.SectionTitle}"
+                    Text="Menu utama" />
+                <TextBlock
+                    Margin="0,0,0,14"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Pilih tujuan Anda. Layar yang belum dibangun tetap dapat dibuka untuk melihat rencana dan statusnya."
+                    TextWrapping="Wrap" />
+
+                <ItemsControl Margin="0,0,0,10" ItemsSource="{Binding MenuItems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button
+                                Width="252"
+                                Margin="0,0,12,12"
+                                Command="{Binding DataContext.OpenMenuItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                Style="{StaticResource Button.Tile}">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock
+                                            Margin="0,0,56,0"
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding Title}" />
+                                        <Border
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Style="{StaticResource Badge}">
+                                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding Badge}" />
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock
+                                        Margin="0,6,0,0"
+                                        Style="{StaticResource Text.Secondary}"
+                                        Text="{Binding Description}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,12"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Status sistem" />
+                            <ItemsControl ItemsSource="{Binding StatusItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Ellipse
+                                                Width="8"
+                                                Height="8"
+                                                Margin="0,4,10,0"
+                                                VerticalAlignment="Top">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{DynamicResource Brush.Warning}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsReady}" Value="True">
+                                                                <Setter Property="Fill" Value="{DynamicResource Brush.Success}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Style="{StaticResource Text.Body}" Text="{Binding Label}" />
+                                                <TextBlock Style="{StaticResource Text.Secondary}" Text="{Binding Value}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="Cadangan harian berjalan otomatis saat aplikasi dibuka."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,4"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Pintasan kasir" />
+                            <TextBlock
+                                Margin="0,0,0,12"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="Aktif saat layar kasir dibangun pada M1."
+                                TextWrapping="Wrap" />
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.SurfaceRaised}">
+                                    <TextBlock Style="{StaticResource Text.Mono}" Text="F2" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Style="{StaticResource Text.Body}" Text="Diskon baris atau keranjang" />
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.SurfaceRaised}">
+                                    <TextBlock Style="{StaticResource Text.Mono}" Text="F10" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Style="{StaticResource Text.Body}" Text="Buka layar pembayaran" />
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.SurfaceRaised}">
+                                    <TextBlock Style="{StaticResource Text.Mono}" Text="F12" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Style="{StaticResource Text.Body}" Text="Bayar cepat dengan tipe bawaan" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <StackPanel Margin="0,20,0,0" Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        Command="{Binding FullScreenCommand}"
+                        Content="Layar penuh"
+                        Style="{StaticResource Button.Ghost}" />
+                    <Button
+                        Margin="0,0,8,0"
+                        Command="{Binding SignOutCommand}"
+                        Content="Ganti pengguna"
+                        Style="{StaticResource Button.Ghost}" />
+                    <Button
+                        Command="{Binding ExitCommand}"
+                        Content="Keluar aplikasi"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

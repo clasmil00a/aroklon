@@ -1,0 +1,229 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+        Non-colour design tokens and text styles.
+
+        Load order in App.xaml:
+            <ResourceDictionary Source="Themes/Theme.Dark.xaml" />
+            <ResourceDictionary Source="Themes/Tokens.xaml" />
+
+        Runtime theme switch: replace merged dictionary 0 with Theme.Light.xaml.
+        Colours are DynamicResource so every open window updates without reload.
+    -->
+
+    <!-- Type families. Fonts are embedded so a fresh install looks right. -->
+    <FontFamily x:Key="Font.Sans">pack://application:,,,/Assets/Fonts/#Inter</FontFamily>
+    <FontFamily x:Key="Font.Mono">pack://application:,,,/Assets/Fonts/#Cascadia Mono</FontFamily>
+
+    <FontWeight x:Key="Font.Weight.Regular">Regular</FontWeight>
+    <FontWeight x:Key="Font.Weight.Medium">Medium</FontWeight>
+    <FontWeight x:Key="Font.Weight.SemiBold">SemiBold</FontWeight>
+    <FontWeight x:Key="Font.Weight.Bold">Bold</FontWeight>
+
+    <sys:Double x:Key="Font.Size.Xs">11</sys:Double>
+    <sys:Double x:Key="Font.Size.Sm">12</sys:Double>
+    <sys:Double x:Key="Font.Size.Base">14</sys:Double>
+    <sys:Double x:Key="Font.Size.Lg">16</sys:Double>
+    <sys:Double x:Key="Font.Size.Xl">20</sys:Double>
+    <sys:Double x:Key="Font.Size.2Xl">26</sys:Double>
+    <sys:Double x:Key="Font.Size.Display">34</sys:Double>
+    <sys:Double x:Key="Font.Size.Keypad">24</sys:Double>
+    <sys:Double x:Key="Font.Size.Receipt">11</sys:Double>
+
+    <sys:Double x:Key="Font.Line.Xs">14</sys:Double>
+    <sys:Double x:Key="Font.Line.Sm">16</sys:Double>
+    <sys:Double x:Key="Font.Line.Base">20</sys:Double>
+    <sys:Double x:Key="Font.Line.Lg">22</sys:Double>
+    <sys:Double x:Key="Font.Line.Xl">26</sys:Double>
+    <sys:Double x:Key="Font.Line.2Xl">32</sys:Double>
+    <sys:Double x:Key="Font.Line.Display">40</sys:Double>
+    <sys:Double x:Key="Font.Line.Keypad">28</sys:Double>
+    <sys:Double x:Key="Font.Line.Receipt">15</sys:Double>
+
+    <!-- Spacing: 4px base with a 2px half-step. -->
+    <sys:Double x:Key="Space.0">0</sys:Double>
+    <sys:Double x:Key="Space.1">2</sys:Double>
+    <sys:Double x:Key="Space.2">4</sys:Double>
+    <sys:Double x:Key="Space.3">8</sys:Double>
+    <sys:Double x:Key="Space.4">12</sys:Double>
+    <sys:Double x:Key="Space.5">16</sys:Double>
+    <sys:Double x:Key="Space.6">24</sys:Double>
+    <sys:Double x:Key="Space.7">32</sys:Double>
+    <sys:Double x:Key="Space.8">48</sys:Double>
+    <sys:Double x:Key="Space.9">64</sys:Double>
+
+    <!-- Radius: near-square desktop chrome. -->
+    <CornerRadius x:Key="Radius.None">0</CornerRadius>
+    <CornerRadius x:Key="Radius.Sm">2</CornerRadius>
+    <CornerRadius x:Key="Radius.Md">4</CornerRadius>
+    <CornerRadius x:Key="Radius.Lg">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
+
+    <Thickness x:Key="Padding.Control">12,0,12,0</Thickness>
+    <Thickness x:Key="Padding.Cell">12,0,12,0</Thickness>
+    <Thickness x:Key="Padding.Page">24</Thickness>
+    <Thickness x:Key="Padding.Dialog">24</Thickness>
+    <Thickness x:Key="Focus.Margin">-3</Thickness>
+
+    <sys:Double x:Key="Border.Width">1</sys:Double>
+    <sys:Double x:Key="Focus.Width">2</sys:Double>
+
+    <!-- Window and shell dimensions (device-independent pixels at 96 DPI). -->
+    <sys:Double x:Key="Layout.Window.MinWidth">1024</sys:Double>
+    <sys:Double x:Key="Layout.Window.MinHeight">720</sys:Double>
+    <sys:Double x:Key="Layout.TopBar">56</sys:Double>
+    <sys:Double x:Key="Layout.NavRail">56</sys:Double>
+    <sys:Double x:Key="Layout.Toolbar">56</sys:Double>
+    <sys:Double x:Key="Layout.TabBar">40</sys:Double>
+    <sys:Double x:Key="Layout.PagePadding">24</sys:Double>
+    <sys:Double x:Key="Layout.ContentMax">1440</sys:Double>
+    <sys:Double x:Key="Layout.Sidebar">240</sys:Double>
+
+    <!-- POS split: cart left, catalogue right. -->
+    <sys:Double x:Key="Layout.CartMin">520</sys:Double>
+    <sys:Double x:Key="Layout.CartMax">760</sys:Double>
+    <sys:Double x:Key="Layout.RightMin">420</sys:Double>
+    <sys:Double x:Key="Layout.ActionTileWidth">96</sys:Double>
+    <sys:Double x:Key="Layout.ActionTileHeight">96</sys:Double>
+    <sys:Double x:Key="Layout.QuickPayHeight">56</sys:Double>
+    <sys:Double x:Key="Layout.ProductTileMin">120</sys:Double>
+    <sys:Double x:Key="Layout.ProductTileHeight">104</sys:Double>
+
+    <sys:Double x:Key="Size.Row.Compact">36</sys:Double>
+    <sys:Double x:Key="Size.Row.Default">44</sys:Double>
+    <sys:Double x:Key="Size.Row.Touch">52</sys:Double>
+    <sys:Double x:Key="Size.Control.Sm">28</sys:Double>
+    <sys:Double x:Key="Size.Control.Md">32</sys:Double>
+    <sys:Double x:Key="Size.Control.Lg">40</sys:Double>
+    <sys:Double x:Key="Size.Control.Touch">48</sys:Double>
+
+    <sys:Double x:Key="Size.Dialog.Sm">440</sys:Double>
+    <sys:Double x:Key="Size.Dialog.Md">640</sys:Double>
+    <sys:Double x:Key="Size.Dialog.Lg">880</sys:Double>
+    <sys:Double x:Key="Size.Receipt.80mm">302</sys:Double>
+    <sys:Double x:Key="Size.Receipt.A5">559</sys:Double>
+    <sys:Double x:Key="Size.Receipt.A4">794</sys:Double>
+
+    <sys:Double x:Key="Size.Icon.Sm">16</sys:Double>
+    <sys:Double x:Key="Size.Icon.Md">20</sys:Double>
+    <sys:Double x:Key="Size.Icon.Lg">24</sys:Double>
+    <sys:Double x:Key="Size.Icon.Xl">32</sys:Double>
+
+    <!-- Visible keyboard focus: 2px accent ring, offset outside the control. -->
+    <Style x:Key="FocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle
+                        Margin="{StaticResource Focus.Margin}"
+                        RadiusX="2"
+                        RadiusY="2"
+                        SnapsToDevicePixels="True"
+                        Stroke="{DynamicResource Brush.Focus}"
+                        StrokeThickness="{StaticResource Focus.Width}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Text styles -->
+    <Style x:Key="Text.Base" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Base}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.Regular}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Base}" />
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="Text.Body" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}" />
+
+    <Style x:Key="Text.BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+    </Style>
+
+    <Style x:Key="Text.Secondary" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Sm}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Sm}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+    </Style>
+
+    <Style x:Key="Text.Caption" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Xs}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Xs}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.Medium}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+    </Style>
+
+    <Style x:Key="Text.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Lg}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Lg}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+    </Style>
+
+    <Style x:Key="Text.DialogTitle" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Xl}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Xl}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+    </Style>
+
+    <Style x:Key="Text.PageTitle" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.2Xl}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.2Xl}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+    </Style>
+
+    <Style x:Key="Text.Amount" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <Style x:Key="Text.AmountLarge" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Xl}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Xl}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <Style x:Key="Text.Total" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Display}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Display}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.Bold}" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <Style x:Key="Text.Keypad" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Keypad}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Keypad}" />
+        <Setter Property="FontWeight" Value="{StaticResource Font.Weight.Medium}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <Style x:Key="Text.Mono" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Sm}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Sm}" />
+    </Style>
+
+    <Style x:Key="Text.Receipt" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Receipt}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Receipt}" />
+    </Style>
+
+    <Style x:Key="Text.Error" TargetType="TextBlock" BasedOn="{StaticResource Text.Base}">
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Sm}" />
+        <Setter Property="LineHeight" Value="{StaticResource Font.Line.Sm}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}" />
+    </Style>
+
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+</ResourceDictionary>

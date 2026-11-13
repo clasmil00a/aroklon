@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+artifacts/
+publish/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+
+# Test output
+TestResults/
+*.trx
+
+# Local databases and logs (never commit shop data)
+*.db
+*.db-shm
+*.db-wal
+*.log
+logs/
+
+# OS noise
+.DS_Store
+Thumbs.db

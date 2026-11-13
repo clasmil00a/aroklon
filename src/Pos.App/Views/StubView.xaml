@@ -1,0 +1,70 @@
+<UserControl
+    x:Class="Pos.App.Views.StubView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border
+            MaxWidth="720"
+            Margin="24"
+            Padding="32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Style="{StaticResource Card}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource Badge}">
+                        <TextBlock Style="{StaticResource Text.Mono}" Text="{Binding ScreenId}" />
+                    </Border>
+                    <Border Margin="8,0,0,0" Style="{StaticResource Badge}">
+                        <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding MilestoneLabel}" />
+                    </Border>
+                </StackPanel>
+
+                <TextBlock
+                    Margin="0,18,0,6"
+                    Style="{StaticResource Text.PageTitle}"
+                    Text="{Binding Title}" />
+                <TextBlock
+                    Style="{StaticResource Text.Body}"
+                    Text="{Binding Purpose}"
+                    TextWrapping="Wrap" />
+
+                <Border
+                    Height="1"
+                    Margin="0,24"
+                    Background="{DynamicResource Brush.Border}" />
+
+                <TextBlock
+                    Margin="0,0,0,8"
+                    Style="{StaticResource Text.SectionTitle}"
+                    Text="Layar ini belum dibangun" />
+                <TextBlock
+                    Style="{StaticResource Text.Body}"
+                    Text="Rute, judul, dan statusnya sudah terdaftar di kerangka aplikasi. Isi layar akan dibuat pada milestone yang tertera, setelah alur kasir inti selesai."
+                    TextWrapping="Wrap" />
+
+                <Border Margin="0,20,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                    <StackPanel>
+                        <TextBlock
+                            Margin="0,0,0,8"
+                            Style="{StaticResource Text.BodyStrong}"
+                            Text="Sudah siap untuk layar ini" />
+                        <TextBlock Style="{StaticResource Text.Secondary}" Text="• Autentikasi dan sesi pengguna" />
+                        <TextBlock Style="{StaticResource Text.Secondary}" Text="• Database lokal dengan skema lengkap" />
+                        <TextBlock Style="{StaticResource Text.Secondary}" Text="• Tema, token, dan komponen dasar" />
+                        <TextBlock Style="{StaticResource Text.Secondary}" Text="• Navigasi dan stub status" />
+                    </StackPanel>
+                </Border>
+
+                <Button
+                    Margin="0,24,0,0"
+                    HorizontalAlignment="Left"
+                    Command="{Binding BackCommand}"
+                    Content="Kembali ke beranda"
+                    Style="{StaticResource Button.Primary}" />
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</UserControl>

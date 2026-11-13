@@ -1,0 +1,138 @@
+<UserControl
+    x:Class="Pos.App.Views.ShellView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="{StaticResource Layout.TopBar}" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border
+            Grid.Row="0"
+            Background="{DynamicResource Brush.Surface}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <Grid Margin="16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                    <Border
+                        Width="30"
+                        Height="30"
+                        Background="{DynamicResource Brush.Accent}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="15"
+                            FontWeight="{StaticResource Font.Weight.Bold}"
+                            Foreground="{DynamicResource Brush.OnAccent}"
+                            Text="P" />
+                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Text="{Binding CompanyName}" />
+                        <TextBlock Style="{StaticResource Text.Caption}" Text="POS · Kasir desktop" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <Border Style="{StaticResource Badge}" Margin="0,0,12,0">
+                        <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding RoleName}" />
+                    </Border>
+                    <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock
+                            HorizontalAlignment="Right"
+                            FontWeight="{StaticResource Font.Weight.Medium}"
+                            Text="{Binding UserDisplayName}" />
+                        <TextBlock
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource Text.Caption}"
+                            Text="{Binding DatabaseLabel}" />
+                    </StackPanel>
+                    <Border
+                        Width="32"
+                        Height="32"
+                        Background="{DynamicResource Brush.Accent}"
+                        CornerRadius="16">
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="{StaticResource Font.Size.Sm}"
+                            FontWeight="{StaticResource Font.Weight.Bold}"
+                            Foreground="{DynamicResource Brush.OnAccent}"
+                            Text="{Binding Initials}" />
+                    </Border>
+                    <Button
+                        Margin="12,0,0,0"
+                        Command="{Binding SignOutCommand}"
+                        Content="Keluar"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="208" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Padding="12"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <ItemsControl ItemsSource="{Binding NavigationItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton
+                                    Margin="0,2"
+                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding Route}"
+                                    Content="{Binding Label}"
+                                    GroupName="MainNav"
+                                    IsChecked="{Binding IsActive, Mode=OneWay}"
+                                    Style="{StaticResource NavItem}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                        <Border
+                            Height="1"
+                            Margin="0,0,0,12"
+                            Background="{DynamicResource Brush.Border}" />
+                        <TextBlock
+                            Style="{StaticResource Text.Caption}"
+                            Text="{Binding DatabaseLabel}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource Text.Caption}"
+                            Text="{Binding Version, StringFormat=Versi {0} · M0}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
+        </Grid>
+    </Grid>
+</UserControl>

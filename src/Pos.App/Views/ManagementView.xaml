@@ -1,0 +1,170 @@
+<UserControl
+    x:Class="Pos.App.Views.ManagementView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}">
+
+    <UserControl.Resources>
+        <Style x:Key="ModuleItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="Root"
+                            Padding="{TemplateBinding Padding}"
+                            Background="Transparent"
+                            CornerRadius="{StaticResource Radius.Sm}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border
+                                    x:Name="Marker"
+                                    Width="3"
+                                    Height="16"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    CornerRadius="2" />
+                                <ContentPresenter
+                                    Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceRaised}" />
+                                <Setter TargetName="Marker" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                                <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Manajemen" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kelola katalog, stok, pelanggan, harga, dan data toko." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S14 · M0" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,10"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Modul back-office" />
+                    <ListBox
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemContainerStyle="{StaticResource ModuleItem}"
+                        ItemsSource="{Binding Modules}"
+                        SelectedItem="{Binding SelectedModule, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" />
+                                    <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding MilestoneLabel}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource Badge}">
+                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.ScreenId}" />
+                        </Border>
+                        <Border Margin="8,0,0,0" Style="{StaticResource Badge}">
+                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.MilestoneLabel}" />
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock
+                        Margin="0,14,0,4"
+                        Style="{StaticResource Text.PageTitle}"
+                        Text="{Binding SelectedModule.Title}" />
+                    <TextBlock
+                        Style="{StaticResource Text.Body}"
+                        Text="{Binding SelectedModule.Purpose}"
+                        TextWrapping="Wrap" />
+
+                    <Border
+                        Height="1"
+                        Margin="0,20"
+                        Background="{DynamicResource Brush.Border}" />
+
+                    <TextBlock
+                        Margin="0,0,0,6"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Status modul" />
+                    <TextBlock
+                        Style="{StaticResource Text.Body}"
+                        TextWrapping="Wrap">
+                        Rute, izin, dan navigasi modul ini sudah terdaftar di kerangka aplikasi. Layar kerja akan dibangun sesuai urutan milestone.
+                    </TextBlock>
+
+                    <Border Margin="0,16,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,8"
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="Yang sudah siap" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Sesi login dan peran pengguna" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Database lokal dan cadangan harian" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Navigasi ke seluruh layar terjadwal" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Margin="0,20,0,0" Orientation="Horizontal">
+                        <Button
+                            Margin="0,0,8,0"
+                            Command="{Binding OpenSettingsCommand}"
+                            Content="Buka pengaturan"
+                            Style="{StaticResource Button.Secondary}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
