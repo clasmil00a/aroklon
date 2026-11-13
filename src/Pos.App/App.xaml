@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:Pos.App.ViewModels"
+    xmlns:conv="clr-namespace:Pos.App.Converters"
     xmlns:views="clr-namespace:Pos.App.Views"
     ShutdownMode="OnMainWindowClose">
 
@@ -13,6 +14,7 @@
                 <ResourceDictionary Source="Themes/Tokens.xaml" />
                 <ResourceDictionary Source="Styles/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
 
             <DataTemplate DataType="{x:Type vm:OnboardingViewModel}">
                 <views:OnboardingView />
@@ -36,6 +38,10 @@
 
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
                 <views:SettingsView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:PosViewModel}">
+                <views:PosView />
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">

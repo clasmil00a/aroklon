@@ -17,10 +17,13 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly DatabaseOptions _databaseOptions;
     private readonly DatabaseInfo _databaseInfo;
     private readonly CompanyInfo _company;
+    private readonly ProductService _products;
+    private readonly SaleService _sales;
 
     private HomeViewModel? _home;
     private ManagementViewModel? _management;
     private SettingsViewModel? _settings;
+    private PosViewModel? _pos;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -36,7 +39,9 @@ public sealed partial class ShellViewModel : ObservableObject
         ThemeService theme,
         UserPreferencesService preferences,
         BackupService backups,
-        DatabaseOptions databaseOptions)
+        DatabaseOptions databaseOptions,
+        ProductService products,
+        SaleService sales)
     {
         Session = session;
         _company = company;
@@ -46,6 +51,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _preferences = preferences;
         _backups = backups;
         _databaseOptions = databaseOptions;
+        _products = products;
+        _sales = sales;
 
         NavigationItems =
         [
@@ -117,6 +124,14 @@ public sealed partial class ShellViewModel : ObservableObject
                     _company);
                 CurrentPage = _settings;
                 ActiveRoute = "settings";
+                break;
+
+            case "S02":
+                _pos ??= new PosViewModel(_products, _sales);
+                _pos.SetSession(Session);
+                _pos.BackRequested += () => Navigate("home");
+                CurrentPage = _pos;
+                ActiveRoute = "home";
                 break;
 
             default:

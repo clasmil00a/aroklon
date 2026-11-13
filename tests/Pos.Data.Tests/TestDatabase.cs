@@ -48,6 +48,10 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public BackupService Backups { get; private set; } = null!;
 
+    public SaleService Sale { get; private set; } = null!;
+
+    public ProductService Product { get; private set; } = null!;
+
     public static async Task<TestDatabase> CreateAsync()
     {
         var database = new TestDatabase();
@@ -77,6 +81,14 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Options,
             database.Clock,
             NullLogger<BackupService>.Instance);
+        database.Sale = new SaleService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Product = new ProductService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
 
         return database;
     }
