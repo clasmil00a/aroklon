@@ -79,7 +79,10 @@ public sealed record PriceListItemView(
     long FactorToBaseMilli,
     long? PriceMinor,
     bool IsInherited,
-    int? MarkupBp);
+    int? MarkupBp)
+{
+    public bool IsNotInherited => !IsInherited;
+}
 
 /// <summary>Request to create a price list.</summary>
 public sealed record PriceListCreateRequest(string Name, bool ApplyPromotions);

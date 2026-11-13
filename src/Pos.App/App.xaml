@@ -56,6 +56,14 @@
                 <views:ProductEditorView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:PriceListViewModel}">
+                <views:PriceListView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:PriceListEditorViewModel}">
+                <views:PriceListEditorView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>

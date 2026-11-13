@@ -86,8 +86,7 @@ public partial class App : Application
                     services.AddSingleton<PriceListService>();
                     services.AddSingleton<CustomerService>();
                     services.AddSingleton<RegisterService>();
-                    services.AddSingleton<ThemeService>();
-                    services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
+                    services.AddSingleton<ThemeService>();                    services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })
                 .Build();
 

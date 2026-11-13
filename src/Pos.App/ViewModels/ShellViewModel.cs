@@ -20,6 +20,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly ProductService _products;
     private readonly SaleService _sales;
     private readonly UnitService _units;
+    private readonly PriceListService _priceLists;
 
     private HomeViewModel? _home;
     private ManagementViewModel? _management;
@@ -28,6 +29,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private UnitViewModel? _unit;
     private ProductListViewModel? _productList;
     private ProductEditorViewModel? _productEditor;
+    private PriceListViewModel? _priceList;
+    private PriceListEditorViewModel? _priceListEditor;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -46,7 +49,8 @@ public sealed partial class ShellViewModel : ObservableObject
         DatabaseOptions databaseOptions,
         ProductService products,
         SaleService sales,
-        UnitService units)
+        UnitService units,
+        PriceListService priceLists)
     {
         Session = session;
         _company = company;
@@ -59,6 +63,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _products = products;
         _sales = sales;
         _units = units;
+        _priceLists = priceLists;
 
         NavigationItems =
         [
@@ -163,6 +168,24 @@ public sealed partial class ShellViewModel : ObservableObject
                 _productEditor ??= new ProductEditorViewModel(_products);
                 _productEditor.BackRequested += () => Navigate("S15");
                 CurrentPage = _productEditor;
+                ActiveRoute = "home";
+                break;
+
+            case "S39":
+                _priceList ??= new PriceListViewModel(_priceLists);
+                _priceList.ListSelected += id =>
+                {
+                    _priceListEditor ??= new PriceListEditorViewModel(_priceLists);
+                    _priceListEditor.SetPriceList(id);
+                    _priceListEditor.BackRequested += () => Navigate("S39");
+                    Navigate("S40");
+                };
+                CurrentPage = _priceList;
+                ActiveRoute = "home";
+                break;
+
+            case "S40":
+                CurrentPage = _priceListEditor ?? new PriceListEditorViewModel(_priceLists);
                 ActiveRoute = "home";
                 break;
 
