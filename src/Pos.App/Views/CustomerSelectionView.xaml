@@ -1,0 +1,108 @@
+<UserControl
+    x:Class="Pos.App.Views.CustomerSelectionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Pilih Pelanggan" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Pilih pelanggan untuk transaksi ini. Pelanggan menentukan daftar harga dan diskon default." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S10 · M2" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Cari pelanggan" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button
+                        Margin="0,8,0,0"
+                        Command="{Binding SearchCommand}"
+                        Content="Cari"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <TextBlock
+                        Margin="0,16,0,0"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Daftar pelanggan" />
+                    <ItemsControl ItemsSource="{Binding CustomerList}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding Code, TargetNullValue='—'}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Secondary}"
+                                                Text="{Binding PriceListName, TargetNullValue='(default)'}" />
+                                        </StackPanel>
+                                        <Button
+                                            Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding DataContext.SelectCustomerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="Pilih"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding CustomerList.Count, StringFormat='{}{0} pelanggan'}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

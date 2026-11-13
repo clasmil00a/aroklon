@@ -47,6 +47,8 @@ public sealed partial class HomeViewModel : ObservableObject
             new("Master satuan", "bungkus, renteng, dus, kg, dan konversi lainnya.", "S42", "M2"),
             new("Daftar produk", "Lihat dan pilih produk untuk diedit satuan jualnya.", "S15", "M2"),
             new("Daftar harga", "Kelola daftar harga retail, grosir, dan per satuan.", "S39", "M2"),
+            new("Harga produk", "Lihat harga semua daftar untuk satu produk.", "S41", "M2"),
+            new("Pelanggan", "Pilih pelanggan dan daftar harga defaultnya.", "S10", "M2"),
             new("Kas masuk/keluar", "Catat uang masuk dan keluar dari laci kas.", "S31", "M4"),
             new("Tutup hari", "Hitung kas, cetak laporan, lalu tutup register.", "S35", "M4"),
             new("Manajemen", "Produk, stok, pelanggan, harga, dan laporan.", "management", "S14"),

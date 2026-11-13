@@ -21,6 +21,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly SaleService _sales;
     private readonly UnitService _units;
     private readonly PriceListService _priceLists;
+    private readonly CustomerService _customers;
 
     private HomeViewModel? _home;
     private ManagementViewModel? _management;
@@ -31,6 +32,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private ProductEditorViewModel? _productEditor;
     private PriceListViewModel? _priceList;
     private PriceListEditorViewModel? _priceListEditor;
+    private ProductPriceViewModel? _productPrice;
+    private CustomerSelectionViewModel? _customerSelection;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -50,7 +53,8 @@ public sealed partial class ShellViewModel : ObservableObject
         ProductService products,
         SaleService sales,
         UnitService units,
-        PriceListService priceLists)
+        PriceListService priceLists,
+        CustomerService customers)
     {
         Session = session;
         _company = company;
@@ -64,6 +68,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _sales = sales;
         _units = units;
         _priceLists = priceLists;
+        _customers = customers;
 
         NavigationItems =
         [
@@ -167,7 +172,26 @@ public sealed partial class ShellViewModel : ObservableObject
             case "S16":
                 _productEditor ??= new ProductEditorViewModel(_products);
                 _productEditor.BackRequested += () => Navigate("S15");
+                _productEditor.PriceViewRequested += pid =>
+                {
+                    _productPrice ??= new ProductPriceViewModel(_products, _priceLists);
+                    _productPrice.SetProduct(pid);
+                    _productPrice.BackRequested += () => Navigate("S16");
+                    Navigate("S41");
+                };
                 CurrentPage = _productEditor;
+                ActiveRoute = "home";
+                break;
+
+            case "S41":
+                CurrentPage = _productPrice ?? new ProductPriceViewModel(_products, _priceLists);
+                ActiveRoute = "home";
+                break;
+
+            case "S10":
+                _customerSelection ??= new CustomerSelectionViewModel(_customers);
+                _customerSelection.BackRequested += () => Navigate("home");
+                CurrentPage = _customerSelection;
                 ActiveRoute = "home";
                 break;
 

@@ -153,4 +153,8 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     private void GoBack() => BackRequested?.Invoke();
 
     public event Action? BackRequested;
+    public event Action<string>? PriceViewRequested;
+
+    [RelayCommand]
+    private void ViewPrices() => PriceViewRequested?.Invoke(_productId);
 }

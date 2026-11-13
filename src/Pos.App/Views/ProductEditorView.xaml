@@ -59,6 +59,13 @@
                         Content="← Kembali ke daftar produk"
                         Style="{StaticResource Button.Ghost}" />
 
+                    <Button
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding ViewPricesCommand}"
+                        Content="Lihat harga semua daftar"
+                        Style="{StaticResource Button.Secondary}" />
+
                     <TextBlock
                         Margin="0,16,0,0"
                         Style="{StaticResource Text.Error}"

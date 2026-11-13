@@ -1,0 +1,115 @@
+<UserControl
+    x:Class="Pos.App.Views.ProductPriceView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Harga Produk" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Lihat harga tiap daftar harga untuk semua satuan jual produk. Tanda '!' berarti warisan." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S41 · M2" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding Detail.Name, TargetNullValue='Produk'}" />
+                    <TextBlock
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Detail.Code, TargetNullValue='—'}" />
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding Detail.BaseUnitName, StringFormat='Dasar: {} {0}'}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke editor produk"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Harga per daftar &amp; satuan" />
+                    <ItemsControl ItemsSource="{Binding Lines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding PriceListName}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding UnitName, TargetNullValue='—'}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit (!)'}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding DataContext.GoBackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Content="← Kembali"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
