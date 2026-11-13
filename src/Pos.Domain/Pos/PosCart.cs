@@ -91,10 +91,11 @@ public static class CartMath
         };
     }
 
-    public static CartTotals Calculate(IEnumerable<CartLine> lines)
+    public static CartTotals Calculate(IEnumerable<CartLine> lines, Discount? cartDiscount = null)
     {
+        var cartDisc = cartDiscount ?? Discount.None;
         var subtotal = 0L;
-        var discount = 0L;
+        var lineDiscount = 0L;
         var quantity = 0L;
         var count = 0;
 
@@ -106,12 +107,15 @@ public static class CartMath
             }
 
             subtotal = checked(subtotal + line.GrossMinor);
-            discount = checked(discount + line.DiscountMinor);
+            lineDiscount = checked(lineDiscount + line.DiscountMinor);
             quantity = checked(quantity + line.BaseQtyMilli);
             count++;
         }
 
-        return new CartTotals(subtotal, discount, 0, subtotal - discount, quantity, count);
+        var cartDiscountMinor = DiscountFor(subtotal - lineDiscount, cartDisc.Kind, cartDisc.Value);
+        var totalDiscount = checked(lineDiscount + cartDiscountMinor);
+
+        return new CartTotals(subtotal, totalDiscount, 0, checked(subtotal - totalDiscount), quantity, count);
     }
 }
 
@@ -123,10 +127,17 @@ public static class CartMath
 public sealed class PosCart
 {
     private readonly List<CartLine> _lines = [];
+    private Discount _cartDiscount = Discount.None;
 
     public IReadOnlyList<CartLine> Lines => _lines;
 
-    public CartTotals Totals => CartMath.Calculate(_lines);
+    public Discount CartDiscount
+    {
+        get => _cartDiscount;
+        private set => _cartDiscount = value;
+    }
+
+    public CartTotals Totals => CartMath.Calculate(_lines, _cartDiscount);
 
     public bool IsEmpty => _lines.Count == 0;
 
@@ -231,6 +242,14 @@ public sealed class PosCart
         _lines.Remove(line);
     }
 
+    public void SetCartDiscount(DiscountKind kind, long value)
+    {
+        CartMath.DiscountFor(0, kind, value); // validate
+        _cartDiscount = new Discount(kind, value);
+    }
+
+    public void ClearCartDiscount() => _cartDiscount = Discount.None;
+
     public void ReplaceLine(CartLine line)
     {
         if (line.QtyMilli <= 0)
@@ -241,7 +260,11 @@ public sealed class PosCart
         Replace(line.LineId, line);
     }
 
-    public void Clear() => _lines.Clear();
+    public void Clear()
+    {
+        _lines.Clear();
+        _cartDiscount = Discount.None;
+    }
 
     public void Load(IEnumerable<CartLine> lines)
     {

@@ -79,7 +79,7 @@ public sealed class SaleService
                   (@id, @number, 'sale', 'open', @clientRequestId, @registerId, @businessDayId,
                    @userId, @customerId, @customerName, @customerTaxNumber,
                    @priceListId, @currency, @currencyMinorUnit, @subtotal,
-                   'none', 0, @discount, 0, @total, 0, 0, @total, @note,
+                   'none', 0, @discount, @tax, @total, 0, 0, @total, @note,
                    @now, @now);
                 """,
                 new
@@ -98,6 +98,7 @@ public sealed class SaleService
                     currencyMinorUnit = company.CurrencyMinorUnit,
                     subtotal = totals.Subtotal,
                     discount = totals.Discount,
+                    tax = totals.Tax,
                     total = totals.Total,
                     note = EmptyToNull(request.Note),
                     now = SqlText.Now(now)
@@ -183,6 +184,15 @@ public sealed class SaleService
             var lines = await ResolveLinesAsync(
                 connection, transaction, request.Lines, priceListId, session, cancellationToken).ConfigureAwait(false);
             var totals = CalculateTotals(lines);
+
+            // Apply cart-level discount on top of line-level discounts (checkout only).
+            var cartDiscountMinor = CartMath.DiscountFor(
+                totals.Subtotal - totals.Discount,
+                request.CartDiscountKind,
+                request.CartDiscountValue);
+            var totalDiscount = checked(totals.Discount + cartDiscountMinor);
+            var totalWithCartDiscount = checked(totals.Subtotal - totalDiscount + totals.Tax);
+
             var allowNegativeStock = string.Equals(
                 await GetSettingAsync(connection, transaction, "pos.negative_stock", cancellationToken).ConfigureAwait(false),
                 "allow",
@@ -192,7 +202,7 @@ public sealed class SaleService
             long paid;
             long change;
             long balance;
-            if (totals.Total == 0)
+            if (totalWithCartDiscount == 0)
             {
                 paid = 0;
                 change = 0;
@@ -200,15 +210,15 @@ public sealed class SaleService
             }
             else if (paymentType.MarkAsPaid)
             {
-                if (request.TenderedMinor < totals.Total)
+                if (request.TenderedMinor < totalWithCartDiscount)
                 {
                     throw new ValidationException(
                         ErrorCodes.Validation,
                         "Jumlah pembayaran kurang dari total transaksi.");
                 }
 
-                paid = totals.Total;
-                change = request.TenderedMinor - totals.Total;
+                paid = totalWithCartDiscount;
+                change = request.TenderedMinor - totalWithCartDiscount;
                 balance = 0;
             }
             else
@@ -220,9 +230,9 @@ public sealed class SaleService
                         "Pembayaran kredit memerlukan pelanggan.");
                 }
 
-                paid = Math.Min(request.TenderedMinor, totals.Total);
+                paid = Math.Min(request.TenderedMinor, totalWithCartDiscount);
                 change = 0;
-                balance = totals.Total - paid;
+                balance = totalWithCartDiscount - paid;
             }
 
             var businessDayId = await EnsureBusinessDayAsync(
@@ -249,7 +259,7 @@ public sealed class SaleService
                       (@id, @number, 'sale', 'closed', @clientRequestId, @registerId, @businessDayId,
                        @userId, @customerId, @customerName, @customerTaxNumber,
                        @priceListId, @currency, @currencyMinorUnit, @subtotal,
-                       'none', 0, @discount, 0, @total, @paid, @change, @balance, @note,
+                       'none', 0, @discount, @tax, @total, @paid, @change, @balance, @note,
                        @now, @now, @now);
                     """,
                     new
@@ -267,8 +277,9 @@ public sealed class SaleService
                         currency = company.Currency,
                         currencyMinorUnit = company.CurrencyMinorUnit,
                         subtotal = totals.Subtotal,
-                        discount = totals.Discount,
-                        total = totals.Total,
+                        discount = totalDiscount,
+                        tax = totals.Tax,
+                        total = totalWithCartDiscount,
                         paid,
                         change,
                         balance,
@@ -309,7 +320,7 @@ public sealed class SaleService
                       price_list_id = @priceListId,
                       subtotal_minor = @subtotal,
                       discount_total_minor = @discount,
-                      tax_total_minor = 0,
+                      tax_total_minor = @tax,
                       total_minor = @total,
                       paid_total_minor = @paid,
                       change_minor = @change,
@@ -331,8 +342,9 @@ public sealed class SaleService
                         customerTaxNumber = customer?.TaxNumber,
                         priceListId,
                         subtotal = totals.Subtotal,
-                        discount = totals.Discount,
-                        total = totals.Total,
+                        discount = totalDiscount,
+                        tax = totals.Tax,
+                        total = totalWithCartDiscount,
                         paid,
                         change,
                         balance,
@@ -413,9 +425,9 @@ public sealed class SaleService
                 """,
                 new
                 {
-                    taxable = totals.Subtotal - totals.Discount,
-                    discount = totals.Discount,
-                    total = totals.Total,
+                    taxable = totals.Subtotal - totalDiscount,
+                    discount = totalDiscount,
+                    total = totalWithCartDiscount,
                     now = SqlText.Now(now),
                     id = businessDayId
                 },
@@ -880,6 +892,15 @@ public sealed class SaleService
             var baseQty = UnitMath.ToBase(input.QtyMilli, row.UnitFactorMilli);
             var unitCost = MoneyMath.RoundDiv(row.BaseCostMinor * row.UnitFactorMilli, 1000);
 
+            // Resolve tax rate: input override, then product's default tax rate.
+            var taxRateId = input.TaxRateId ?? await ResolveDefaultTaxRateAsync(
+                connection, transaction, row.ProductId, cancellationToken).ConfigureAwait(false);
+            var rateBp = taxRateId is not null
+                ? await GetTaxRateBpAsync(connection, transaction, taxRateId, cancellationToken).ConfigureAwait(false)
+                : 0;
+            var taxableBase = gross - discount;
+            var tax = rateBp > 0 ? MoneyMath.PercentOf(taxableBase, rateBp) : 0;
+
             resolved.Add(new ResolvedLine(
                 row.ProductId,
                 row.ProductUnitId,
@@ -895,7 +916,10 @@ public sealed class SaleService
                 input.DiscountKind,
                 input.DiscountValue,
                 discount,
-                gross - discount,
+                tax,
+                gross - discount + tax,
+                taxRateId,
+                rateBp,
                 input.Comment,
                 row.IsService,
                 overridden));
@@ -908,7 +932,8 @@ public sealed class SaleService
     {
         var subtotal = lines.Sum(line => line.GrossMinor);
         var discount = lines.Sum(line => line.DiscountMinor);
-        return new Totals(subtotal, discount, subtotal - discount);
+        var tax = lines.Sum(line => line.TaxMinor);
+        return new Totals(subtotal, discount, tax, checked(subtotal - discount + tax));
     }
 
     private static async Task EnsureStockAsync(
@@ -965,6 +990,7 @@ public sealed class SaleService
         var sort = 0;
         foreach (var line in lines)
         {
+            var saleItemId = Ids.NewId();
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 INSERT INTO sale_items
@@ -977,12 +1003,12 @@ public sealed class SaleService
                   (@id, @saleId, @productId, @productUnitId, @name, @code,
                    @unitName, @factor, @qty, @baseQty,
                    @unitPrice, @unitCost, @discountKind, @discountValue,
-                   @discountTotal, 0, @lineTotal, @status,
+                   @discountTotal, @taxTotal, @lineTotal, @status,
                    @comment, @sort, @now, @now);
                 """,
                 new
                 {
-                    id = Ids.NewId(),
+                    id = saleItemId,
                     saleId,
                     productId = line.ProductId,
                     productUnitId = line.ProductUnitId,
@@ -997,6 +1023,7 @@ public sealed class SaleService
                     discountKind = Discount.ToDatabase(line.DiscountKind),
                     discountValue = line.DiscountValue,
                     discountTotal = line.DiscountMinor,
+                    taxTotal = line.TaxMinor,
                     lineTotal = line.TotalMinor,
                     status,
                     comment = EmptyToNull(line.Comment),
@@ -1005,6 +1032,33 @@ public sealed class SaleService
                 },
                 transaction,
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            // Insert per-line tax if applicable.
+            if (line.TaxMinor > 0 && line.TaxRateId is not null)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    INSERT INTO sale_item_taxes
+                      (id, sale_item_id, tax_rate_id, name_snapshot, rate_bp,
+                       taxable_base_minor, amount_minor, created_at)
+                    VALUES
+                      (@id, @saleItemId, @taxRateId, @name, @rateBp,
+                       @taxableBase, @taxAmount, @now);
+                    """,
+                    new
+                    {
+                        id = Ids.NewId(),
+                        saleItemId,
+                        taxRateId = line.TaxRateId,
+                        name = line.Name,
+                        rateBp = line.RateBp,
+                        taxableBase = line.GrossMinor - line.DiscountMinor,
+                        taxAmount = line.TaxMinor,
+                        now = SqlText.Now(now)
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken)).ConfigureAwait(false);
+            }
         }
     }
 
@@ -1297,6 +1351,39 @@ public sealed class SaleService
     private static string? EmptyToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private async Task<string?> ResolveDefaultTaxRateAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string productId,
+        CancellationToken cancellationToken)
+    {
+        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            """
+            SELECT tr.id
+            FROM product_taxes pt
+            JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
+            WHERE pt.product_id = @productId
+            ORDER BY tr.rate_bp DESC
+            LIMIT 1;
+            """,
+            new { productId },
+            transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    private async Task<int> GetTaxRateBpAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string taxRateId,
+        CancellationToken cancellationToken)
+    {
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
+            new { id = taxRateId },
+            transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     private static TimeZoneInfo ResolveTimezone(string? timezone)
     {
         if (!string.IsNullOrWhiteSpace(timezone))
@@ -1316,7 +1403,7 @@ public sealed class SaleService
         return TimeZoneInfo.Utc;
     }
 
-    private sealed record Totals(long Subtotal, long Discount, long Total);
+    private sealed record Totals(long Subtotal, long Discount, long Tax, long Total);
 
     private sealed record ResolvedLine(
         string ProductId,
@@ -1333,7 +1420,10 @@ public sealed class SaleService
         DiscountKind DiscountKind,
         long DiscountValue,
         long DiscountMinor,
+        long TaxMinor,
         long TotalMinor,
+        string? TaxRateId,
+        int RateBp,
         string? Comment,
         bool IsService,
         bool PriceOverridden)

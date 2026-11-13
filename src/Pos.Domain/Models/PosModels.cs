@@ -26,6 +26,9 @@ public sealed record ProductLookup(
             : UnitMath.FromBase(StockBaseMilli, UnitFactorMilli);
 }
 
+/// <summary>Tax rate applicable to products.</summary>
+public sealed record TaxRateSummary(string Id, string Name, int RateBp, bool IsDefault);
+
 public sealed record ProductCreateRequest(
     string Name,
     string? Code,
@@ -45,6 +48,7 @@ public sealed record SaleLineInput(
     long? UnitPriceOverrideMinor,
     DiscountKind DiscountKind,
     long DiscountValue,
+    string? TaxRateId = null,
     string? Comment = null);
 
 public sealed record ParkSaleRequest(
@@ -60,7 +64,9 @@ public sealed record CheckoutRequest(
     string? CustomerId = null,
     string? Note = null,
     string? ClientRequestId = null,
-    string? ParkedSaleId = null);
+    string? ParkedSaleId = null,
+    DiscountKind CartDiscountKind = DiscountKind.None,
+    long CartDiscountValue = 0);
 
 public sealed record SaleResult(
     string SaleId,

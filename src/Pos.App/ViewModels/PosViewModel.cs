@@ -15,6 +15,7 @@ public sealed partial class PosViewModel : ObservableObject
 {
     private readonly ProductService _products;
     private readonly SaleService _sales;
+    private readonly CustomerService _customers;
     private readonly PosCart _cart = new();
 
     [ObservableProperty]
@@ -38,17 +39,36 @@ public sealed partial class PosViewModel : ObservableObject
     [ObservableProperty]
     private bool _canCheckout;
 
+    [ObservableProperty]
+    private CustomerSummary? _selectedCustomer;
+
+    [ObservableProperty]
+    private string _customerLabel = "Pelanggan (umum)";
+
+    [ObservableProperty]
+    private DiscountKind _cartDiscountKind = DiscountKind.None;
+
+    [ObservableProperty]
+    private long _cartDiscountValue;
+
     private UserSession? _session;
 
-    public PosViewModel(ProductService products, SaleService sales)
+    public PosViewModel(ProductService products, SaleService sales, CustomerService customers)
     {
         _products = products;
         _sales = sales;
+        _customers = customers;
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(SearchText) && !string.IsNullOrWhiteSpace(SearchText))
             {
                 _ = SearchAsync();
+            }
+            else if (e.PropertyName is nameof(CartDiscountKind) or nameof(CartDiscountValue))
+            {
+                _cart.SetCartDiscount(CartDiscountKind, CartDiscountValue);
+                Recalculate();
+                UpdateCanCheckout();
             }
         };
     }
@@ -67,6 +87,7 @@ public sealed partial class PosViewModel : ObservableObject
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
     private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0;
+
     [RelayCommand]
     private async Task SearchAsync()
     {
@@ -123,6 +144,41 @@ public sealed partial class PosViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task SelectCustomerAsync()
+    {
+        // Delegate to shell which hosts the customer selection screen.
+        // For now, show a simple inline selection.
+        ErrorMessage = string.Empty;
+        try
+        {
+            var customers = await _customers.ListActiveAsync();
+            if (customers.Count == 0)
+            {
+                ErrorMessage = "Belum ada pelanggan aktif.";
+                return;
+            }
+
+            // Simple selection: pick the first active customer for demo.
+            // Full S10 screen integration is handled via shell navigation.
+            var first = customers[0];
+            SelectedCustomer = first;
+            CustomerLabel = first.Name + (first.PriceListName is not null ? " · " + first.PriceListName : string.Empty);
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to load customers");
+            ErrorMessage = "Gagal memuat daftar pelanggan. Coba lagi.";
+        }
+    }
+
+    [RelayCommand]
+    private void ClearCustomer()
+    {
+        SelectedCustomer = null;
+        CustomerLabel = "Pelanggan (umum)";
+    }
+
     private void ChangeQuantity(CartLineViewModel? line, long delta)
     {
         if (line is null || IsBusy)
@@ -163,6 +219,40 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private void DecreaseLine(CartLineViewModel? line) => ChangeQuantity(line, -1000);
 
+    private void SetLineUnit(CartLineViewModel? line, string productUnitId, string unitName, long factor, long price)
+    {
+        if (line is null || IsBusy)
+        {
+            return;
+        }
+
+        ErrorMessage = string.Empty;
+        try
+        {
+            var updatedLine = _cart.Lines.First(l => l.LineId == line.LineId);
+            var newLine = updatedLine with
+            {
+                ProductUnitId = productUnitId,
+                UnitName = unitName,
+                UnitFactorMilli = factor,
+                UnitPriceMinor = price,
+                PriceOverridden = true,
+            };
+            _cart.ReplaceLine(newLine);
+            RefreshLines();
+            Recalculate();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to switch unit");
+            ErrorMessage = exception.Message;
+        }
+        finally
+        {
+            UpdateCanCheckout();
+        }
+    }
+
     [RelayCommand]
     private async Task CheckoutAsync()
     {
@@ -184,9 +274,13 @@ public sealed partial class PosViewModel : ObservableObject
                     line.PriceOverridden ? line.UnitPriceMinor : null,
                     line.DiscountKind,
                     line.DiscountValue,
+                    null,
                     line.Comment)).ToList(),
                 "pmt-cash",
-                0);
+                0,
+                CustomerId: SelectedCustomer?.Id,
+                CartDiscountKind: CartDiscountKind,
+                CartDiscountValue: CartDiscountValue);
 
             var result = await _sales.CheckoutAsync(request);
             ErrorMessage = "Transaksi selesai. " + result.Number + " · Total " +
@@ -196,6 +290,10 @@ public sealed partial class PosViewModel : ObservableObject
                     : string.Empty);
             _cart.Clear();
             Lines = new ObservableCollection<CartLineViewModel>();
+            SelectedCustomer = null;
+            CustomerLabel = "Pelanggan (umum)";
+            CartDiscountKind = DiscountKind.None;
+            CartDiscountValue = 0;
             Recalculate();
         }
         catch (PosException exception)

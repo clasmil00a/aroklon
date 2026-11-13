@@ -30,12 +30,22 @@
                     <TextBlock Style="{StaticResource Text.Caption}" Text="Cari produk, tambahkan ke keranjang, lalu bayar tunai." />
                 </StackPanel>
 
-                <TextBlock
-                    Grid.Column="2"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource Text.BodyStrong}"
-                    Text="{Binding Totals.TotalMinor, StringFormat='Rp {0:N0}'}" />
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        Command="{Binding SelectCustomerCommand}"
+                        Content="{Binding CustomerLabel}"
+                        Style="{StaticResource Button.Ghost}" />
+                    <Button
+                        Command="{Binding ClearCustomerCommand}"
+                        Content="×"
+                        Style="{StaticResource Button.Ghost}" />
+                    <TextBlock
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding Totals.TotalMinor, StringFormat='Rp {0:N0}'}" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -206,13 +216,43 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <TextBlock Style="{StaticResource Text.Body}" Text="Subtotal" />
-                            <TextBlock Style="{StaticResource Text.Body}" Text="Total" />
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Diskon" />
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Pajak" />
+                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="Total" />
                         </StackPanel>
                         <StackPanel Grid.Column="1">
                             <TextBlock Style="{StaticResource Text.Body}" Text="{Binding Totals.SubtotalMinor, StringFormat='Rp {0:N0}'}" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="-{Binding Totals.DiscountMinor, StringFormat='Rp {0:N0}'}" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="{Binding Totals.TaxMinor, StringFormat='Rp {0:N0}'}" />
                             <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Totals.TotalMinor, StringFormat='Rp {0:N0}'}" />
                         </StackPanel>
                     </Grid>
+
+                    <Border Margin="0,12,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Diskon Keranjang" />
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    Style="{StaticResource Input}"
+                                    Text="{Binding CartDiscountValue, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button
+                                    Grid.Column="1"
+                                    Width="70"
+                                    Margin="8,0,0,0"
+                                    Content="Terapkan"
+                                    Style="{StaticResource Button.Secondary}" />
+                            </Grid>
+                            <TextBlock
+                                Margin="0,8,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="Masukkan nominal diskon untuk seluruh keranjang."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
 
                     <Button
                         Margin="0,12,0,0"

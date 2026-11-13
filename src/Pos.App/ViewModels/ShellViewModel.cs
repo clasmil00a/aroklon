@@ -143,7 +143,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
 
             case "S02":
-                _pos ??= new PosViewModel(_products, _sales);
+                _pos ??= new PosViewModel(_products, _sales, _customers);
                 _pos.SetSession(Session);
                 _pos.BackRequested += () => Navigate("home");
                 CurrentPage = _pos;
