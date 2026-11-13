@@ -1,0 +1,212 @@
+<UserControl
+    x:Class="Pos.App.Views.RefundView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Refund Transaksi" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Cari transaksi asli, pilih baris yang akan direfund, dan tentukan jumlah refund." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S34 · M4" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Search -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Cari transaksi asli (nomor struk)" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding SaleNumberQuery, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button
+                        Margin="0,8,0,0"
+                        Command="{Binding SearchSaleCommand}"
+                        Content="Cari Transaksi"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <Border Margin="0,16,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,8"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Transaksi asli" />
+                            <TextBlock
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding OriginalSaleNumber, TargetNullValue='—'}" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding OriginalSaleTotal, TargetNullValue='—'}" />
+                            <TextBlock
+                                Margin="0,12,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="Pilih baris di kanan untuk direfund."
+                                Visibility="{Binding SaleFound, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke beranda"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Refund lines -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Baris yang akan direfund" />
+                    <ItemsControl ItemsSource="{Binding RefundLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding UnitName, TargetNullValue='—'}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Secondary}"
+                                                Text="Sisa dapat direfund: {Binding RefundableQtyMilli, StringFormat='{}{0:0.###}'}" />
+                                        </StackPanel>
+                                        <TextBox
+                                            Grid.Column="1"
+                                            Width="100"
+                                            Margin="0,0,6,0"
+                                            Style="{StaticResource Input}"
+                                            Text="{Binding RefundQtyMilli, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding LineTotalMinor, StringFormat='Rp {0:N0}'}" />
+                                        <Button
+                                            Grid.Column="3"
+                                            Width="28"
+                                            Height="28"
+                                            Content="×"
+                                            Command="{Binding DataContext.SetRefundQtyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="10"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.BorderInput}"
+                        BorderThickness="{StaticResource Border.Width}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.SectionTitle}" Text="Pembayaran refund" />
+                            <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Tipe pembayaran" />
+                            <Border
+                                HorizontalAlignment="Left"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.BorderInput}"
+                                BorderThickness="{StaticResource Border.Width}"
+                                CornerRadius="{StaticResource Radius.Sm}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton
+                                        GroupName="RefundPayment"
+                                        IsChecked="{Binding PaymentTypeId, Converter={x:Static Binding.DoNothing}, ConverterParameter='pmt-cash', TargetNullValue='pmt-cash'}"
+                                        Content="Tunai"
+                                        Style="{StaticResource Segment}" />
+                                    <RadioButton
+                                        GroupName="RefundPayment"
+                                        IsChecked="{Binding PaymentTypeId, Converter={x:Static Binding.DoNothing}, ConverterParameter='pmt-card', TargetNullValue='pmt-card'}"
+                                        Content="Kartu"
+                                        Style="{StaticResource Segment}" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Diterima" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding TenderedAmount, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Alasan refund" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding RefundReason, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                Margin="0,14,0,0"
+                                Command="{Binding SubmitRefundCommand}"
+                                Content="Proses Refund"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Style="{StaticResource Button.Primary}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

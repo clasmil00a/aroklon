@@ -22,6 +22,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly UnitService _units;
     private readonly PriceListService _priceLists;
     private readonly CustomerService _customers;
+    private readonly CashMovementService _cashMovements;
+    private readonly RefundService _refunds;
+    private readonly EndOfDayService _endOfDay;
 
     private HomeViewModel? _home;
     private ManagementViewModel? _management;
@@ -34,6 +37,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private PriceListEditorViewModel? _priceListEditor;
     private ProductPriceViewModel? _productPrice;
     private CustomerSelectionViewModel? _customerSelection;
+    private CashMovementViewModel? _cashMovement;
+    private RefundViewModel? _refund;
+    private EndOfDayViewModel? _endOfDayScreen;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -54,7 +60,10 @@ public sealed partial class ShellViewModel : ObservableObject
         SaleService sales,
         UnitService units,
         PriceListService priceLists,
-        CustomerService customers)
+        CustomerService customers,
+        CashMovementService cashMovements,
+        RefundService refunds,
+        EndOfDayService endOfDay)
     {
         Session = session;
         _company = company;
@@ -69,6 +78,9 @@ public sealed partial class ShellViewModel : ObservableObject
         _units = units;
         _priceLists = priceLists;
         _customers = customers;
+        _cashMovements = cashMovements;
+        _refunds = refunds;
+        _endOfDay = endOfDay;
 
         NavigationItems =
         [
@@ -210,6 +222,27 @@ public sealed partial class ShellViewModel : ObservableObject
 
             case "S40":
                 CurrentPage = _priceListEditor ?? new PriceListEditorViewModel(_priceLists);
+                ActiveRoute = "home";
+                break;
+
+            case "S31":
+                _cashMovement ??= new CashMovementViewModel(_cashMovements);
+                _cashMovement.BackRequested += () => Navigate("home");
+                CurrentPage = _cashMovement;
+                ActiveRoute = "home";
+                break;
+
+            case "S34":
+                _refund ??= new RefundViewModel(_refunds, _sales);
+                _refund.BackRequested += () => Navigate("home");
+                CurrentPage = _refund;
+                ActiveRoute = "home";
+                break;
+
+            case "S35":
+                _endOfDayScreen ??= new EndOfDayViewModel(_endOfDay, _sales);
+                _endOfDayScreen.BackRequested += () => Navigate("home");
+                CurrentPage = _endOfDayScreen;
                 ActiveRoute = "home";
                 break;
 

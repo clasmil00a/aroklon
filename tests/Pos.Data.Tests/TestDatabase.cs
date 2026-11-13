@@ -60,6 +60,12 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public RegisterService Register { get; private set; } = null!;
 
+    public CashMovementService CashMovements { get; private set; } = null!;
+
+    public RefundService Refunds { get; private set; } = null!;
+
+    public EndOfDayService EndOfDay { get; private set; } = null!;
+
     public static async Task<TestDatabase> CreateAsync()
     {
         var database = new TestDatabase();
@@ -110,6 +116,19 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Sessions,
             database.Clock);
         database.Register = new RegisterService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.CashMovements = new CashMovementService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Refunds = new RefundService(
+            database.Factory,
+            database.Sessions,
+            database.Clock,
+            database.Sale);
+        database.EndOfDay = new EndOfDayService(
             database.Factory,
             database.Sessions,
             database.Clock);

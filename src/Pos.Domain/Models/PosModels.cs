@@ -156,3 +156,87 @@ public sealed record SaleFilter(
     DateOnly? To = null,
     string? Query = null,
     int Limit = 200);
+
+/// <summary>Cash movement (kas masuk/keluar) request.</summary>
+public sealed record CashMovementRequest(
+    string RegisterId,
+    string Direction, // 'in' or 'out'
+    long AmountMinor,
+    string Reason);
+
+/// <summary>Cash movement result.</summary>
+public sealed record CashMovementResult(
+    string Id,
+    string Direction,
+    long AmountMinor,
+    long BalanceMinor,
+    string CreatedAt);
+
+/// <summary>Cash movement summary for listing.</summary>
+public sealed record CashMovementSummary(
+    string Id,
+    string Direction,
+    long AmountMinor,
+    string Reason,
+    string CreatedAt,
+    string UserName);
+
+/// <summary>Refund line input.</summary>
+public sealed record RefundLineInput(
+    string SaleItemId,
+    long RefundQtyMilli,
+    string? Reason);
+
+/// <summary>Refund request.</summary>
+public sealed record RefundRequest(
+    string SaleId,
+    IReadOnlyList<RefundLineInput> Lines,
+    string PaymentTypeId,
+    long TenderedMinor,
+    string Reason);
+
+/// <summary>Refund result.</summary>
+public sealed record RefundResult(
+    string RefundSaleId,
+    string RefundNumber,
+    string Status,
+    long RefundTotalMinor,
+    long PaidMinor,
+    long ChangeMinor);
+
+/// <summary>Refund summary for listing.</summary>
+public sealed record RefundSummary(
+    string Id,
+    string Number,
+    string CreatedAt,
+    string OriginalSaleNumber,
+    long RefundTotalMinor,
+    string UserName);
+
+/// <summary>End of day request.</summary>
+public sealed record EndOfDayRequest(
+    string RegisterId,
+    long ClosingCashMinor,
+    string? VarianceNote);
+
+/// <summary>End of day result.</summary>
+public sealed record EndOfDayResult(
+    string ReportNumber,
+    string BusinessDate,
+    long SalesCount,
+    long RefundCount,
+    long TaxableTotalMinor,
+    long TaxTotalMinor,
+    long DiscountTotalMinor,
+    long GrandTotalMinor,
+    long CashInTotalMinor,
+    long CashOutTotalMinor,
+    long ClosingCashMinor,
+    long ExpectedCashMinor,
+    long VarianceMinor)
+{
+    public long CashIn => CashInTotalMinor;
+    public long CashOut => CashOutTotalMinor;
+    public long GrandTotal => GrandTotalMinor;
+    public long ExpectedCash => ExpectedCashMinor;
+}

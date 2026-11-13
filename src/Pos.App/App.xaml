@@ -72,6 +72,18 @@
                 <views:CustomerSelectionView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:CashMovementViewModel}">
+                <views:CashMovementView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:RefundViewModel}">
+                <views:RefundView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:EndOfDayViewModel}">
+                <views:EndOfDayView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>
