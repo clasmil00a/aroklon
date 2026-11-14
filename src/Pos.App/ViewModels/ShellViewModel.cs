@@ -40,6 +40,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private CashMovementViewModel? _cashMovement;
     private RefundViewModel? _refund;
     private EndOfDayViewModel? _endOfDayScreen;
+    private OpenOrdersViewModel? _openOrders;
+    private SalesHistoryViewModel? _salesHistory;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -81,6 +83,14 @@ public sealed partial class ShellViewModel : ObservableObject
         _cashMovements = cashMovements;
         _refunds = refunds;
         _endOfDay = endOfDay;
+        _openOrders = new OpenOrdersViewModel(_sales);
+        _openOrders.ResumeRequested += resumeData =>
+        {
+            _pos ??= new PosViewModel(_products, _sales, _customers);
+            _pos.SetSession(Session);
+            _pos.ResumeOpenOrder(resumeData);
+            Navigate("S02");
+        };
 
         NavigationItems =
         [
@@ -207,6 +217,25 @@ public sealed partial class ShellViewModel : ObservableObject
                 ActiveRoute = "home";
                 break;
 
+            case "S11":
+                CurrentPage = new ReceiptViewModel(_sales);
+                ActiveRoute = "home";
+                break;
+
+            case "S12":
+                _openOrders ??= new OpenOrdersViewModel(_sales);
+                _openOrders.BackRequested += () => Navigate("home");
+                _openOrders.ResumeRequested += resumeData =>
+                {
+                    _pos ??= new PosViewModel(_products, _sales, _customers);
+                    _pos.SetSession(Session);
+                    _pos.ResumeOpenOrder(resumeData);
+                    Navigate("S02");
+                };
+                CurrentPage = _openOrders;
+                ActiveRoute = "home";
+                break;
+
             case "S39":
                 _priceList ??= new PriceListViewModel(_priceLists);
                 _priceList.ListSelected += id =>
@@ -236,6 +265,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _refund ??= new RefundViewModel(_refunds, _sales);
                 _refund.BackRequested += () => Navigate("home");
                 CurrentPage = _refund;
+                ActiveRoute = "home";
+                break;
+
+            case "S32":
+                _salesHistory ??= new SalesHistoryViewModel(_sales);
+                _salesHistory.BackRequested += () => Navigate("home");
+                CurrentPage = _salesHistory;
                 ActiveRoute = "home";
                 break;
 

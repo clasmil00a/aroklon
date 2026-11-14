@@ -1,0 +1,143 @@
+<UserControl
+    x:Class="Pos.App.Views.ReceiptView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Struk Transaksi" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="{Binding Document.Number, StringFormat='Struk {0}', TargetNullValue='Struk'}" />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S11 · M5" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Receipt preview -->
+            <Border Grid.Column="0" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Pratinjau struk" />
+                    <Border
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.BorderInput}"
+                        BorderThickness="{StaticResource Border.Width}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <TextBlock
+                            Padding="12"
+                            FontFamily="{StaticResource Font.Mono}"
+                            FontSize="{StaticResource Font.Size.Sm}"
+                            Text="{Binding ReceiptText}"
+                            TextWrapping="Wrap" />
+                    </Border>
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Receipt actions -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Aksi struk" />
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="Pilih tindakan untuk struk ini." />
+
+                    <Button
+                        Margin="0,0,0,8"
+                        Command="{Binding PrintCommand}"
+                        Content="Cetak struk"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <Button
+                        Margin="0,0,0,8"
+                        Command="{Binding SavePdfCommand}"
+                        Content="Simpan sebagai PDF"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Secondary}" />
+
+                    <Button
+                        Margin="0,0,0,8"
+                        Command="{Binding EmailCommand}"
+                        Content="Email ke pelanggan"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Secondary}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Command="{Binding SkipCommand}"
+                        Content="Lewati struk"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <Border
+                        Margin="0,16,0,0"
+                        Padding="10"
+                        Background="{DynamicResource Brush.Bg}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Detail struk" />
+                            <TextBlock
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding Document.Number, TargetNullValue='—'}" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding Document.DateText, TargetNullValue='—'}" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding Document.TotalMinor, StringFormat='Total: Rp {0:N0}', TargetNullValue='—'}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

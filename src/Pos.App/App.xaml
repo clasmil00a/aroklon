@@ -72,6 +72,18 @@
                 <views:CustomerSelectionView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:OpenOrdersViewModel}">
+                <views:OpenOrdersView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ReceiptViewModel}">
+                <views:ReceiptView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:SalesHistoryViewModel}">
+                <views:SalesHistoryView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:CashMovementViewModel}">
                 <views:CashMovementView />
             </DataTemplate>

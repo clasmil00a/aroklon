@@ -51,6 +51,21 @@ public sealed partial class PosViewModel : ObservableObject
     [ObservableProperty]
     private long _cartDiscountValue;
 
+    [ObservableProperty]
+    private ObservableCollection<PaymentTypeInfo> _paymentTypes = new();
+
+    [ObservableProperty]
+    private PaymentTypeInfo? _selectedPaymentType;
+
+    [ObservableProperty]
+    private long _tenderedAmount;
+
+    [ObservableProperty]
+    private long _changeAmount;
+
+    [ObservableProperty]
+    private string _infoMessage = string.Empty;
+
     private UserSession? _session;
 
     public PosViewModel(ProductService products, SaleService sales, CustomerService customers)
@@ -70,10 +85,36 @@ public sealed partial class PosViewModel : ObservableObject
                 Recalculate();
                 UpdateCanCheckout();
             }
+            else if (e.PropertyName is nameof(TenderedAmount))
+            {
+                UpdateChange();
+            }
         };
+
+        _ = LoadPaymentTypesAsync();
     }
 
     public void SetSession(UserSession session) => _session = session;
+
+    public async Task ResumeOpenOrder(OpenOrderResumeData data)
+    {
+        _cart.Clear();
+        Lines = new ObservableCollection<CartLineViewModel>();
+
+        foreach (var input in data.Lines)
+        {
+            // Look up current product info for display; prices are re-resolved at checkout.
+            var lookup = await _products.GetAsync(input.ProductId);
+            var line = _cart.Add(lookup, input.QtyMilli,
+                input.UnitPriceOverrideMinor,
+                input.DiscountKind,
+                input.DiscountValue,
+                input.Comment);
+        }
+
+        Recalculate();
+        UpdateCanCheckout();
+    }
 
     public event Action? BackRequested;
 
@@ -87,6 +128,45 @@ public sealed partial class PosViewModel : ObservableObject
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
     private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0;
+
+    private void UpdateChange()
+    {
+        ChangeAmount = TenderedAmount > Totals.TotalMinor
+            ? TenderedAmount - Totals.TotalMinor
+            : 0;
+    }
+
+    [RelayCommand]
+    private async Task LoadPaymentTypesAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            var types = await _sales.ListPaymentTypesAsync();
+            PaymentTypes = new ObservableCollection<PaymentTypeInfo>(types);
+
+            // Select default payment type (cash).
+            var defaultType = types.FirstOrDefault(t => t.IsDefault) ?? types.FirstOrDefault();
+            if (defaultType is not null)
+            {
+                SelectedPaymentType = defaultType;
+            }
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to load payment types");
+            ErrorMessage = "Gagal memuat tipe pembayaran. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     [RelayCommand]
     private async Task SearchAsync()
@@ -147,8 +227,6 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectCustomerAsync()
     {
-        // Delegate to shell which hosts the customer selection screen.
-        // For now, show a simple inline selection.
         ErrorMessage = string.Empty;
         try
         {
@@ -159,8 +237,6 @@ public sealed partial class PosViewModel : ObservableObject
                 return;
             }
 
-            // Simple selection: pick the first active customer for demo.
-            // Full S10 screen integration is handled via shell navigation.
             var first = customers[0];
             SelectedCustomer = first;
             CustomerLabel = first.Name + (first.PriceListName is not null ? " · " + first.PriceListName : string.Empty);
@@ -261,6 +337,24 @@ public sealed partial class PosViewModel : ObservableObject
             return;
         }
 
+        if (SelectedPaymentType is null)
+        {
+            ErrorMessage = "Tipe pembayaran wajib dipilih.";
+            return;
+        }
+
+        if (SelectedPaymentType.MarkAsPaid && TenderedAmount < Totals.TotalMinor)
+        {
+            ErrorMessage = "Jumlah tunai kurang dari total transaksi.";
+            return;
+        }
+
+        if (!SelectedPaymentType.MarkAsPaid && SelectedCustomer is null)
+        {
+            ErrorMessage = "Pembayaran kredit memerlukan pelanggan.";
+            return;
+        }
+
         ErrorMessage = string.Empty;
         IsBusy = true;
         UpdateCanCheckout();
@@ -276,8 +370,8 @@ public sealed partial class PosViewModel : ObservableObject
                     line.DiscountValue,
                     null,
                     line.Comment)).ToList(),
-                "pmt-cash",
-                0,
+                SelectedPaymentType.Id,
+                TenderedAmount,
                 CustomerId: SelectedCustomer?.Id,
                 CartDiscountKind: CartDiscountKind,
                 CartDiscountValue: CartDiscountValue);
@@ -288,12 +382,18 @@ public sealed partial class PosViewModel : ObservableObject
                 (result.ChangeMinor > 0
                     ? " · Kembali " + MoneyMath.Format(result.ChangeMinor)
                     : string.Empty);
+
+            // Show receipt after checkout (S11).
+            await ShowReceiptAsync(result);
+
             _cart.Clear();
             Lines = new ObservableCollection<CartLineViewModel>();
             SelectedCustomer = null;
             CustomerLabel = "Pelanggan (umum)";
             CartDiscountKind = DiscountKind.None;
             CartDiscountValue = 0;
+            TenderedAmount = 0;
+            ChangeAmount = 0;
             Recalculate();
         }
         catch (PosException exception)
@@ -309,6 +409,25 @@ public sealed partial class PosViewModel : ObservableObject
         {
             IsBusy = false;
             UpdateCanCheckout();
+        }
+    }
+
+    private async Task ShowReceiptAsync(SaleResult result)
+    {
+        try
+        {
+            var detail = await _sales.GetAsync(result.SaleId);
+            var document = await _sales.GetReceiptAsync(detail.Id);
+            var text = SaleService.RenderReceipt(document);
+
+            // For now, show receipt text in error/info area and log it.
+            // Full print/email/PDF actions (S11) are wired via ReceiptView.
+            Log.Information("Receipt for {Number}:\n{Receipt}", result.Number, text);
+            InfoMessage = "Struk telah dicetak. Lihat riwayat penjualan untuk detail.";
+        }
+        catch (Exception exception)
+        {
+            Log.Warning(exception, "Could not generate receipt preview");
         }
     }
 

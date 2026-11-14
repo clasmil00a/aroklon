@@ -240,3 +240,29 @@ public sealed record EndOfDayResult(
     public long GrandTotal => GrandTotalMinor;
     public long ExpectedCash => ExpectedCashMinor;
 }
+
+/// <summary>Pilihan pembayaran di layar kasir (S07).</summary>
+public sealed record PaymentSelection(
+    string PaymentTypeId,
+    string PaymentTypeName,
+    bool MarkAsPaid,
+    bool OpensCashDrawer,
+    long TenderedMinor);
+
+/// <summary>Hasil aksi struk (S11).</summary>
+public sealed record ReceiptActionResult(
+    string Action, // "print" | "email" | "pdf" | "skip"
+    string? FilePath,
+    string? Message);
+
+/// <summary>Data untuk resume pesanan terbuka (S12).</summary>
+public sealed record OpenOrderResumeData(
+    string SaleId,
+    string Number,
+    string CreatedAt,
+    string? CustomerName,
+    string UserName,
+    int ItemCount,
+    long TotalMinor,
+    string? Note,
+    IReadOnlyList<SaleLineInput> Lines);

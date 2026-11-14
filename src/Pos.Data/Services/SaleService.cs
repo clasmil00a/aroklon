@@ -502,6 +502,90 @@ public sealed class SaleService
             row.ItemCount, row.TotalMinor, row.Note)).ToList();
     }
 
+    public async Task<OpenOrderResumeData?> GetOpenSaleForResumeAsync(
+        string saleId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        RequirePermission(session, PermissionKeys.PosSell);
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        var sale = await connection.QuerySingleOrDefaultAsync<OpenSaleRow>(new CommandDefinition(
+            """
+            SELECT
+              s.id AS Id,
+              s.number AS Number,
+              s.created_at AS CreatedAt,
+              s.customer_name_snapshot AS CustomerName,
+              s.user_name AS UserName,
+              COUNT(si.id) AS ItemCount,
+              s.total_minor AS TotalMinor,
+              s.note AS Note
+            FROM v_open_sales s
+            LEFT JOIN sale_items si ON si.sale_id = s.id
+            WHERE s.id = @saleId
+            GROUP BY s.id;
+            """,
+            new { saleId },
+            cancellationToken: cancellationToken)).ConfigureAwait(false)
+            ?? throw new NotFoundException("sale.open_not_found", "Pesanan terbuka tidak ditemukan.");
+
+        var lines = await connection.QueryAsync<SaleLineInputRow>(new CommandDefinition(
+            """
+            SELECT
+              product_id AS ProductId,
+              product_unit_id AS ProductUnitId,
+              qty_milli AS QtyMilli,
+              unit_price_minor AS UnitPriceOverrideMinor,
+              discount_kind AS DiscountKind,
+              discount_value AS DiscountValue,
+              comment AS Comment
+            FROM sale_items
+            WHERE sale_id = @saleId AND status <> 'voided';
+            """,
+            new { saleId },
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+        var resumeLines = lines.Select(row => new SaleLineInput(
+            row.ProductId!,
+            row.ProductUnitId!,
+            row.QtyMilli,
+            row.UnitPriceOverrideMinor,
+            Discount.FromDatabase(row.DiscountKind),
+            row.DiscountValue,
+            row.Comment)).ToList();
+
+        return new OpenOrderResumeData(
+            sale.Id, sale.Number, sale.CreatedAt, sale.CustomerName, sale.UserName,
+            sale.ItemCount, sale.TotalMinor, sale.Note, resumeLines);
+    }
+
+    public async Task<IReadOnlyList<PaymentTypeInfo>> ListPaymentTypesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        RequirePermission(session, PermissionKeys.PosSell);
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await connection.QueryAsync<PaymentTypeRow>(new CommandDefinition(
+            """
+            SELECT
+              id AS Id,
+              name AS Name,
+              icon AS Icon,
+              shortcut AS Shortcut,
+              mark_as_paid AS MarkAsPaid,
+              is_default AS IsDefault,
+              opens_cash_drawer AS OpensCashDrawer
+            FROM payment_types
+            WHERE active = 1
+            ORDER BY sort_order;
+            """,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+        return rows.Select(r => new PaymentTypeInfo(
+            r.Id, r.Name, r.Icon, r.Shortcut, r.MarkAsPaid, r.IsDefault, r.OpensCashDrawer)).ToList();
+    }
+
     public async Task VoidOpenAsync(
         string saleId,
         string? reason,
@@ -1448,7 +1532,10 @@ public sealed class SaleService
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string? Icon { get; set; }
+        public string? Shortcut { get; set; }
         public bool MarkAsPaid { get; set; }
+        public bool IsDefault { get; set; }
         public bool OpensCashDrawer { get; set; }
     }
 
@@ -1566,5 +1653,16 @@ public sealed class SaleService
         public long TenderedMinor { get; set; }
         public long ChangeMinor { get; set; }
         public string CreatedAt { get; set; } = string.Empty;
+    }
+
+    private sealed class SaleLineInputRow
+    {
+        public string? ProductId { get; set; }
+        public string? ProductUnitId { get; set; }
+        public long QtyMilli { get; set; }
+        public long? UnitPriceOverrideMinor { get; set; }
+        public string DiscountKind { get; set; } = "none";
+        public long DiscountValue { get; set; }
+        public string? Comment { get; set; }
     }
 }

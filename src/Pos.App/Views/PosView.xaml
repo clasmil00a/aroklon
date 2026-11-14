@@ -230,37 +230,49 @@
 
                     <Border Margin="0,12,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Diskon Keranjang" />
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox
-                                    Style="{StaticResource Input}"
-                                    Text="{Binding CartDiscountValue, UpdateSourceTrigger=PropertyChanged}" />
-                                <Button
-                                    Grid.Column="1"
-                                    Width="70"
-                                    Margin="8,0,0,0"
-                                    Content="Terapkan"
-                                    Style="{StaticResource Button.Secondary}" />
-                            </Grid>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pembayaran" />
+                            <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Tipe pembayaran" />
+                            <Border
+                                HorizontalAlignment="Left"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.BorderInput}"
+                                BorderThickness="{StaticResource Border.Width}"
+                                CornerRadius="{StaticResource Radius.Sm}">
+                                <StackPanel Orientation="Vertical">
+                                    <ItemsControl ItemsSource="{Binding PaymentTypes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <RadioButton
+                                                    GroupName="PaymentType"
+                                                    IsChecked="{Binding DataContext.SelectedPaymentType, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Content="{Binding Name}"
+                                                    Style="{StaticResource Segment}"
+                                                    Margin="0,2" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Diterima" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding TenderedAmount, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Kembali" />
                             <TextBlock
-                                Margin="0,8,0,0"
-                                Style="{StaticResource Text.Caption}"
-                                Text="Masukkan nominal diskon untuk seluruh keranjang."
-                                TextWrapping="Wrap" />
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding ChangeAmount, StringFormat='Rp {0:N0}'}" />
+
+                            <Button
+                                Margin="0,14,0,0"
+                                Height="44"
+                                Command="{Binding CheckoutCommand}"
+                                Content="Bayar Sekarang"
+                                IsEnabled="{Binding CanCheckout}"
+                                Style="{StaticResource Button.Primary}" />
                         </StackPanel>
                     </Border>
-
-                    <Button
-                        Margin="0,12,0,0"
-                        Height="44"
-                        Command="{Binding CheckoutCommand}"
-                        Content="Bayar Tunai"
-                        IsEnabled="{Binding CanCheckout}"
-                        Style="{StaticResource Button.Primary}" />
 
                     <TextBlock
                         Margin="0,8,0,0"
@@ -268,6 +280,12 @@
                         Text="{Binding ErrorMessage}"
                         TextWrapping="Wrap"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </Border>
         </Grid>
