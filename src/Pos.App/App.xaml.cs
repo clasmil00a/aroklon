@@ -96,6 +96,7 @@ public partial class App : Application
                     services.AddSingleton<PaymentTypeService>();
                     services.AddSingleton<DatabaseService>();
                     services.AddSingleton<ProductGroupService>();
+                    services.AddSingleton<ReportsService>();
                     services.AddSingleton<ThemeService>();
                     services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })

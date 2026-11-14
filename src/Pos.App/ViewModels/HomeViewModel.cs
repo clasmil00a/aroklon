@@ -56,7 +56,8 @@ public sealed partial class HomeViewModel : ObservableObject
             new("Tutup hari", "Hitung kas, cetak laporan Z, lalu tutup register.", "S35", "M4"),
             new("Grup produk", "Kelola grup produk untuk katalog (S43 · M8).", "S43", "M8"),
             new("Manajemen", "Produk, stok, pelanggan, harga, dan laporan.", "management", "S14"),
-            new("Pengaturan", "Tema, perilaku kasir, cetak, dan database.", "settings", "S27")
+            new("Pengaturan", "Tema, perilaku kasir, cetak, dan database.", "settings", "S27"),
+            new("Laporan", "Laporan penjualan, stok, dan kasir.", "S44", "M8"),
         ];
 
         StatusItems =

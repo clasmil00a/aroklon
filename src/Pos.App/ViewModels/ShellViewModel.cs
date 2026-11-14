@@ -53,6 +53,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private ProductGroupViewModel? _productGroup;
     private ProductGroupService _productGroupService;
     private readonly SettingsService _settingsService;
+    private readonly ReportsService _reportsService;
+
+    private ReportsViewModel? _reportsViewModel;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -81,7 +84,8 @@ public sealed partial class ShellViewModel : ObservableObject
         AdminUserService users,
         DatabaseService database,
         ProductGroupService productGroupService,
-        SettingsService settings)
+        SettingsService settings,
+        ReportsService reportsService)
     {
         Session = session;
         _company = company;
@@ -104,6 +108,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _database = database;
         _productGroupService = productGroupService;
         _settingsService = settings;
+        _reportsService = reportsService;
+        _reportsService = reportsService;
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
@@ -337,6 +343,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _productGroup ??= new ProductGroupViewModel(_productGroupService);
                 _productGroup.BackRequested += () => Navigate("home");
                 CurrentPage = _productGroup;
+                ActiveRoute = "home";
+                break;
+
+            case "S44":
+                _reportsViewModel ??= new ReportsViewModel(_reportsService);
+                _reportsViewModel.BackRequested += () => Navigate("home");
+                CurrentPage = _reportsViewModel;
                 ActiveRoute = "home";
                 break;
 
