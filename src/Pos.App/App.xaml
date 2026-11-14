@@ -40,6 +40,10 @@
                 <views:SettingsView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:ProductGroupViewModel}">
+                <views:ProductGroupView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:CustomerSelectionViewModel}">
                 <views:CustomerSelectionView />
             </DataTemplate>

@@ -1,0 +1,158 @@
+<UserControl
+    x:Class="Pos.App.Views.ProductGroupView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Grup Produk" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kelola grup produk untuk organisasi katalog (S43 · M8)." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S43 · M8" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Form -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Grup produk baru" />
+
+                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama grup" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Deskripsi (opsional)" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Urutan" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding SortOrder, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <CheckBox
+                        Margin="0,10,0,0"
+                        IsChecked="{Binding Active, Mode=TwoWay}"
+                        Content="Aktif" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Height="44"
+                        Command="{Binding SaveCommand}"
+                        Content="Simpan Grup"
+                        IsDefault="True"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <Button
+                        Margin="0,8,0,0"
+                        Command="{Binding CancelEditCommand}"
+                        Content="Batal"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- List -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Daftar grup produk" />
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding Description, TargetNullValue='—'}" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            Grid.Column="1"
+                                            IsChecked="{Binding Active, Mode=TwoWay}"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Segment}" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="Ubah"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Groups.Count, StringFormat='{}{0} grup produk'}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke beranda"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

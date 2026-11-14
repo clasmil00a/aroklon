@@ -63,10 +63,30 @@
                         Margin="0,0,0,8"
                         Style="{StaticResource Text.Caption}"
                         Text="Cari produk (nama, kode, atau barcode)" />
-                    <TextBox
-                        x:Name="SearchBox"
-                        Style="{StaticResource Input}"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox
+                            x:Name="SearchBox"
+                            Style="{StaticResource Input}"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox
+                            Grid.Column="1"
+                            Width="200"
+                            Margin="8,0,0,0"
+                            Style="{StaticResource Input}"
+                            Text="{Binding BarcodeInput, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button
+                            Grid.Column="1"
+                            Width="100"
+                            Height="44"
+                            Margin="8,0,0,0"
+                            Command="{Binding ScanBarcodeAsyncCommand}"
+                            Content="Scan"
+                            Style="{StaticResource Button.Primary}" />
+                    </Grid>
                     <TextBlock
                         Margin="0,8,0,0"
                         Style="{StaticResource Text.Secondary}"
@@ -270,6 +290,28 @@
                                     </ItemsControl>
                                 </StackPanel>
                             </Border>
+
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Pembayaran cepat" />
+                            <ItemsControl ItemsSource="{Binding QuickPayAmounts}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                            Width="100"
+                                            Height="56"
+                                            Margin="0,0,8,8"
+                                            Command="{Binding DataContext.QuickAddPaymentAmountCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Secondary}">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Converter={x:Static Binding.DoNothing}, ConverterParameter='Rp {0:N0}'}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Pembayaran terpilih" />
                             <ItemsControl ItemsSource="{Binding SelectedPayments}">

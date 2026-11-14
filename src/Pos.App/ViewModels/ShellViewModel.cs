@@ -50,6 +50,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private DatabaseViewModel? _databaseView;
     private VisualWorkspaceViewModel? _visualWorkspace;
 
+    private ProductGroupViewModel? _productGroup;
+    private ProductGroupService _productGroupService;
+    private readonly SettingsService _settingsService;
+
     [ObservableProperty]
     private object? _currentPage;
 
@@ -75,7 +79,9 @@ public sealed partial class ShellViewModel : ObservableObject
         EndOfDayService endOfDay,
         PaymentTypeService paymentTypes,
         AdminUserService users,
-        DatabaseService database)
+        DatabaseService database,
+        ProductGroupService productGroupService,
+        SettingsService settings)
     {
         Session = session;
         _company = company;
@@ -96,6 +102,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _paymentTypes = paymentTypes;
         _users = users;
         _database = database;
+        _productGroupService = productGroupService;
+        _settingsService = settings;
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
@@ -172,7 +180,8 @@ public sealed partial class ShellViewModel : ObservableObject
                     _backups,
                     _databaseOptions,
                     _databaseInfo,
-                    _company);
+                    _company,
+                    _settingsService);
                 CurrentPage = _settings;
                 ActiveRoute = "settings";
                 break;
@@ -321,6 +330,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _databaseView ??= new DatabaseViewModel(_database, _backups);
                 _databaseView.BackRequested += () => Navigate("home");
                 CurrentPage = _databaseView;
+                ActiveRoute = "home";
+                break;
+
+            case "S43":
+                _productGroup ??= new ProductGroupViewModel(_productGroupService);
+                _productGroup.BackRequested += () => Navigate("home");
+                CurrentPage = _productGroup;
                 ActiveRoute = "home";
                 break;
 

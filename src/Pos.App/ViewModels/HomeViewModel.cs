@@ -54,6 +54,7 @@ public sealed partial class HomeViewModel : ObservableObject
             new("Kas masuk/keluar", "Catat uang masuk dan keluar dari laci kas.", "S31", "M4"),
             new("Refund", "Refund transaksi dan kembalikan stok.", "S34", "M4"),
             new("Tutup hari", "Hitung kas, cetak laporan Z, lalu tutup register.", "S35", "M4"),
+            new("Grup produk", "Kelola grup produk untuk katalog (S43 · M8).", "S43", "M8"),
             new("Manajemen", "Produk, stok, pelanggan, harga, dan laporan.", "management", "S14"),
             new("Pengaturan", "Tema, perilaku kasir, cetak, dan database.", "settings", "S27")
         ];

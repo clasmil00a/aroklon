@@ -198,6 +198,18 @@
                                     <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding DatabaseSize}" />
                                 </Grid>
 
+                                <Border Margin="0,12,0,0" Padding="10" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderInput}" BorderThickness="{StaticResource Border.Width}" CornerRadius="{StaticResource Radius.Sm}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Perilaku stok" />
+                                        <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.Secondary}" Text="Kontrol apakah penjualan dapat dilakukan saat stok tidak mencukupi." TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Margin="0,0,0,0"
+                                            IsChecked="{Binding NegativeStockBlock, Mode=TwoWay}"
+                                            Content="Blokir penjualan jika stok tidak mencukupi" />
+                                        <TextBlock Margin="0,4,0,0" Style="{StaticResource Text.Caption}" Text="Jika dicentang, penjualan akan diblokir jika stok tidak cukup. Jika tidak dicentang, penjualan masih dapat dilakukan meskipun stok negatif." TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
                                 <TextBlock Margin="0,0,0,4" Style="{StaticResource Text.Caption}" Text="Folder cadangan" />
                                 <TextBlock
                                     Margin="0,0,0,16"

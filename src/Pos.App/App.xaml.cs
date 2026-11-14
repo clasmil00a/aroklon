@@ -95,7 +95,9 @@ public partial class App : Application
                     services.AddSingleton<EndOfDayService>();
                     services.AddSingleton<PaymentTypeService>();
                     services.AddSingleton<DatabaseService>();
-                    services.AddSingleton<ThemeService>();                    services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
+                    services.AddSingleton<ProductGroupService>();
+                    services.AddSingleton<ThemeService>();
+                    services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })
                 .Build();
 

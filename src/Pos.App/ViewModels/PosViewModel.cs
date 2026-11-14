@@ -22,6 +22,9 @@ public sealed partial class PosViewModel : ObservableObject
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    private string _barcodeInput = string.Empty;
+
+    [ObservableProperty]
     private ObservableCollection<ProductLookup> _searchResults = new();
 
     [ObservableProperty]
@@ -61,6 +64,12 @@ public sealed partial class PosViewModel : ObservableObject
 
     [ObservableProperty]
     private string _infoMessage = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<long> _quickPayAmounts = new()
+    {
+        10000, 25000, 50000, 100000, 200000
+    };
 
     private UserSession? _session;
 
@@ -179,6 +188,48 @@ public sealed partial class PosViewModel : ObservableObject
         {
             Log.Error(exception, "Product search failed");
             ErrorMessage = "Pencarian produk gagal. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateCanCheckout();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ScanBarcodeAsync()
+    {
+        if (IsBusy) return;
+        ErrorMessage = string.Empty;
+        IsBusy = true;
+        UpdateCanCheckout();
+        try
+        {
+            var barcode = BarcodeInput?.Trim();
+            if (string.IsNullOrEmpty(barcode))
+            {
+                ErrorMessage = "Barcode kosong. Silakan scan atau ketik barcode.";
+                return;
+            }
+
+            var product = await _products.FindByBarcodeAsync(barcode);
+            if (product is null)
+            {
+                ErrorMessage = $"Barcode '{barcode}' tidak ditemukan.";
+                return;
+            }
+
+            var line = _cart.Add(product, 1);
+            ReplaceOrAddLine(line);
+            Recalculate();
+            BarcodeInput = string.Empty;
+            SearchText = string.Empty;
+            SearchResults = new ObservableCollection<ProductLookup>();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Barcode scan failed");
+            ErrorMessage = "Pindai barcode gagal. Coba lagi.";
         }
         finally
         {
@@ -315,6 +366,45 @@ public sealed partial class PosViewModel : ObservableObject
         if (SelectedPayments.Any(p => p.PaymentTypeId == type.Id)) return;
 
         var vm = new PaymentSelectionViewModel(type);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PaymentSelectionViewModel.AmountMinor))
+            {
+                OnPropertyChanged(nameof(TotalTendered));
+                UpdateCanCheckout();
+            }
+        };
+        SelectedPayments.Add(vm);
+        UpdateCanCheckout();
+    }
+
+    [RelayCommand]
+    private void QuickAddPaymentAmount(long amount)
+    {
+        if (IsBusy) return;
+
+        // Find first payment type that is MarkAsPaid (cash-type), default to first payment type
+        var paymentType = SelectedPayments.FirstOrDefault()?.PaymentTypeId;
+        if (paymentType == null && _paymentTypes.Count > 0)
+        {
+            paymentType = _paymentTypes.First().Id;
+        }
+
+        if (paymentType == null) return;
+
+        // Don't add duplicate payment type entries with same type
+        var existing = SelectedPayments.FirstOrDefault(p => p.PaymentTypeId == paymentType);
+        if (existing != null)
+        {
+            // Add to existing amount
+            existing.AmountMinor += amount;
+            OnPropertyChanged(nameof(TotalTendered));
+            UpdateCanCheckout();
+            return;
+        }
+
+        var vm = new PaymentSelectionViewModel(_paymentTypes.FirstOrDefault(p => p.Id == paymentType) ?? _paymentTypes.FirstOrDefault());
+        vm.AmountMinor = amount;
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(PaymentSelectionViewModel.AmountMinor))

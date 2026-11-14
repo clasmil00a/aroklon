@@ -28,6 +28,9 @@ public sealed partial class AppShellViewModel : ObservableObject
     private readonly AdminUserService _users;
     private readonly DatabaseService _database;
 
+    private readonly ProductGroupService _productGroupService;
+    private readonly SettingsService _settings;
+
     private CompanyInfo? _company;
 
     [ObservableProperty]
@@ -53,7 +56,9 @@ public sealed partial class AppShellViewModel : ObservableObject
         EndOfDayService endOfDay,
         PaymentTypeService paymentTypes,
         AdminUserService users,
-        DatabaseService database)
+        DatabaseService database,
+        ProductGroupService productGroupService,
+        SettingsService settings)
     {
         _auth = auth;
         _theme = theme;
@@ -72,6 +77,8 @@ public sealed partial class AppShellViewModel : ObservableObject
         _paymentTypes = paymentTypes;
         _users = users;
         _database = database;
+        _productGroupService = productGroupService;
+        _settings = settings;
     }
 
     public async Task InitializeAsync()
@@ -157,7 +164,9 @@ public sealed partial class AppShellViewModel : ObservableObject
             _endOfDay,
             _paymentTypes,
             _users,
-            _database);
+            _database,
+            _productGroupService,
+            _settings);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
         shell.FullScreenRequested += (_, _) => ToggleFullScreen();

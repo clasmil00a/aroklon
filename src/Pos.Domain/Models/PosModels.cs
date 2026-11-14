@@ -259,6 +259,28 @@ public sealed record ReceiptActionResult(
     string? FilePath,
     string? Message);
 
+/// <summary>Grup produk (S43 - M8).</summary>
+public sealed record ProductGroup(
+    string Id,
+    string Name,
+    string? Description,
+    int SortOrder,
+    bool Active);
+
+/// <summary>Permintaan membuat grup produk.</summary>
+public sealed record ProductGroupCreateRequest(
+    string Name,
+    string? Description,
+    int SortOrder,
+    bool Active);
+
+/// <summary>Permintaan mengubah grup produk.</summary>
+public sealed record ProductGroupUpdateRequest(
+    string? Name,
+    string? Description,
+    int? SortOrder,
+    bool? Active);
+
 /// <summary>Data untuk resume pesanan terbuka (S12).</summary>
 public sealed record OpenOrderResumeData(
     string SaleId,

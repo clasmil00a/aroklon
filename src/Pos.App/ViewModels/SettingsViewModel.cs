@@ -18,6 +18,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly BackupService _backups;
     private readonly DatabaseOptions _databaseOptions;
     private readonly DatabaseInfo _databaseInfo;
+    private readonly SettingsService _settings;
 
     private bool _isDarkTheme;
     private bool _isLightTheme;
@@ -31,19 +32,37 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _databaseSize = string.Empty;
 
+    private bool _negativeStockBlock = true;
+
+    public bool NegativeStockBlock
+    {
+        get => _negativeStockBlock;
+        set
+        {
+            if (_negativeStockBlock != value)
+            {
+                _negativeStockBlock = value;
+                OnPropertyChanged(nameof(NegativeStockBlock));
+                _ = _settings.SetAsync("pos.negative_stock", value ? "block" : "allow");
+            }
+        }
+    }
+
     public SettingsViewModel(
         ThemeService theme,
         UserPreferencesService preferences,
         BackupService backups,
         DatabaseOptions databaseOptions,
         DatabaseInfo databaseInfo,
-        CompanyInfo company)
+        CompanyInfo company,
+        SettingsService settings)
     {
         _theme = theme;
         _preferences = preferences;
         _backups = backups;
         _databaseOptions = databaseOptions;
         _databaseInfo = databaseInfo;
+        _settings = settings;
 
         ShopName = company.Name;
         CurrencyLabel = company.Currency == "IDR"
@@ -57,6 +76,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         SchemaVersionText = "Versi " + databaseInfo.SchemaVersion;
         AppVersion = AppInfo.Version;
         RefreshDatabaseSize();
+
+        var negativeStockJson = _settings.GetAsync("pos.negative_stock").Result;
+        _negativeStockBlock = string.IsNullOrWhiteSpace(negativeStockJson) || negativeStockJson != "allow";
 
         var preferencesValue = preferences.Load();
         if (preferencesValue.Theme == "light")
