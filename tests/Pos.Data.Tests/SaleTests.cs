@@ -81,8 +81,7 @@ public sealed class SaleTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 3_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            50_000,
+            [new PaymentInput("pmt-cash", 50_000)],
             ParkedSaleId: parked.SaleId));
 
         // Same request id, sale already closed -> existing sale returned.
@@ -91,8 +90,7 @@ public sealed class SaleTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 3_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            50_000,
+            [new PaymentInput("pmt-cash", 50_000)],
             ClientRequestId: clientRequest,
             ParkedSaleId: parked.SaleId));
 
@@ -130,8 +128,7 @@ public sealed class SaleTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 2_500, null,
                     DiscountKind.Percent, 1000)
             ],
-            "pmt-cash",
-            30_000));
+            [new PaymentInput("pmt-cash", 30_000)]));
 
         var history = await _db.Sale.ListAsync(new SaleFilter { Limit = 10 });
         Assert.Single(history);
@@ -161,8 +158,7 @@ public sealed class SaleTests : IAsyncLifetime
                     new SaleLineInput(_productId, _unitId, 50_000, null,
                         DiscountKind.None, 0)
                 ],
-                "pmt-cash",
-                100_000)));
+                [new PaymentInput("pmt-cash", 100_000)])));
     }
 
     [Fact]
@@ -228,8 +224,7 @@ public sealed class SaleTests : IAsyncLifetime
         var result = await _db.Sale.CheckoutAsync(new CheckoutRequest(
             [new SaleLineInput(_productId, _unitId, 10_000, null,
                 DiscountKind.None, 0)],
-            "pmt-cash",
-            200_000));
+            [new PaymentInput("pmt-cash", 200_000)]));
 
         Assert.Equal("closed", result.Status);
     }
@@ -243,6 +238,7 @@ public sealed class SaleTaxTests : IAsyncLifetime
     private string _taxRateId = null!;
 
     public Task InitializeAsync() => SetUpAsync();
+
     public async Task DisposeAsync() => await _db.DisposeAsync();
 
     private async Task SetUpAsync()
@@ -280,8 +276,7 @@ public sealed class SaleTaxTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 10_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            150_000));
+            [new PaymentInput("pmt-cash", 150_000)]));
 
         Assert.Equal("closed", result.Status);
         // 10 * 12_000 = 120_000 gross, tax 11% = 13_200, total = 133_200
@@ -298,8 +293,7 @@ public sealed class SaleTaxTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 10_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            130_000,
+            [new PaymentInput("pmt-cash", 130_000)],
             CartDiscountKind: DiscountKind.Percent,
             CartDiscountValue: 1000)); // 10% cart discount
 
@@ -318,8 +312,7 @@ public sealed class SaleTaxTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 5_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            100_000));
+            [new PaymentInput("pmt-cash", 100_000)]));
 
         var history = await _db.Sale.ListAsync(new SaleFilter { Limit = 10 });
         Assert.Single(history);
@@ -340,8 +333,7 @@ public sealed class SaleTaxTests : IAsyncLifetime
                 new SaleLineInput(_productId, _unitId, 10_000, null,
                     DiscountKind.None, 0)
             ],
-            "pmt-cash",
-            150_000));
+            [new PaymentInput("pmt-cash", 150_000)]));
 
         var history = await _db.Sale.ListAsync(new SaleFilter { Limit = 10 });
         var detail = await _db.Sale.GetAsync(history[0].Id);
@@ -367,6 +359,7 @@ public sealed class SaleTaxDebugTests : IAsyncLifetime
     private string _taxRateId = null!;
 
     public Task InitializeAsync() => SetUpAsync();
+
     public async Task DisposeAsync() => await _db.DisposeAsync();
 
     private async Task SetUpAsync()
@@ -410,7 +403,7 @@ public sealed class SaleTaxDebugTests : IAsyncLifetime
                 "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
                 new { id = rateId })
             : 0;
-        
+
         Assert.Equal(_taxRateId, rateId);
         Assert.Equal(1100, rateBp);
     }

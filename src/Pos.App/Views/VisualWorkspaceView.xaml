@@ -1,0 +1,374 @@
+<UserControl
+    x:Class="Pos.App.Views.VisualWorkspaceView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Top bar -->
+        <Border Grid.Row="0" Padding="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button
+                    Grid.Column="0"
+                    Margin="0,0,12,0"
+                    Command="{Binding GoBackCommand}"
+                    Content="← Beranda"
+                    Style="{StaticResource Button.Ghost}" />
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Text.PageTitle}" Text="Penjualan (Visual)" />
+                    <TextBlock Style="{StaticResource Text.Caption}" Text="Tata letak sentuh untuk transaksi cepat." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                    <Button
+                        Margin="0,0,8,0"
+                        Command="{Binding SelectCustomerCommand}"
+                        Content="{Binding CustomerLabel}"
+                        Style="{StaticResource Button.Ghost}" />
+                    <Button
+                        Command="{Binding ClearCustomerCommand}"
+                        Content="×"
+                        Style="{StaticResource Button.Ghost}" />
+                    <TextBlock
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding Totals.TotalMinor, StringFormat='Rp {0:N0}'}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Product groups + product grid -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Grup produk" />
+
+                    <ItemsControl ItemsSource="{Binding ProductGroups}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button
+                                    Width="120"
+                                    MinHeight="100"
+                                    Margin="0,0,8,8"
+                                    Command="{Binding DataContext.SelectProductGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource Button.Tile}">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding Name}"
+                                            TextWrapping="Wrap"
+                                            MaxHeight="48" />
+                                        <TextBlock
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="{Binding GroupName, TargetNullValue='Produk'}" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,8"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Produk" />
+                            <ItemsControl ItemsSource="{Binding ProductList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                            Width="120"
+                                            MinHeight="100"
+                                            Margin="0,0,8,8"
+                                            Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Tile}">
+                                            <StackPanel>
+                                                <TextBlock
+                                                    Style="{StaticResource Text.BodyStrong}"
+                                                    Text="{Binding Name}"
+                                                    TextWrapping="Wrap"
+                                                    MaxHeight="48" />
+                                                <TextBlock
+                                                    Style="{StaticResource Text.Secondary}"
+                                                    Text="{Binding PriceMinor, StringFormat='Rp {0:N0}'}" />
+                                                <TextBlock
+                                                    Style="{StaticResource Text.Caption}"
+                                                    Text="{Binding UnitName}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock
+                                Margin="0,8,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="{Binding Products.Count, StringFormat='{}{0} produk'}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Right: Cart + Payment -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <!-- Cart -->
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Keranjang belanja" />
+                    <ItemsControl ItemsSource="{Binding Lines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="8"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding UnitName}" />
+                                        </StackPanel>
+
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            Orientation="Horizontal">
+                                            <Button
+                                                Width="28"
+                                                Height="28"
+                                                Command="{Binding DataContext.DecreaseLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="−"
+                                                Style="{StaticResource Button.Ghost}" />
+                                            <TextBlock
+                                                Margin="6,0"
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource Text.Body}"
+                                                Text="{Binding QtyMilli, StringFormat='{}{0:0.###}'}" />
+                                            <Button
+                                                Width="28"
+                                                Height="28"
+                                                Margin="6,0,0,0"
+                                                Command="{Binding DataContext.IncreaseLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="+"
+                                                Style="{StaticResource Button.Ghost}" />
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding TotalMinor, StringFormat='Rp {0:N0}'}" />
+
+                                        <Button
+                                            Grid.Column="3"
+                                            Width="28"
+                                            Height="28"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="×"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Lines.Count, StringFormat='{}{0} baris'}" />
+
+                    <Border
+                        Height="1"
+                        Margin="0,12"
+                        Background="{DynamicResource Brush.Border}" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Subtotal" />
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Diskon" />
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Pajak" />
+                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="Total" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Style="{StaticResource Text.Body}" Text="{Binding Totals.SubtotalMinor, StringFormat='Rp {0:N0}'}" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="-{Binding Totals.DiscountMinor, StringFormat='Rp {0:N0}'}" />
+                            <TextBlock Style="{StaticResource Text.Secondary}" Text="{Binding Totals.TaxMinor, StringFormat='Rp {0:N0}'}" />
+                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Totals.TotalMinor, StringFormat='Rp {0:N0}'}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Payment -->
+                    <Border Margin="0,12,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                        <StackPanel>
+                            <TextBlock
+                                Margin="0,0,0,8"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Pembayaran" />
+                            <TextBlock
+                                Margin="0,0,0,6"
+                                Style="{StaticResource Text.Caption}"
+                                Text="Tipe pembayaran" />
+                            <ItemsControl ItemsSource="{Binding PaymentTypes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                            Width="150"
+                                            MinHeight="60"
+                                            Margin="0,0,8,8"
+                                            Command="{Binding DataContext.AddPaymentTypeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Tile}">
+                                            <StackPanel>
+                                                <TextBlock
+                                                    Style="{StaticResource Text.BodyStrong}"
+                                                    Text="{Binding Name}"
+                                                    TextWrapping="Wrap"
+                                                    MaxHeight="40" />
+                                                <TextBlock
+                                                    Style="{StaticResource Text.Caption}"
+                                                    Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <TextBlock
+                                Margin="0,10,0,6"
+                                Style="{StaticResource Text.SectionTitle}"
+                                Text="Pembayaran terpilih" />
+                            <ItemsControl ItemsSource="{Binding SelectedPayments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,0,0,6"
+                                            Padding="8"
+                                            Background="{DynamicResource Brush.Surface}"
+                                            BorderBrush="{DynamicResource Brush.BorderInput}"
+                                            BorderThickness="{StaticResource Border.Width}"
+                                            CornerRadius="{StaticResource Radius.Sm}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding PaymentTypeName}" />
+                                                    <TextBlock
+                                                        Style="{StaticResource Text.Caption}"
+                                                        Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                                </StackPanel>
+                                                <TextBox
+                                                    Grid.Column="1"
+                                                    Width="100"
+                                                    Style="{StaticResource Input}"
+                                                    Text="{Binding AmountMinor, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button
+                                                    Grid.Column="2"
+                                                    Width="28"
+                                                    Height="28"
+                                                    Command="{Binding DataContext.RemovePaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="×"
+                                                    Style="{StaticResource Button.Ghost}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Total pembayaran" />
+                            <TextBlock
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding SelectedPayments, Converter={x:Static Binding.DoNothing}, ConverterParameter='total', TargetNullValue='Rp 0'}" />
+
+                            <Button
+                                Margin="0,16,0,0"
+                                Height="56"
+                                Command="{Binding CheckoutCommand}"
+                                Content="Bayar Sekarang"
+                                IsEnabled="{Binding CanCheckout}"
+                                Style="{StaticResource Button.Primary}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

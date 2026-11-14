@@ -112,6 +112,10 @@
                 <views:EndOfDayView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:VisualWorkspaceViewModel}">
+                <views:VisualWorkspaceView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>

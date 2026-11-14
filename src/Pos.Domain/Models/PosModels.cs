@@ -57,10 +57,14 @@ public sealed record ParkSaleRequest(
     string? Note,
     string? ClientRequestId = null);
 
+/// <summary>Satu pembayaran dalam pembayaran terpisah (split payment).</summary>
+public sealed record PaymentInput(
+    string PaymentTypeId,
+    long AmountMinor);
+
 public sealed record CheckoutRequest(
     IReadOnlyList<SaleLineInput> Lines,
-    string PaymentTypeId,
-    long TenderedMinor,
+    IReadOnlyList<PaymentInput> Payments,
     string? CustomerId = null,
     string? Note = null,
     string? ClientRequestId = null,

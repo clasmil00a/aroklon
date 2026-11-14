@@ -55,13 +55,9 @@ public sealed partial class PosViewModel : ObservableObject
     private ObservableCollection<PaymentTypeInfo> _paymentTypes = new();
 
     [ObservableProperty]
-    private PaymentTypeInfo? _selectedPaymentType;
+    private ObservableCollection<PaymentSelectionViewModel> _selectedPayments = new();
 
-    [ObservableProperty]
-    private long _tenderedAmount;
-
-    [ObservableProperty]
-    private long _changeAmount;
+    public long TotalTendered => _selectedPayments.Sum(p => p.AmountMinor);
 
     [ObservableProperty]
     private string _infoMessage = string.Empty;
@@ -85,10 +81,17 @@ public sealed partial class PosViewModel : ObservableObject
                 Recalculate();
                 UpdateCanCheckout();
             }
-            else if (e.PropertyName is nameof(TenderedAmount))
+            else if (e.PropertyName is nameof(SelectedPayments))
             {
-                UpdateChange();
+                OnPropertyChanged(nameof(TotalTendered));
+                UpdateCanCheckout();
             }
+        };
+
+        _selectedPayments.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(TotalTendered));
+            UpdateCanCheckout();
         };
 
         _ = LoadPaymentTypesAsync();
@@ -118,32 +121,21 @@ public sealed partial class PosViewModel : ObservableObject
 
     public event Action? BackRequested;
 
-    [RelayCommand]
-    private void GoBack() => BackRequested?.Invoke();
-
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsNotBusy => !IsBusy;
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
-    private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0;
+    private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0 && _selectedPayments.Count > 0;
 
-    private void UpdateChange()
-    {
-        ChangeAmount = TenderedAmount > Totals.TotalMinor
-            ? TenderedAmount - Totals.TotalMinor
-            : 0;
-    }
+    [RelayCommand]
+    private void GoBack() => BackRequested?.Invoke();
 
     [RelayCommand]
     private async Task LoadPaymentTypesAsync()
     {
-        if (IsBusy)
-        {
-            return;
-        }
-
+        if (IsBusy) return;
         IsBusy = true;
         try
         {
@@ -154,7 +146,10 @@ public sealed partial class PosViewModel : ObservableObject
             var defaultType = types.FirstOrDefault(t => t.IsDefault) ?? types.FirstOrDefault();
             if (defaultType is not null)
             {
-                SelectedPaymentType = defaultType;
+                SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>
+                {
+                    new(defaultType)
+                };
             }
         }
         catch (Exception exception)
@@ -171,11 +166,7 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchAsync()
     {
-        if (IsBusy)
-        {
-            return;
-        }
-
+        if (IsBusy) return;
         ErrorMessage = string.Empty;
         IsBusy = true;
         UpdateCanCheckout();
@@ -199,11 +190,7 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private void AddToCart(ProductLookup? product)
     {
-        if (product is null || IsBusy)
-        {
-            return;
-        }
-
+        if (product is null || IsBusy) return;
         ErrorMessage = string.Empty;
         try
         {
@@ -257,10 +244,7 @@ public sealed partial class PosViewModel : ObservableObject
 
     private void ChangeQuantity(CartLineViewModel? line, long delta)
     {
-        if (line is null || IsBusy)
-        {
-            return;
-        }
+        if (line is null || IsBusy) return;
 
         var newQty = line.QtyMilli + delta;
         if (newQty <= 0)
@@ -278,11 +262,7 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private void RemoveLine(CartLineViewModel? line)
     {
-        if (line is null)
-        {
-            return;
-        }
-
+        if (line is null) return;
         _cart.Remove(line.LineId);
         RefreshLines();
         Recalculate();
@@ -297,10 +277,7 @@ public sealed partial class PosViewModel : ObservableObject
 
     private void SetLineUnit(CartLineViewModel? line, string productUnitId, string unitName, long factor, long price)
     {
-        if (line is null || IsBusy)
-        {
-            return;
-        }
+        if (line is null || IsBusy) return;
 
         ErrorMessage = string.Empty;
         try
@@ -330,26 +307,54 @@ public sealed partial class PosViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void AddPaymentType(PaymentTypeInfo? type)
+    {
+        if (type is null || IsBusy) return;
+
+        // Don't add duplicate payment type
+        if (SelectedPayments.Any(p => p.PaymentTypeId == type.Id)) return;
+
+        var vm = new PaymentSelectionViewModel(type);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PaymentSelectionViewModel.AmountMinor))
+            {
+                OnPropertyChanged(nameof(TotalTendered));
+                UpdateCanCheckout();
+            }
+        };
+        SelectedPayments.Add(vm);
+        UpdateCanCheckout();
+    }
+
+    [RelayCommand]
+    private void RemovePayment(PaymentSelectionViewModel? payment)
+    {
+        if (payment is null) return;
+        SelectedPayments.Remove(payment);
+        UpdateCanCheckout();
+    }
+
+    [RelayCommand]
     private async Task CheckoutAsync()
     {
-        if (IsBusy || _cart.Lines.Count == 0)
+        if (IsBusy || _cart.Lines.Count == 0) return;
+
+        if (SelectedPayments.Count == 0)
         {
+            ErrorMessage = "Minimal satu pembayaran wajib dipilih.";
             return;
         }
 
-        if (SelectedPaymentType is null)
+        var totalTendered = SelectedPayments.Sum(p => p.AmountMinor);
+        if (totalTendered < Totals.TotalMinor)
         {
-            ErrorMessage = "Tipe pembayaran wajib dipilih.";
+            ErrorMessage = "Jumlah pembayaran kurang dari total transaksi.";
             return;
         }
 
-        if (SelectedPaymentType.MarkAsPaid && TenderedAmount < Totals.TotalMinor)
-        {
-            ErrorMessage = "Jumlah tunai kurang dari total transaksi.";
-            return;
-        }
-
-        if (!SelectedPaymentType.MarkAsPaid && SelectedCustomer is null)
+        var creditPayments = SelectedPayments.Where(p => !p.PaymentType.MarkAsPaid).ToList();
+        if (creditPayments.Any() && SelectedCustomer is null)
         {
             ErrorMessage = "Pembayaran kredit memerlukan pelanggan.";
             return;
@@ -370,8 +375,9 @@ public sealed partial class PosViewModel : ObservableObject
                     line.DiscountValue,
                     null,
                     line.Comment)).ToList(),
-                SelectedPaymentType.Id,
-                TenderedAmount,
+                SelectedPayments.Select(p => new PaymentInput(
+                    p.PaymentTypeId,
+                    p.AmountMinor)).ToList(),
                 CustomerId: SelectedCustomer?.Id,
                 CartDiscountKind: CartDiscountKind,
                 CartDiscountValue: CartDiscountValue);
@@ -392,8 +398,7 @@ public sealed partial class PosViewModel : ObservableObject
             CustomerLabel = "Pelanggan (umum)";
             CartDiscountKind = DiscountKind.None;
             CartDiscountValue = 0;
-            TenderedAmount = 0;
-            ChangeAmount = 0;
+            SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>();
             Recalculate();
         }
         catch (PosException exception)
@@ -419,9 +424,6 @@ public sealed partial class PosViewModel : ObservableObject
             var detail = await _sales.GetAsync(result.SaleId);
             var document = await _sales.GetReceiptAsync(detail.Id);
             var text = SaleService.RenderReceipt(document);
-
-            // For now, show receipt text in error/info area and log it.
-            // Full print/email/PDF actions (S11) are wired via ReceiptView.
             Log.Information("Receipt for {Number}:\n{Receipt}", result.Number, text);
             InfoMessage = "Struk telah dicetak. Lihat riwayat penjualan untuk detail.";
         }

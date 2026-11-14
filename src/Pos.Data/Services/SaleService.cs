@@ -141,14 +141,17 @@ public sealed class SaleService
         RequirePermission(session, PermissionKeys.PosSell);
         ValidateLines(request.Lines);
 
-        if (string.IsNullOrWhiteSpace(request.PaymentTypeId))
+        if (request.Payments is null || request.Payments.Count == 0)
         {
-            throw new ValidationException(ErrorCodes.Validation, "Tipe pembayaran wajib dipilih.");
+            throw new ValidationException(ErrorCodes.Validation, "Minimal satu pembayaran wajib dipilih.");
         }
 
-        if (request.TenderedMinor < 0)
+        foreach (var payment in request.Payments)
         {
-            throw new ValidationException(ErrorCodes.Validation, "Jumlah pembayaran tidak boleh negatif.");
+            if (payment.AmountMinor < 0)
+            {
+                throw new ValidationException(ErrorCodes.Validation, "Jumlah pembayaran tidak boleh negatif.");
+            }
         }
 
         var now = _clock.UtcNow;
@@ -178,8 +181,6 @@ public sealed class SaleService
             var register = await GetRegisterAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             var customer = await GetCustomerAsync(
                 connection, transaction, request.CustomerId, cancellationToken).ConfigureAwait(false);
-            var paymentType = await GetPaymentTypeAsync(
-                connection, transaction, request.PaymentTypeId, cancellationToken).ConfigureAwait(false);
             var priceListId = customer?.PriceListId ?? register.DefaultPriceListId;
             var lines = await ResolveLinesAsync(
                 connection, transaction, request.Lines, priceListId, session, cancellationToken).ConfigureAwait(false);
@@ -199,40 +200,36 @@ public sealed class SaleService
                 StringComparison.OrdinalIgnoreCase);
             await EnsureStockAsync(connection, transaction, lines, allowNegativeStock, cancellationToken).ConfigureAwait(false);
 
-            long paid;
-            long change;
-            long balance;
+            // Process payments (split payment support).
+            long totalPaid = 0;
+            long totalChange = 0;
+            long totalBalance = 0;
+            var totalTendered = request.Payments.Sum(p => p.AmountMinor);
+
             if (totalWithCartDiscount == 0)
             {
-                paid = 0;
-                change = 0;
-                balance = 0;
+                totalPaid = 0;
+                totalChange = 0;
+                totalBalance = 0;
             }
-            else if (paymentType.MarkAsPaid)
+            else if (totalTendered >= totalWithCartDiscount)
             {
-                if (request.TenderedMinor < totalWithCartDiscount)
-                {
-                    throw new ValidationException(
-                        ErrorCodes.Validation,
-                        "Jumlah pembayaran kurang dari total transaksi.");
-                }
-
-                paid = totalWithCartDiscount;
-                change = request.TenderedMinor - totalWithCartDiscount;
-                balance = 0;
+                totalPaid = totalWithCartDiscount;
+                totalChange = totalTendered - totalWithCartDiscount;
+                totalBalance = 0;
             }
             else
             {
-                if (customer is null)
+                totalPaid = totalTendered;
+                totalChange = 0;
+                totalBalance = totalWithCartDiscount - totalTendered;
+
+                if (customer is null && totalBalance > 0)
                 {
                     throw new ValidationException(
                         ErrorCodes.Validation,
                         "Pembayaran kredit memerlukan pelanggan.");
                 }
-
-                paid = Math.Min(request.TenderedMinor, totalWithCartDiscount);
-                change = 0;
-                balance = totalWithCartDiscount - paid;
             }
 
             var businessDayId = await EnsureBusinessDayAsync(
@@ -280,9 +277,9 @@ public sealed class SaleService
                         discount = totalDiscount,
                         tax = totals.Tax,
                         total = totalWithCartDiscount,
-                        paid,
-                        change,
-                        balance,
+                        paid = totalPaid,
+                        change = totalChange,
+                        balance = totalBalance,
                         note = EmptyToNull(request.Note),
                         now = SqlText.Now(now)
                     },
@@ -345,9 +342,9 @@ public sealed class SaleService
                         discount = totalDiscount,
                         tax = totals.Tax,
                         total = totalWithCartDiscount,
-                        paid,
-                        change,
-                        balance,
+                        paid = totalPaid,
+                        change = totalChange,
+                        balance = totalBalance,
                         note = EmptyToNull(request.Note),
                         now = SqlText.Now(now)
                     },
@@ -384,11 +381,21 @@ public sealed class SaleService
                     cancellationToken: cancellationToken)).ConfigureAwait(false);
             }
 
-            var appliedPayment = paymentType.MarkAsPaid
-                ? Math.Min(request.TenderedMinor, totals.Total)
-                : paid;
-            if (appliedPayment > 0)
+            // Insert each payment with its allocated amount.
+            long remainingToApply = totalWithCartDiscount;
+            foreach (var payment in request.Payments)
             {
+                if (payment.AmountMinor <= 0) continue;
+                if (remainingToApply <= 0) continue;
+
+                var pt = await GetPaymentTypeAsync(
+                    connection, transaction, payment.PaymentTypeId, cancellationToken).ConfigureAwait(false);
+
+                var amountToApply = Math.Min(payment.AmountMinor, remainingToApply);
+                remainingToApply -= amountToApply;
+                var changeForThisPayment = payment.AmountMinor - amountToApply;
+                totalPaid += amountToApply;
+
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
                     INSERT INTO payments
@@ -402,10 +409,10 @@ public sealed class SaleService
                     {
                         id = Ids.NewId(),
                         saleId,
-                        paymentTypeId = paymentType.Id,
-                        amount = appliedPayment,
-                        tendered = request.TenderedMinor,
-                        change,
+                        paymentTypeId = payment.PaymentTypeId,
+                        amount = amountToApply,
+                        tendered = payment.AmountMinor,
+                        change = changeForThisPayment,
                         userId = session.UserId,
                         now = SqlText.Now(now)
                     },
@@ -441,7 +448,7 @@ public sealed class SaleService
                 "sale.completed",
                 "sale",
                 saleId,
-                new { number, total = totals.Total, paid, change, service = request.ParkedSaleId is not null },
+                new { number, total = totals.Total, paid = totalPaid, change = totalChange, service = request.ParkedSaleId is not null },
                 now,
                 cancellationToken).ConfigureAwait(false);
 
@@ -449,7 +456,7 @@ public sealed class SaleService
 
             return new SaleResult(
                 saleId, number, "closed", totals.Subtotal, totalDiscount, totals.Tax,
-                totalWithCartDiscount, paid, change, false);
+                totalWithCartDiscount, totalPaid, totalChange, false);
         }
         catch (SqliteException exception) when (
             exception.SqliteErrorCode == 19 &&

@@ -242,30 +242,84 @@
                                     <ItemsControl ItemsSource="{Binding PaymentTypes}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <RadioButton
-                                                    GroupName="PaymentType"
-                                                    IsChecked="{Binding DataContext.SelectedPaymentType, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    Content="{Binding Name}"
-                                                    Style="{StaticResource Segment}"
-                                                    Margin="0,2" />
+                                                <Button
+                                                    Width="150"
+                                                    MinHeight="60"
+                                                    Margin="0,0,8,8"
+                                                    Command="{Binding DataContext.AddPaymentTypeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource Button.Tile}">
+                                                    <StackPanel>
+                                                        <TextBlock
+                                                            Style="{StaticResource Text.BodyStrong}"
+                                                            Text="{Binding Name}"
+                                                            TextWrapping="Wrap"
+                                                            MaxHeight="40" />
+                                                        <TextBlock
+                                                            Style="{StaticResource Text.Caption}"
+                                                            Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                                    </StackPanel>
+                                                </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
                                     </ItemsControl>
                                 </StackPanel>
                             </Border>
 
-                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Diterima" />
-                            <TextBox
-                                Style="{StaticResource Input}"
-                                Text="{Binding TenderedAmount, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Pembayaran terpilih" />
+                            <ItemsControl ItemsSource="{Binding SelectedPayments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,0,0,6"
+                                            Padding="8"
+                                            Background="{DynamicResource Brush.Surface}"
+                                            BorderBrush="{DynamicResource Brush.BorderInput}"
+                                            BorderThickness="{StaticResource Border.Width}"
+                                            CornerRadius="{StaticResource Radius.Sm}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding PaymentTypeName}" />
+                                                    <TextBlock
+                                                        Style="{StaticResource Text.Caption}"
+                                                        Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                                </StackPanel>
+                                                <TextBox
+                                                    Grid.Column="1"
+                                                    Width="100"
+                                                    Style="{StaticResource Input}"
+                                                    Text="{Binding AmountMinor, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button
+                                                    Grid.Column="2"
+                                                    Width="28"
+                                                    Height="28"
+                                                    Command="{Binding DataContext.RemovePaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="×"
+                                                    Style="{StaticResource Button.Ghost}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Kembali" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Total pembayaran" />
                             <TextBlock
                                 Style="{StaticResource Text.BodyStrong}"
-                                Text="{Binding ChangeAmount, StringFormat='Rp {0:N0}'}" />
+                                Text="{Binding SelectedPayments, Converter={x:Static Binding.DoNothing}, ConverterParameter='total', TargetNullValue='Rp 0'}" />
 
                             <Button
-                                Margin="0,14,0,0"
+                                Margin="0,16,0,0"
                                 Height="44"
                                 Command="{Binding CheckoutCommand}"
                                 Content="Bayar Sekarang"

@@ -48,6 +48,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private PaymentTypeViewModel? _paymentType;
     private UserManagementViewModel? _userManagement;
     private DatabaseViewModel? _databaseView;
+    private VisualWorkspaceViewModel? _visualWorkspace;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -181,6 +182,14 @@ public sealed partial class ShellViewModel : ObservableObject
                 _pos.SetSession(Session);
                 _pos.BackRequested += () => Navigate("home");
                 CurrentPage = _pos;
+                ActiveRoute = "home";
+                break;
+
+            case "S03":
+                _visualWorkspace ??= new VisualWorkspaceViewModel(_products, _sales, _customers);
+                _visualWorkspace.SetSession(Session);
+                _visualWorkspace.BackRequested += () => Navigate("home");
+                CurrentPage = _visualWorkspace;
                 ActiveRoute = "home";
                 break;
 

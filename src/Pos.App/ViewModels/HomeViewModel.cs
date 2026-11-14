@@ -42,6 +42,7 @@ public sealed partial class HomeViewModel : ObservableObject
         MenuItems =
         [
             new("Kasir", "Mulai transaksi, cari produk, dan terima pembayaran.", "S02", "M1"),
+            new("Kasir visual", "Tata letak sentuh dengan grid produk.", "S03", "M7"),
             new("Riwayat penjualan", "Cari transaksi lama dan cetak ulang struk.", "S32", "M1"),
             new("Pesanan terbuka", "Lanjutkan transaksi yang ditahan sebelumnya.", "S12", "M1"),
             new("Struk", "Lihat, cetak, atau simpan struk transaksi.", "S11", "M5"),
