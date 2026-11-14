@@ -1,0 +1,191 @@
+<UserControl
+    x:Class="Pos.App.Views.UserManagementView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Pengguna &amp; Akses" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kelola pengguna dan izin akses (S25)." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S25 · M6" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Form -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Pengguna baru" />
+
+                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama pengguna" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Nama lengkap" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding NewFullName, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Kata sandi" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding NewPassword, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Role" />
+                    <ItemsControl ItemsSource="{Binding Roles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton
+                                    GroupName="UserRole"
+                                    IsChecked="{Binding DataContext.NewRoleId, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Content="{Binding Name}"
+                                    Style="{StaticResource Segment}"
+                                    Margin="0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <CheckBox
+                        Margin="0,10,0,0"
+                        IsChecked="{Binding NewActive, Mode=TwoWay}"
+                        Content="Aktif" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Height="44"
+                        Command="{Binding SaveCommand}"
+                        Content="Simpan Pengguna"
+                        IsDefault="True"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <Button
+                        Margin="0,8,0,0"
+                        Command="{Binding CancelEditCommand}"
+                        Content="Batal"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- List -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Daftar pengguna" />
+                    <ItemsControl ItemsSource="{Binding Users}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Username}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding FullName}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="{Binding RoleName}" />
+                                        <CheckBox
+                                            Grid.Column="2"
+                                            IsChecked="{Binding Active, Mode=TwoWay}"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Segment}" />
+                                        <Button
+                                            Grid.Column="3"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="Ubah"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Users.Count, StringFormat='{}{0} pengguna'}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke beranda"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

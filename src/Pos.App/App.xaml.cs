@@ -78,7 +78,11 @@ public partial class App : Application
                     services.AddSingleton<AuthService>();
                     services.AddSingleton<SettingsService>();
                     services.AddSingleton<CompanyService>();
-                    services.AddSingleton<AdminUserService>();
+                    services.AddSingleton<AdminUserService>(sp => new AdminUserService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IPasswordHasher>(),
+                        sp.GetRequiredService<IClock>()));
                     services.AddSingleton<BackupService>();
                     services.AddSingleton<ProductService>();
                     services.AddSingleton<SaleService>();
@@ -89,6 +93,8 @@ public partial class App : Application
                     services.AddSingleton<CashMovementService>();
                     services.AddSingleton<RefundService>();
                     services.AddSingleton<EndOfDayService>();
+                    services.AddSingleton<PaymentTypeService>();
+                    services.AddSingleton<DatabaseService>();
                     services.AddSingleton<ThemeService>();                    services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })
                 .Build();

@@ -1,0 +1,124 @@
+<UserControl
+    x:Class="Pos.App.Views.DatabaseView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Database &amp; Cadangan" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kesehatan database, cadangan, dan pemulihan (S38)." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S38 · M6" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Health -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Kesehatan database" />
+                    <TextBlock
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding Health.Connected, StringFormat='{}{0}'}" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="Skema: {Binding Health.SchemaVersion}" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="Integritas: {Binding Health.IntegrityOk}" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="Foreign keys: {Binding Health.ForeignKeysOk}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Command="{Binding RefreshCommand}"
+                        Content="Segarkan"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding Health.Error}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding Health.Error, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Backups -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Cadangan" />
+                    <ItemsControl ItemsSource="{Binding Backups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="8"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Path}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding Status}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.BodyStrong}"
+                                            Text="{Binding SizeBytes}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding Backups.Count, StringFormat='{}{0} cadangan'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

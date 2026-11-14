@@ -25,6 +25,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly CashMovementService _cashMovements;
     private readonly RefundService _refunds;
     private readonly EndOfDayService _endOfDay;
+    private readonly PaymentTypeService _paymentTypes;
+    private readonly AdminUserService _users;
+    private readonly DatabaseService _database;
 
     private HomeViewModel? _home;
     private ManagementViewModel? _management;
@@ -42,6 +45,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private EndOfDayViewModel? _endOfDayScreen;
     private OpenOrdersViewModel? _openOrders;
     private SalesHistoryViewModel? _salesHistory;
+    private PaymentTypeViewModel? _paymentType;
+    private UserManagementViewModel? _userManagement;
+    private DatabaseViewModel? _databaseView;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -65,7 +71,10 @@ public sealed partial class ShellViewModel : ObservableObject
         CustomerService customers,
         CashMovementService cashMovements,
         RefundService refunds,
-        EndOfDayService endOfDay)
+        EndOfDayService endOfDay,
+        PaymentTypeService paymentTypes,
+        AdminUserService users,
+        DatabaseService database)
     {
         Session = session;
         _company = company;
@@ -83,6 +92,9 @@ public sealed partial class ShellViewModel : ObservableObject
         _cashMovements = cashMovements;
         _refunds = refunds;
         _endOfDay = endOfDay;
+        _paymentTypes = paymentTypes;
+        _users = users;
+        _database = database;
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
@@ -279,6 +291,27 @@ public sealed partial class ShellViewModel : ObservableObject
                 _endOfDayScreen ??= new EndOfDayViewModel(_endOfDay, _sales);
                 _endOfDayScreen.BackRequested += () => Navigate("home");
                 CurrentPage = _endOfDayScreen;
+                ActiveRoute = "home";
+                break;
+
+            case "S24":
+                _paymentType ??= new PaymentTypeViewModel(_paymentTypes);
+                _paymentType.BackRequested += () => Navigate("home");
+                CurrentPage = _paymentType;
+                ActiveRoute = "home";
+                break;
+
+            case "S25":
+                _userManagement ??= new UserManagementViewModel(_users);
+                _userManagement.BackRequested += () => Navigate("home");
+                CurrentPage = _userManagement;
+                ActiveRoute = "home";
+                break;
+
+            case "S38":
+                _databaseView ??= new DatabaseViewModel(_database, _backups);
+                _databaseView.BackRequested += () => Navigate("home");
+                CurrentPage = _databaseView;
                 ActiveRoute = "home";
                 break;
 

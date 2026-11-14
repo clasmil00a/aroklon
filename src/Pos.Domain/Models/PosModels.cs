@@ -266,3 +266,87 @@ public sealed record OpenOrderResumeData(
     long TotalMinor,
     string? Note,
     IReadOnlyList<SaleLineInput> Lines);
+
+/// <summary>Ringkasan tipe pembayaran (S24).</summary>
+public sealed record PaymentTypeSummary(
+    string Id,
+    string Name,
+    string? Icon,
+    string? Shortcut,
+    bool MarkAsPaid,
+    bool IsDefault,
+    bool OpensCashDrawer,
+    bool Active,
+    int SortOrder);
+
+/// <summary>Permintaan membuat tipe pembayaran (S24).</summary>
+public sealed record PaymentTypeCreateRequest(
+    string Name,
+    string? Icon,
+    string? Shortcut,
+    bool MarkAsPaid,
+    bool IsDefault,
+    bool OpensCashDrawer,
+    int SortOrder);
+
+/// <summary>Permintaan mengubah tipe pembayaran (S24).</summary>
+public sealed record PaymentTypeUpdateRequest(
+    string? Name,
+    string? Icon,
+    string? Shortcut,
+    bool? MarkAsPaid,
+    bool? IsDefault,
+    bool? OpensCashDrawer,
+    bool? Active,
+    int? SortOrder);
+
+/// <summary>Ringkasan role pengguna (S25).</summary>
+public sealed record RoleSummary(
+    string Id,
+    string Name,
+    bool IsAdmin,
+    string PermissionsJson);
+
+/// <summary>Detail pengguna dengan role dan izin (S25).</summary>
+public sealed record UserDetail(
+    string Id,
+    string Username,
+    string FullName,
+    string RoleId,
+    string RoleName,
+    bool Active,
+    string? LastLoginAt,
+    string PermissionsJson);
+
+/// <summary>Permintaan membuat pengguna (S25).</summary>
+public sealed record UserCreateRequest(
+    string Username,
+    string FullName,
+    string Password,
+    string RoleId,
+    bool Active);
+
+/// <summary>Permintaan mengubah pengguna (S25).</summary>
+public sealed record UserUpdateRequest(
+    string? FullName,
+    string? RoleId,
+    bool? Active,
+    string? NewPassword);
+
+/// <summary>Hasil pemeriksaan kesehatan database (S38).</summary>
+public sealed record HealthCheckResult(
+    bool Connected,
+    int SchemaVersion,
+    bool IntegrityOk,
+    bool ForeignKeysOk,
+    string? Error);
+
+/// <summary>Permintaan pemulihan database dari cadangan (S38).</summary>
+public sealed record RestoreRequest(
+    string BackupPath);
+
+/// <summary>Pengaturan jadwal cadangan (S38).</summary>
+public sealed record BackupScheduleSetting(
+    bool Enabled,
+    int Hour,
+    int Minute);

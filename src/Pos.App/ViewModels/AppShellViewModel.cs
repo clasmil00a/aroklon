@@ -24,6 +24,9 @@ public sealed partial class AppShellViewModel : ObservableObject
     private readonly CashMovementService _cashMovements;
     private readonly RefundService _refunds;
     private readonly EndOfDayService _endOfDay;
+    private readonly PaymentTypeService _paymentTypes;
+    private readonly AdminUserService _users;
+    private readonly DatabaseService _database;
 
     private CompanyInfo? _company;
 
@@ -47,7 +50,10 @@ public sealed partial class AppShellViewModel : ObservableObject
         CustomerService customers,
         CashMovementService cashMovements,
         RefundService refunds,
-        EndOfDayService endOfDay)
+        EndOfDayService endOfDay,
+        PaymentTypeService paymentTypes,
+        AdminUserService users,
+        DatabaseService database)
     {
         _auth = auth;
         _theme = theme;
@@ -63,6 +69,9 @@ public sealed partial class AppShellViewModel : ObservableObject
         _cashMovements = cashMovements;
         _refunds = refunds;
         _endOfDay = endOfDay;
+        _paymentTypes = paymentTypes;
+        _users = users;
+        _database = database;
     }
 
     public async Task InitializeAsync()
@@ -145,7 +154,10 @@ public sealed partial class AppShellViewModel : ObservableObject
             _customers,
             _cashMovements,
             _refunds,
-            _endOfDay);
+            _endOfDay,
+            _paymentTypes,
+            _users,
+            _database);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
         shell.FullScreenRequested += (_, _) => ToggleFullScreen();

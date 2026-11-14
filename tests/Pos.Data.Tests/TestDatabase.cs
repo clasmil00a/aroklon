@@ -66,6 +66,10 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public EndOfDayService EndOfDay { get; private set; } = null!;
 
+    public PaymentTypeService PaymentTypes { get; private set; } = null!;
+
+    public DatabaseService Database { get; private set; } = null!;
+
     public static async Task<TestDatabase> CreateAsync()
     {
         var database = new TestDatabase();
@@ -89,7 +93,11 @@ public sealed class TestDatabase : IAsyncDisposable
             NullLogger<AuthService>.Instance);
         database.Settings = new SettingsService(database.Factory, database.Sessions, database.Clock);
         database.Company = new CompanyService(database.Factory, database.Sessions, database.Clock);
-        database.Users = new AdminUserService(database.Factory, database.Sessions);
+        database.Users = new AdminUserService(
+            database.Factory,
+            database.Sessions,
+            database.Hasher,
+            database.Clock);
         database.Backups = new BackupService(
             database.Factory,
             database.Options,
@@ -132,6 +140,15 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Factory,
             database.Sessions,
             database.Clock);
+        database.PaymentTypes = new PaymentTypeService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
+        database.Database = new DatabaseService(
+            database.Factory,
+            database.Sessions,
+            database.Clock,
+            database.Options);
 
         return database;
     }
