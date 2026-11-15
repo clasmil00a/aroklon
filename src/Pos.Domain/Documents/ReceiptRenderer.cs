@@ -23,6 +23,7 @@ public sealed record ReceiptDocument(
     string? Address,
     string? Phone,
     string? TaxNumber,
+    string? LogoPath,
     string? Header,
     string? Footer,
     string Number,

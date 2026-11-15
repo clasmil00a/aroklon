@@ -89,7 +89,8 @@ public partial class App : Application
                         sp.GetRequiredService<IDbConnectionFactory>(),
                         sp.GetRequiredService<ISessionStore>(),
                         sp.GetRequiredService<IClock>(),
-                        sp.GetRequiredService<TaxService>()));
+                        sp.GetRequiredService<TaxService>(),
+                        sp.GetRequiredService<CreditPaymentService>()));
                     services.AddSingleton<UnitService>();
                     services.AddSingleton<PriceListService>();
                     services.AddSingleton<CustomerService>();
@@ -111,6 +112,35 @@ public partial class App : Application
                         sp.GetRequiredService<IClock>()));
                     services.AddSingleton<CashDrawerService>(sp => new CashDrawerService(
                         sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<CreditPaymentService>(sp => new CreditPaymentService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<CsvImportService>(sp => new CsvImportService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<StockHistoryService>(sp => new StockHistoryService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<OrderLockService>(sp => new OrderLockService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<CartSplitMergeService>(sp => new CartSplitMergeService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<VirtualKeyboardService>(sp => new VirtualKeyboardService(
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<WeighingScaleService>(sp => new WeighingScaleService(
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<MultiRegisterService>(sp => new MultiRegisterService(
                         sp.GetRequiredService<ISessionStore>(),
                         sp.GetRequiredService<IClock>()));
                     services.AddSingleton<ThemeService>();

@@ -138,7 +138,7 @@ public sealed class PosCartTests
     }
 
     private static ProductLookup Lookup(string id, string name, string unit, long factor, long price) =>
-        new(id, name, null, id, "unit-base", unit, factor, price, 0, 0, false, true, null, null);
+        new(id, name, null, id, "unit-base", unit, factor, price, 0, 0, false, true, null, null, null, null, null);
 }
 
 public sealed class CartMathTests
@@ -227,5 +227,5 @@ public sealed class CartDiscountTests
     }
 
     private static ProductLookup Lookup(string id, string name, string unit, long factor, long price) =>
-        new(id, name, null, id, "unit-base", unit, factor, price, 0, 0, false, true, null, null);
+        new(id, name, null, id, "unit-base", unit, factor, price, 0, 0, false, true, null, null, null, null, null);
 }

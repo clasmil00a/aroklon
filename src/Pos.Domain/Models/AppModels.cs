@@ -22,6 +22,7 @@ public sealed record CompanyInfo(
     string? Address,
     string? Phone,
     string? Email,
+    string? LogoPath,
     string Currency,
     int CurrencyMinorUnit,
     string Locale,

@@ -18,17 +18,20 @@ public sealed class SaleService
     private readonly ISessionStore _sessions;
     private readonly IClock _clock;
     private readonly TaxService _taxService;
+    private readonly CreditPaymentService _creditPaymentService;
 
     public SaleService(
         IDbConnectionFactory factory,
         ISessionStore sessions,
         IClock clock,
-        TaxService taxService)
+        TaxService taxService,
+        CreditPaymentService creditPaymentService)
     {
         _factory = factory;
         _sessions = sessions;
         _clock = clock;
         _taxService = taxService;
+        _creditPaymentService = creditPaymentService;
     }
 
     public async Task<SaleResult> ParkAsync(
@@ -227,11 +230,22 @@ public sealed class SaleService
                 totalChange = 0;
                 totalBalance = totalWithCartDiscount - totalTendered;
 
-                if (customer is null && totalBalance > 0)
+                if (totalBalance > 0)
                 {
-                    throw new ValidationException(
-                        ErrorCodes.Validation,
-                        "Pembayaran kredit memerlukan pelanggan.");
+                    var creditEnabled = await _creditPaymentService.IsEnabledAsync(cancellationToken).ConfigureAwait(false);
+                    if (!creditEnabled)
+                    {
+                        throw new ValidationException(
+                            ErrorCodes.Validation,
+                            "Pembayaran kredit dinonaktifkan. Silakan lunasi penuh.");
+                    }
+
+                    if (customer is null)
+                    {
+                        throw new ValidationException(
+                            ErrorCodes.Validation,
+                            "Pembayaran kredit memerlukan pelanggan.");
+                    }
                 }
             }
 
@@ -858,6 +872,7 @@ public sealed class SaleService
             company.Address,
             company.Phone,
             company.TaxNumber,
+            company.LogoPath,
             string.IsNullOrWhiteSpace(header) ? company.ReceiptHeader : header,
             string.IsNullOrWhiteSpace(footer) ? company.ReceiptFooter : footer,
             sale.Number,
@@ -1553,6 +1568,7 @@ public sealed class SaleService
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
+        public string? LogoPath { get; set; }
         public string Currency { get; set; } = "IDR";
         public int CurrencyMinorUnit { get; set; }
         public string Locale { get; set; } = "id-ID";

@@ -145,6 +145,7 @@ public sealed class CompanyService
         row.Address,
         row.Phone,
         row.Email,
+        row.LogoPath,
         row.Currency,
         row.CurrencyMinorUnit,
         row.Locale,
@@ -161,6 +162,7 @@ public sealed class CompanyService
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
+        public string? LogoPath { get; set; }
         public string Currency { get; set; } = "IDR";
         public int CurrencyMinorUnit { get; set; }
         public string Locale { get; set; } = "id-ID";

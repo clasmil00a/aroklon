@@ -109,6 +109,7 @@ public sealed class AuthService
                 company.Address,
                 company.Phone,
                 company.Email,
+                company.LogoPath,
                 company.Currency,
                 company.CurrencyMinorUnit,
                 company.Locale,
@@ -496,6 +497,7 @@ public sealed class AuthService
         public string? Address { get; set; }
         public string? Phone { get; set; }
         public string? Email { get; set; }
+        public string? LogoPath { get; set; }
         public string Currency { get; set; } = "IDR";
         public int CurrencyMinorUnit { get; set; }
         public string Locale { get; set; } = "id-ID";

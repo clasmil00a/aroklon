@@ -52,6 +52,8 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public TaxService Tax { get; private set; } = null!;
 
+    public CreditPaymentService CreditPayment { get; private set; } = null!;
+
     public ProductService Product { get; private set; } = null!;
 
     public UnitService Unit { get; private set; } = null!;
@@ -109,11 +111,16 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Factory,
             database.Sessions,
             database.Clock);
+        database.CreditPayment = new CreditPaymentService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
         database.Sale = new SaleService(
             database.Factory,
             database.Sessions,
             database.Clock,
-            database.Tax);
+            database.Tax,
+            database.CreditPayment);
         database.Product = new ProductService(
             database.Factory,
             database.Sessions,

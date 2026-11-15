@@ -18,7 +18,10 @@ public sealed record ProductLookup(
     bool IsService,
     bool PriceChangeAllowed,
     string? Barcode,
-    string? GroupName)
+    string? GroupName,
+    string? ImagePath,
+    string? Color,
+    int? AgeRestriction)
 {
     public long StockInSellingUnitMilli =>
         UnitFactorMilli <= 0

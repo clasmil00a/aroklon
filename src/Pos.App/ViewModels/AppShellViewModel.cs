@@ -158,7 +158,7 @@ public sealed partial class AppShellViewModel : ObservableObject
         var shell = new ShellViewModel(
             session,
             _company ?? new CompanyInfo(
-                "company", "Toko Saya", null, null, null, null, null,
+                "company", "Toko Saya", null, null, null, null, null, null,
                 "IDR", 0, "id-ID", "Asia/Jakarta", null, null),
             _databaseInfo,
             _auth,

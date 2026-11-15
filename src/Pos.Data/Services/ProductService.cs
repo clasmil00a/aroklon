@@ -879,6 +879,9 @@ public sealed class ProductService
         public bool PriceChangeAllowed { get; set; }
         public string? Barcode { get; set; }
         public string? GroupName { get; set; }
+        public string? ImagePath { get; set; }
+        public string? Color { get; set; }
+        public int? AgeRestriction { get; set; }
 
         public ProductLookup ToLookup() => new(
             ProductId,
@@ -894,7 +897,10 @@ public sealed class ProductService
             IsService,
             PriceChangeAllowed,
             Barcode,
-            GroupName);
+            GroupName,
+            ImagePath,
+            Color,
+            AgeRestriction);
     }
 
     private sealed class ProductDetailRow
