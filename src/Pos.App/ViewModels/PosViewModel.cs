@@ -17,7 +17,10 @@ public sealed partial class PosViewModel : ObservableObject
     private readonly SaleService _sales;
     private readonly CustomerService _customers;
     private readonly CashDrawerService _cashDrawer;
+    private readonly ProductSearchViewModel _productSearch;
     private readonly PosCart _cart = new();
+
+    public ProductSearchViewModel ProductSearchVm => _productSearch;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -72,6 +75,9 @@ public sealed partial class PosViewModel : ObservableObject
         10000, 25000, 50000, 100000, 200000
     };
 
+    [ObservableProperty]
+    private bool _isSearchModalOpen;
+
     private UserSession? _session;
 
     public PosViewModel(
@@ -84,6 +90,9 @@ public sealed partial class PosViewModel : ObservableObject
         _sales = sales;
         _customers = customers;
         _cashDrawer = cashDrawer;
+        _productSearch = new ProductSearchViewModel(_products);
+        _productSearch.ProductSelected += OnProductSearchProductSelected;
+        _productSearch.CloseRequested += () => IsSearchModalOpen = false;
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(SearchText) && !string.IsNullOrWhiteSpace(SearchText))
@@ -142,7 +151,7 @@ public sealed partial class PosViewModel : ObservableObject
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
-    private void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0 && _selectedPayments.Count > 0;
+    public void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0 && _selectedPayments.Count > 0;
 
     [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
@@ -281,6 +290,24 @@ public sealed partial class PosViewModel : ObservableObject
         {
             UpdateCanCheckout();
         }
+    }
+
+    [RelayCommand]
+    private void OpenSearchModal()
+    {
+        IsSearchModalOpen = true;
+        _ = _productSearch.InitializeAsync();
+    }
+
+    private void OnProductSearchProductSelected(ProductLookup? product)
+    {
+        if (product is null) return;
+        AddProductToCart(product, 1_000);
+        IsSearchModalOpen = false;
+        _productSearch.SearchText = string.Empty;
+        _productSearch.Results = new ObservableCollection<ProductLookup>();
+        _productSearch.SelectedIndex = -1;
+        InfoMessage = $"{product.Name} ditambahkan ke keranjang.";
     }
 
     [RelayCommand]
@@ -633,6 +660,30 @@ public sealed partial class PosViewModel : ObservableObject
     }
 
     private void Recalculate() => Totals = _cart.Totals;
+
+    public void AddProductToCart(ProductLookup product, long qtyMilli)
+    {
+        if (product is null || IsBusy) return;
+        ErrorMessage = string.Empty;
+        try
+        {
+            var line = _cart.Add(product, qtyMilli);
+            ReplaceOrAddLine(line);
+            Recalculate();
+            UpdateCanCheckout();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Add to cart failed");
+            ErrorMessage = exception.Message;
+        }
+    }
+
+    public void RecalculateAndUpdate()
+    {
+        Recalculate();
+        UpdateCanCheckout();
+    }
 }
 
 public sealed record CartLineViewModel(

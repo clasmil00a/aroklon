@@ -49,6 +49,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private UserManagementViewModel? _userManagement;
     private DatabaseViewModel? _databaseView;
     private VisualWorkspaceViewModel? _visualWorkspace;
+    private ProductSearchViewModel? _productSearchPage;
 
     private ProductGroupViewModel? _productGroup;
     private ProductGroupService _productGroupService;
@@ -217,6 +218,14 @@ public sealed partial class ShellViewModel : ObservableObject
                 _visualWorkspace.SetSession(Session);
                 _visualWorkspace.BackRequested += () => Navigate("home");
                 CurrentPage = _visualWorkspace;
+                ActiveRoute = "home";
+                break;
+
+            case "S04":
+                _productSearchPage ??= new ProductSearchViewModel(_products);
+                _productSearchPage.ProductSelected += _ => Navigate("home");
+                _productSearchPage.CloseRequested += () => Navigate("home");
+                CurrentPage = _productSearchPage;
                 ActiveRoute = "home";
                 break;
 

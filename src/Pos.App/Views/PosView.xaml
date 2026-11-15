@@ -5,6 +5,7 @@
     Background="{DynamicResource Brush.Bg}">
     <UserControl.InputBindings>
         <KeyBinding Key="D" Modifiers="Ctrl" Command="{Binding KickCashDrawerCommand}" />
+        <KeyBinding Key="F3" Command="{Binding OpenSearchModalCommand}" />
     </UserControl.InputBindings>
 
     <Grid Margin="16">
@@ -447,6 +448,25 @@
                             Style="{StaticResource Button.Ghost}" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Advanced product search modal (F3) -->
+        <Border
+            Grid.RowSpan="2"
+            Background="#80000000"
+            Visibility="{Binding IsSearchModalOpen, Converter={StaticResource BoolToVisibility}}"
+            Panel.ZIndex="20">
+            <Border
+                Width="700"
+                Height="500"
+                Background="{DynamicResource Brush.Bg}"
+                BorderBrush="{DynamicResource Brush.BorderInput}"
+                BorderThickness="{StaticResource Border.Width}"
+                CornerRadius="{StaticResource Radius.Sm}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <ContentControl Content="{Binding ProductSearchVm}" />
             </Border>
         </Border>
     </Grid>
