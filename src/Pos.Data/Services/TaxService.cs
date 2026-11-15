@@ -35,6 +35,56 @@ public sealed class TaxService
     }
 
     /// <summary>
+    /// Returns true when the pos.tax_enabled setting is true.
+    /// </summary>
+    public async Task<bool> IsTaxEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var json = await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "SELECT value_json FROM settings WHERE key = 'pos.tax_enabled' AND scope = 'global' AND scope_id = '';",
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+        return string.Equals(SqlText.DisplaySetting(json), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Sets the pos.tax_enabled setting.
+    /// </summary>
+    public async Task SetTaxEnabledAsync(
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession();
+        var session = RequireSession();
+        RequirePermission(session, PermissionKeys.SettingsManage);
+
+        var now = _clock.UtcNow;
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO settings (key, scope, scope_id, value_json, updated_at)
+                VALUES ('pos.tax_enabled', 'global', '', @valueJson, @now)
+                ON CONFLICT(key, scope, scope_id) DO UPDATE SET
+                    value_json = excluded.value_json,
+                    updated_at = excluded.updated_at;
+                """,
+                new { valueJson = SqlText.Serialize(enabled), now = SqlText.Now(now) },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Lists all active tax rates.
     /// </summary>
     public async Task<IReadOnlyList<TaxRateInfo>> ListTaxRatesAsync(

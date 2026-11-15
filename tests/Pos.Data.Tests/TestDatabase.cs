@@ -50,6 +50,8 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public SaleService Sale { get; private set; } = null!;
 
+    public TaxService Tax { get; private set; } = null!;
+
     public ProductService Product { get; private set; } = null!;
 
     public UnitService Unit { get; private set; } = null!;
@@ -103,10 +105,15 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Options,
             database.Clock,
             NullLogger<BackupService>.Instance);
-        database.Sale = new SaleService(
+        database.Tax = new TaxService(
             database.Factory,
             database.Sessions,
             database.Clock);
+        database.Sale = new SaleService(
+            database.Factory,
+            database.Sessions,
+            database.Clock,
+            database.Tax);
         database.Product = new ProductService(
             database.Factory,
             database.Sessions,

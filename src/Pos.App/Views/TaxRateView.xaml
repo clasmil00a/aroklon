@@ -58,6 +58,19 @@
                         Content="Tarif bawaan"
                         IsChecked="{Binding IsDefault}" />
 
+                    <CheckBox
+                        Margin="0,16,0,0"
+                        Content="Pajak diaktifkan secara global"
+                        IsChecked="{Binding TaxEnabled, Mode=TwoWay}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Height="44"
+                        Command="{Binding ToggleTaxEnabledCommand}"
+                        Content="Ubah status pajak"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Secondary}" />
+
                     <Button
                         Margin="0,16,0,0"
                         Height="44"

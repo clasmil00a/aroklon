@@ -17,15 +17,18 @@ public sealed class SaleService
     private readonly IDbConnectionFactory _factory;
     private readonly ISessionStore _sessions;
     private readonly IClock _clock;
+    private readonly TaxService _taxService;
 
     public SaleService(
         IDbConnectionFactory factory,
         ISessionStore sessions,
-        IClock clock)
+        IClock clock,
+        TaxService taxService)
     {
         _factory = factory;
         _sessions = sessions;
         _clock = clock;
+        _taxService = taxService;
     }
 
     public async Task<SaleResult> ParkAsync(
@@ -985,36 +988,48 @@ public sealed class SaleService
             var unitCost = MoneyMath.RoundDiv(row.BaseCostMinor * row.UnitFactorMilli, 1000);
 
             // Resolve tax rates: all active product taxes + optional input override.
-            var productTaxRateIds = await connection.QueryAsync<string>(new CommandDefinition(
-                """
-                SELECT tr.id
-                FROM product_taxes pt
-                JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
-                WHERE pt.product_id = @productId
-                ORDER BY tr.rate_bp DESC;
-                """,
-                new { productId = row.ProductId },
-                transaction,
-                cancellationToken: cancellationToken)).ConfigureAwait(false);
+            // If tax is globally disabled (pos.tax_enabled = false), skip tax entirely.
+            var taxEnabled = await _taxService.IsTaxEnabledAsync(cancellationToken).ConfigureAwait(false);
 
-            var taxRateIdList = productTaxRateIds.ToList();
+            var taxRateIdList = new List<string>();
             var rateBpList = new List<int>();
-            foreach (var trId in taxRateIdList)
+            var taxInfos = new List<TaxRateInfo>();
+            long tax = 0;
+            long taxableBase = gross - discount;
+            if (taxableBase < 0) taxableBase = 0;
+
+            if (taxEnabled)
             {
-                var rb = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-                    "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
-                    new { id = trId },
+                var productTaxRateIds = await connection.QueryAsync<string>(new CommandDefinition(
+                    """
+                    SELECT tr.id
+                    FROM product_taxes pt
+                    JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
+                    WHERE pt.product_id = @productId
+                    ORDER BY tr.rate_bp DESC;
+                    """,
+                    new { productId = row.ProductId },
                     transaction,
                     cancellationToken: cancellationToken)).ConfigureAwait(false);
-                rateBpList.Add(rb);
+
+                taxRateIdList = productTaxRateIds.ToList();
+                foreach (var trId in taxRateIdList)
+                {
+                    var rb = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+                        "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
+                        new { id = trId },
+                        transaction,
+                        cancellationToken: cancellationToken)).ConfigureAwait(false);
+                    rateBpList.Add(rb);
+                }
+
+                taxInfos = taxRateIdList.Zip(rateBpList, (id, bp) =>
+                    new TaxRateInfo(id, row.Name, bp, true, false)).ToList();
+
+                var priceIncludesTax = row.PriceIncludesTax == 1;
+                (tax, taxableBase) = TaxService.ComputeLineTax(
+                    gross, discount, taxInfos, priceIncludesTax);
             }
-
-            var taxInfos = taxRateIdList.Zip(rateBpList, (id, bp) =>
-                new TaxRateInfo(id, row.Name, bp, true, false)).ToList();
-
-            var priceIncludesTax = row.PriceIncludesTax == 1;
-            var (tax, taxableBase) = TaxService.ComputeLineTax(
-                gross, discount, taxInfos, priceIncludesTax);
 
             resolved.Add(new ResolvedLine(
                 row.ProductId,

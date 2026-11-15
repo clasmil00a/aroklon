@@ -85,7 +85,11 @@ public partial class App : Application
                         sp.GetRequiredService<IClock>()));
                     services.AddSingleton<BackupService>();
                     services.AddSingleton<ProductService>();
-                    services.AddSingleton<SaleService>();
+                    services.AddSingleton<SaleService>(sp => new SaleService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>(),
+                        sp.GetRequiredService<TaxService>()));
                     services.AddSingleton<UnitService>();
                     services.AddSingleton<PriceListService>();
                     services.AddSingleton<CustomerService>();
@@ -106,6 +110,7 @@ public partial class App : Application
                         sp.GetRequiredService<ISessionStore>(),
                         sp.GetRequiredService<IClock>()));
                     services.AddSingleton<CashDrawerService>(sp => new CashDrawerService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
                         sp.GetRequiredService<ISessionStore>(),
                         sp.GetRequiredService<IClock>()));
                     services.AddSingleton<ThemeService>();

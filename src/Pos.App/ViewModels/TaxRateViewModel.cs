@@ -33,6 +33,9 @@ public sealed partial class TaxRateViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private bool _taxEnabled;
+
     public TaxRateViewModel(TaxService taxService)
     {
         _taxService = taxService;
@@ -56,11 +59,39 @@ public sealed partial class TaxRateViewModel : ObservableObject
         {
             var list = await _taxService.ListTaxRatesAsync();
             TaxRates = new ObservableCollection<TaxRateInfo>(list);
+            TaxEnabled = await _taxService.IsTaxEnabledAsync();
         }
         catch (Exception exception)
         {
             Log.Error(exception, "Failed to load tax rates");
             ErrorMessage = "Gagal memuat tarif pajak. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleTaxEnabledAsync()
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        InfoMessage = string.Empty;
+
+        try
+        {
+            await _taxService.SetTaxEnabledAsync(!TaxEnabled);
+            TaxEnabled = !TaxEnabled;
+            InfoMessage = TaxEnabled
+                ? "Pajak diaktifkan."
+                : "Pajak dinonaktifkan. Semua transaksi baru akan tanpa pajak.";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to toggle tax");
+            ErrorMessage = "Gagal mengubah status pajak. Coba lagi.";
         }
         finally
         {

@@ -33,6 +33,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _databaseSize = string.Empty;
 
     private bool _negativeStockBlock = true;
+    private bool _cashDrawerEnabled = true;
 
     public bool NegativeStockBlock
     {
@@ -44,6 +45,20 @@ public sealed partial class SettingsViewModel : ObservableObject
                 _negativeStockBlock = value;
                 OnPropertyChanged(nameof(NegativeStockBlock));
                 _ = _settings.SetAsync("pos.negative_stock", value ? "block" : "allow");
+            }
+        }
+    }
+
+    public bool CashDrawerEnabled
+    {
+        get => _cashDrawerEnabled;
+        set
+        {
+            if (_cashDrawerEnabled != value)
+            {
+                _cashDrawerEnabled = value;
+                OnPropertyChanged(nameof(CashDrawerEnabled));
+                _ = _settings.SetAsync("pos.cash_drawer_enabled", value ? "true" : "false");
             }
         }
     }
@@ -79,6 +94,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         var negativeStockJson = _settings.GetAsync("pos.negative_stock").Result;
         _negativeStockBlock = string.IsNullOrWhiteSpace(negativeStockJson) || negativeStockJson != "allow";
+
+        var cashDrawerJson = _settings.GetAsync("pos.cash_drawer_enabled").Result;
+        _cashDrawerEnabled = string.IsNullOrWhiteSpace(cashDrawerJson) || cashDrawerJson != "false";
 
         var preferencesValue = preferences.Load();
         if (preferencesValue.Theme == "light")
