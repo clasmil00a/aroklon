@@ -1,4 +1,4 @@
-# Aroklon POS
+# POS Desktop
 
 Aplikasi kasir Windows untuk toko sendiri. WPF native, database SQLite lokal,
 tanpa server dan tanpa Chromium. Antarmuka berbahasa Indonesia dengan sapaan
@@ -21,15 +21,15 @@ yang belum tersedia membuka halaman status, bukan tautan mati.
 Di Windows:
 
 ```powershell
-dotnet build src/Pos.App/Aroklon.App.csproj
-dotnet run --project src/Pos.App/Aroklon.App.csproj
+dotnet build src/Pos.App/Pos.App.csproj
+dotnet run --project src/Pos.App/Pos.App.csproj
 ```
 
 Di Linux (kompilasi saja):
 
 ```bash
 export PATH=/root/.dotnet:$PATH
-dotnet build src/Pos.App/Aroklon.App.csproj
+dotnet build src/Pos.App/Pos.App.csproj
 ```
 
 ## Tes
@@ -61,7 +61,7 @@ Argon2id 64 MB, 3 iterasi, paralelisme 2.
 Semua data pengguna berada di profil Windows, bukan di folder instalasi:
 
 ```text
-%LOCALAPPDATA%\Aroklon\
+%LOCALAPPDATA%\PosDesktop\
   data\pos.db
   backups\pos-YYYYMMDD-HHmmss.db
   logs\pos-YYYYMMDD.log

@@ -19,6 +19,13 @@
     <ProjectReference Include="..\Pos.Data\Pos.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\Fonts\*.ttf" />
+    <Resource Include="Assets\Fonts\CascadiaMono.ttf" />
+    <Resource Include="Assets\Fonts\Cascadia-OFL.txt" />
+    <Resource Include="Assets\Fonts\Inter-Bold.ttf" />
+    <Resource Include="Assets\Fonts\Inter-Medium.ttf" />
+    <Resource Include="Assets\Fonts\Inter-OFL.txt" />
+    <Resource Include="Assets\Fonts\Inter-Regular.ttf" />
+    <Resource Include="Assets\Fonts\Inter-SemiBold.ttf" />
+    <Resource Include="Assets\Fonts\Lucide-ISC.txt" />
   </ItemGroup>
 </Project>

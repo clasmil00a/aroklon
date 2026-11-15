@@ -1,7 +1,7 @@
 using System.Windows.Controls;
-using Aroklon.App.ViewModels;
+using Pos.App.ViewModels;
 
-namespace Aroklon.App.Views;
+namespace Pos.App.Views;
 
 public partial class CashMovementView : UserControl
 {

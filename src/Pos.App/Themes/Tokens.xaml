@@ -68,7 +68,7 @@
     <Thickness x:Key="Padding.Dialog">24</Thickness>
     <Thickness x:Key="Focus.Margin">-3</Thickness>
 
-    <sys:Double x:Key="Border.Width">1</sys:Double>
+    <Thickness x:Key="Border.Width">1,1,1,1</Thickness>
     <sys:Double x:Key="Focus.Width">2</sys:Double>
 
     <!-- Window and shell dimensions (device-independent pixels at 96 DPI). -->

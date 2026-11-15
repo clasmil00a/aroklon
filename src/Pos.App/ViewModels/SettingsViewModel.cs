@@ -2,14 +2,14 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Aroklon.App.Services;
+using Pos.App.Services;
 using Pos.Data.Database;
 using Pos.Data.Services;
 using Pos.Domain;
 using Pos.Domain.Models;
 using Serilog;
 
-namespace Aroklon.App.ViewModels;
+namespace Pos.App.ViewModels;
 
 public sealed partial class SettingsViewModel : ObservableObject
 {

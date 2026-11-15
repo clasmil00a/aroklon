@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace Aroklon.App;
+namespace Pos.App;
 
 public partial class MainWindow : Window
 {

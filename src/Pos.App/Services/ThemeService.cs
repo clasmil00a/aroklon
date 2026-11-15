@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace Aroklon.App.Services;
+namespace Pos.App.Services;
 
 public enum AppTheme
 {

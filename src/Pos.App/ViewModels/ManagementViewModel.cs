@@ -1,8 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Aroklon.App.Services;
+using Pos.App.Services;
 
-namespace Aroklon.App.ViewModels;
+namespace Pos.App.ViewModels;
 
 public sealed record BackOfficeModule(
     string ScreenId,

@@ -1,12 +1,12 @@
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Aroklon.App.Services;
+using Pos.App.Services;
 using Pos.Data.Database;
 using Pos.Data.Services;
 using Pos.Domain.Models;
 using Serilog;
 
-namespace Aroklon.App.ViewModels;
+namespace Pos.App.ViewModels;
 
 public sealed partial class AppShellViewModel : ObservableObject
 {

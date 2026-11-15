@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pos.Domain.Tests", "tests\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pos.Data.Tests", "tests\Pos.Data.Tests\Pos.Data.Tests.csproj", "{BD0E92DD-3BD0-4091-8653-2E784F168AE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aroklon.App", "src\Pos.App\Aroklon.App.csproj", "{6F00D6E4-4D61-4FFF-AAF6-AFE0627E4BF9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pos.App", "src\Pos.App\Pos.App.csproj", "{6F00D6E4-4D61-4FFF-AAF6-AFE0627E4BF9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pos.UiTests", "tests\Pos.UiTests\Pos.UiTests.csproj", "{431CE8F4-14D6-45BB-970F-978DCC6D3920}"
 EndProject

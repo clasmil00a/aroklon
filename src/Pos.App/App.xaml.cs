@@ -4,8 +4,8 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Aroklon.App.Services;
-using Aroklon.App.ViewModels;
+using Pos.App.Services;
+using Pos.App.ViewModels;
 using Pos.Data.Database;
 using Pos.Data.Security;
 using Pos.Data.Services;
@@ -13,7 +13,7 @@ using Pos.Domain.Security;
 using Pos.Domain.Time;
 using Serilog;
 
-namespace Aroklon.App;
+namespace Pos.App;
 
 public partial class App : Application
 {
@@ -26,7 +26,7 @@ public partial class App : Application
 
         _singleInstance = new Mutex(
             initiallyOwned: false,
-            name: @"Local\Aroklon.SingleInstance",
+            name: @"Local\PosDesktop.SingleInstance",
             createdNew: out var isFirstInstance);
 
         if (!isFirstInstance)

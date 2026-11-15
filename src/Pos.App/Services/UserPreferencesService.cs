@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace Aroklon.App.Services;
+namespace Pos.App.Services;
 
 public sealed record UserPreferences(string Theme)
 {
