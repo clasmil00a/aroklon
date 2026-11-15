@@ -635,6 +635,60 @@ public sealed class ProductService
         }
     }
 
+    public async Task DeleteProductUnitAsync(
+        string productUnitId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        if (!session.Can(PermissionKeys.CatalogManage))
+        {
+            throw new PermissionException("Anda tidak memiliki izin untuk mengelola katalog produk.");
+        }
+
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            // Block if used in any sale items.
+            var usedInSales = await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+                """
+                SELECT COUNT(*) FROM sale_items WHERE product_unit_id = @productUnitId;
+                """,
+                new { productUnitId },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            if (usedInSales > 0)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new ConflictException(
+                    "product_unit.in_use",
+                    "Tidak dapat menghapus varian satuan karena sudah digunakan dalam transaksi penjualan.");
+            }
+
+            var deleted = await connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE FROM product_units WHERE id = @productUnitId;
+                """,
+                new { productUnitId },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            if (deleted == 0)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new NotFoundException("product_unit.not_found", "Varian satuan tidak ditemukan.");
+            }
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+    }
+
     public async Task DeleteProductAsync(
         string productId,
         CancellationToken cancellationToken = default)

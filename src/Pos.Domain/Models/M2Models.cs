@@ -87,6 +87,9 @@ public sealed record PriceListItemView(
 /// <summary>Request to create a price list.</summary>
 public sealed record PriceListCreateRequest(string Name, bool ApplyPromotions);
 
+/// <summary>Request to update a price list.</summary>
+public sealed record PriceListUpdateRequest(string? Name, bool? ApplyPromotions, bool? Active);
+
 /// <summary>Request to update a price list item price.</summary>
 public sealed record PriceListItemUpdateRequest(long? PriceMinor, int? MarkupBp);
 

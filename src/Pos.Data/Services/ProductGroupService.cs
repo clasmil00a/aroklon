@@ -149,6 +149,26 @@ public sealed class ProductGroupService
         await using var transaction = connection.BeginTransaction(deferred: false);
         try
         {
+            // If deactivating, block when products still reference this group.
+            if (request.Active == false)
+            {
+                var usedByProducts = await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+                    """
+                    SELECT COUNT(*) FROM products WHERE group_id = @id AND active = 1;
+                    """,
+                    new { id = groupId },
+                    transaction,
+                    cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+                if (usedByProducts > 0)
+                {
+                    await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                    throw new ConflictException(
+                        "product_group.in_use",
+                        "Tidak dapat menonaktifkan grup produk karena masih dipakai oleh produk aktif.");
+                }
+            }
+
             var updated = await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE product_groups

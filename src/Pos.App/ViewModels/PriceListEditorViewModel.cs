@@ -30,6 +30,15 @@ public sealed partial class PriceListEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private string _editName = string.Empty;
+
+    [ObservableProperty]
+    private bool _editApplyPromotions;
+
+    [ObservableProperty]
+    private bool _isEditFormVisible;
+
     private string _priceListId = string.Empty;
 
     public PriceListEditorViewModel(PriceListService priceLists)
@@ -141,6 +150,87 @@ public sealed partial class PriceListEditorViewModel : ObservableObject
         {
             Log.Error(exception, "Failed to clear price");
             ErrorMessage = "Gagal menghapus harga. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ShowEditForm()
+    {
+        if (IsBusy || List is null) return;
+
+        EditName = List.Name;
+        EditApplyPromotions = List.ApplyPromotions;
+        IsEditFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void HideEditForm()
+    {
+        IsEditFormVisible = false;
+        EditName = string.Empty;
+        EditApplyPromotions = false;
+    }
+
+    [RelayCommand]
+    private async Task UpdateListAsync()
+    {
+        if (List is null || IsBusy) return;
+
+        if (string.IsNullOrWhiteSpace(EditName))
+        {
+            ErrorMessage = "Nama daftar harga wajib diisi.";
+            return;
+        }
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _priceLists.UpdateAsync(List.Id, new(
+                EditName.Trim(),
+                EditApplyPromotions,
+                List.Active
+            ));
+
+            InfoMessage = "Daftar harga diperbarui.";
+            IsEditFormVisible = false;
+            await InitializeAsync();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to update price list");
+            ErrorMessage = "Gagal memperbarui daftar harga. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleListActiveAsync()
+    {
+        if (List is null || IsBusy) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _priceLists.ToggleActiveAsync(List.Id, !List.Active);
+
+            InfoMessage = List.Active ? "Daftar harga dinonaktifkan." : "Daftar harga diaktifkan.";
+            await InitializeAsync();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to toggle price list");
+            ErrorMessage = "Gagal mengubah status daftar harga. Coba lagi.";
         }
         finally
         {

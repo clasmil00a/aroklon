@@ -39,6 +39,25 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    // Variant editing
+    [ObservableProperty]
+    private string? _editingVariantId;
+
+    [ObservableProperty]
+    private long _editingFactor;
+
+    [ObservableProperty]
+    private long? _editingPrice;
+
+    [ObservableProperty]
+    private bool _editingIsDefaultSale;
+
+    [ObservableProperty]
+    private bool _editingActive;
+
+    [ObservableProperty]
+    private string _editingError = string.Empty;
+
     private string _productId = string.Empty;
 
     public ProductEditorViewModel(ProductService products)
@@ -142,6 +161,137 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         {
             Log.Error(exception, "Failed to add variant");
             ErrorMessage = "Gagal menambahkan varian satuan. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void EditVariant(ProductUnitVariant? variant)
+    {
+        if (variant is null || IsBusy) return;
+
+        EditingVariantId = variant.ProductUnitId;
+        EditingFactor = variant.FactorToBaseMilli;
+        EditingPrice = variant.PriceMinor;
+        EditingIsDefaultSale = variant.IsDefaultSale;
+        EditingActive = variant.Active;
+        EditingError = string.Empty;
+    }
+
+    [RelayCommand]
+    private void CancelEditVariant()
+    {
+        EditingVariantId = null;
+        EditingFactor = 1000;
+        EditingPrice = null;
+        EditingIsDefaultSale = false;
+        EditingActive = true;
+        EditingError = string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task UpdateVariantAsync()
+    {
+        if (EditingVariantId is null || IsBusy) return;
+
+        if (EditingFactor <= 0)
+        {
+            EditingError = "Faktor satuan harus lebih dari nol.";
+            return;
+        }
+
+        if (EditingPrice is not null && EditingPrice.Value < 0)
+        {
+            EditingError = "Harga tidak boleh negatif.";
+            return;
+        }
+
+        IsBusy = true;
+        EditingError = string.Empty;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _products.UpdateProductUnitAsync(EditingVariantId, new(
+                EditingFactor,
+                EditingIsDefaultSale,
+                EditingPrice,
+                null, // sortOrder - keep existing
+                EditingActive
+            ));
+
+            InfoMessage = "Varian satuan diperbarui.";
+            CancelEditVariant();
+            await InitializeAsync();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to update variant");
+            EditingError = exception.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteVariantAsync(ProductUnitVariant? variant)
+    {
+        if (variant is null || IsBusy) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _products.DeleteProductUnitAsync(variant.ProductUnitId);
+            InfoMessage = "Varian satuan dihapus.";
+            await InitializeAsync();
+        }
+        catch (Pos.Domain.ConflictException)
+        {
+            ErrorMessage = "Tidak dapat menghapus varian karena sudah digunakan dalam transaksi.";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to delete variant");
+            ErrorMessage = "Gagal menghapus varian satuan. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleVariantActiveAsync(ProductUnitVariant? variant)
+    {
+        if (variant is null || IsBusy) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _products.UpdateProductUnitAsync(variant.ProductUnitId, new(
+                variant.FactorToBaseMilli,
+                variant.IsDefaultSale,
+                variant.PriceMinor,
+                null, // sortOrder - keep existing
+                !variant.Active
+            ));
+
+            InfoMessage = variant.Active ? "Varian dinonaktifkan." : "Varian diaktifkan.";
+            await InitializeAsync();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to toggle variant");
+            ErrorMessage = "Gagal mengubah status varian. Coba lagi.";
         }
         finally
         {

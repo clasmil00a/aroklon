@@ -243,6 +243,127 @@ public sealed class PriceListService
         }
     }
 
+    public async Task UpdateAsync(
+        string priceListId,
+        PriceListUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        if (!session.Can(PermissionKeys.PriceListsManage))
+        {
+            throw new PermissionException("Anda tidak memiliki izin untuk mengelola daftar harga.");
+        }
+
+        var now = _clock.UtcNow;
+
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            var updated = await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE price_lists
+                SET name = COALESCE(@name, name),
+                    apply_promotions = COALESCE(@applyPromotions, apply_promotions),
+                    active = COALESCE(@active, active),
+                    updated_at = @now
+                WHERE id = @id;
+                """,
+                new
+                {
+                    id = priceListId,
+                    name = string.IsNullOrWhiteSpace(request.Name) ? null : request.Name.Trim(),
+                    applyPromotions = request.ApplyPromotions,
+                    active = request.Active,
+                    now = SqlText.Now(now)
+                },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            if (updated == 0)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new NotFoundException("price_list.not_found", "Daftar harga tidak ditemukan.");
+            }
+
+            await AuditWriter.WriteAsync(
+                connection,
+                transaction,
+                session.UserId,
+                "price_list.updated",
+                "price_list",
+                priceListId,
+                new { name = request.Name, active = request.Active },
+                now,
+                cancellationToken).ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw new ConflictException("price_list.duplicate", "Nama daftar harga sudah dipakai.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    public async Task ToggleActiveAsync(
+        string priceListId,
+        bool active,
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        if (!session.Can(PermissionKeys.PriceListsManage))
+        {
+            throw new PermissionException("Anda tidak memiliki izin untuk mengelola daftar harga.");
+        }
+
+        var now = _clock.UtcNow;
+
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            var updated = await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE price_lists
+                SET active = @active, updated_at = @now
+                WHERE id = @id;
+                """,
+                new { id = priceListId, active = active ? 1 : 0, now = SqlText.Now(now) },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            if (updated == 0)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                throw new NotFoundException("price_list.not_found", "Daftar harga tidak ditemukan.");
+            }
+
+            await AuditWriter.WriteAsync(
+                connection,
+                transaction,
+                session.UserId,
+                active ? "price_list.activated" : "price_list.deactivated",
+                "price_list",
+                priceListId,
+                new { active },
+                now,
+                cancellationToken).ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+    }
+
     public async Task<PriceListSummary> CopyAsync(
         string sourcePriceListId,
         string newName,

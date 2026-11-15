@@ -97,6 +97,8 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding UnitName}" />
@@ -119,6 +121,32 @@
                                             HorizontalAlignment="Right"
                                             Style="{StaticResource Text.Caption}"
                                             Text="{Binding StockInSellingUnitMilli, StringFormat='Stok: {} {0:N0}'}" />
+                                        <CheckBox
+                                            Grid.Column="3"
+                                            VerticalAlignment="Center"
+                                            IsChecked="{Binding Active, Mode=TwoWay}"
+                                            Command="{Binding DataContext.ToggleVariantActiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="{Binding Active, Converter={x:Static Binding.DoNothing}, ConverterParameter='Aktif', TargetNullValue='Nonaktif'}"
+                                            Style="{StaticResource Segment}" />
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                            <Button
+                                                Width="28"
+                                                Height="28"
+                                                Margin="4,0,0,0"
+                                                Command="{Binding DataContext.EditVariantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="✎"
+                                                Style="{StaticResource Button.Ghost}" />
+                                            <Button
+                                                Width="28"
+                                                Height="28"
+                                                Margin="4,0,0,0"
+                                                Command="{Binding DataContext.DeleteVariantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="×"
+                                                Style="{StaticResource Button.Ghost}" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -156,6 +184,59 @@
                                 Content="Tambah Varian"
                                 IsEnabled="{Binding IsNotBusy}"
                                 Style="{StaticResource Button.Primary}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Edit variant -->
+                    <Border
+                        Margin="0,12,0,0"
+                        Padding="10"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.BorderInput}"
+                        BorderThickness="{StaticResource Border.Width}"
+                        CornerRadius="{StaticResource Radius.Sm}"
+                        Visibility="{Binding EditingVariantId, Converter={StaticResource BoolToVisibility}, ConverterParameter='inverse', TargetNullValue='Visible'}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Edit varian" />
+                            <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Faktor (1 satuan = X base milli)" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding EditingFactor, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Harga jual (opsional, kosong = inherit)" />
+                            <TextBox
+                                Style="{StaticResource Input}"
+                                Text="{Binding EditingPrice, UpdateSourceTrigger=PropertyChanged}" />
+                            <CheckBox
+                                Margin="0,10,0,0"
+                                IsChecked="{Binding EditingIsDefaultSale, Mode=TwoWay}"
+                                Content="Jadikan satuan jual default" />
+                            <CheckBox
+                                Margin="0,10,0,0"
+                                IsChecked="{Binding EditingActive, Mode=TwoWay}"
+                                Content="Aktif" />
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button
+                                    Width="100"
+                                    Height="44"
+                                    Margin="0,0,12,0"
+                                    Command="{Binding UpdateVariantCommand}"
+                                    Content="Simpan"
+                                    IsDefault="True"
+                                    IsEnabled="{Binding IsNotBusy}"
+                                    Style="{StaticResource Button.Primary}" />
+                                <Button
+                                    Width="100"
+                                    Height="44"
+                                    Command="{Binding CancelEditVariantCommand}"
+                                    Content="Batal"
+                                    Style="{StaticResource Button.Ghost}" />
+                            </StackPanel>
+                            <TextBlock
+                                Margin="0,12,0,0"
+                                Style="{StaticResource Text.Error}"
+                                Text="{Binding EditingError}"
+                                TextWrapping="Wrap"
+                                Visibility="{Binding EditingError, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </Border>
 

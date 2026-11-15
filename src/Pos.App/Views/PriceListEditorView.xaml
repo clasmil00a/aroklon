@@ -100,6 +100,84 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Price list settings -->
+                    <Border
+                        Margin="0,16,0,0"
+                        Padding="10"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.BorderInput}"
+                        BorderThickness="{StaticResource Border.Width}"
+                        CornerRadius="{StaticResource Radius.Sm}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pengaturan daftar harga" />
+                            <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.Secondary}" Text="{Binding List.Name, StringFormat='{} {0}', TargetNullValue='Daftar Harga'}" />
+                            <CheckBox
+                                Margin="0,4,0,0"
+                                IsChecked="{Binding List.ApplyPromotions, Mode=TwoWay}"
+                                Content="Terapkan promosi" />
+
+                            <Button
+                                Margin="0,12,0,0"
+                                Height="44"
+                                Command="{Binding ShowEditFormCommand}"
+                                Content="Ubah nama / status"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Style="{StaticResource Button.Secondary}" />
+
+                            <Button
+                                Margin="0,8,0,0"
+                                Height="44"
+                                Command="{Binding ToggleListActiveCommand}"
+                                Content="{Binding List.Active, Converter={x:Static Binding.DoNothing}, ConverterParameter='Nonaktifkan Daftar Harga', TargetNullValue='Nonaktifkan Daftar Harga'}"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Style="{StaticResource Button.Ghost}" />
+
+                            <!-- Edit form -->
+                            <Border
+                                Margin="0,12,0,0"
+                                Padding="10"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.BorderInput}"
+                                BorderThickness="{StaticResource Border.Width}"
+                                CornerRadius="{StaticResource Radius.Sm}"
+                                Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama daftar harga" />
+                                    <TextBox
+                                        Style="{StaticResource Input}"
+                                        Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}" />
+                                    <CheckBox
+                                        Margin="0,10,0,0"
+                                        IsChecked="{Binding EditApplyPromotions, Mode=TwoWay}"
+                                        Content="Terapkan promosi" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                        <Button
+                                            Width="100"
+                                            Height="44"
+                                            Margin="0,0,12,0"
+                                            Command="{Binding UpdateListCommand}"
+                                            Content="Simpan"
+                                            IsDefault="True"
+                                            IsEnabled="{Binding IsNotBusy}"
+                                            Style="{StaticResource Button.Primary}" />
+                                        <Button
+                                            Width="100"
+                                            Height="44"
+                                            Command="{Binding HideEditFormCommand}"
+                                            Content="Batal"
+                                            Style="{StaticResource Button.Ghost}" />
+                                    </StackPanel>
+                                    <TextBlock
+                                        Margin="0,12,0,0"
+                                        Style="{StaticResource Text.Error}"
+                                        Text="{Binding ErrorMessage}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock
                         Margin="0,12,0,0"
                         Style="{StaticResource Text.Error}"
