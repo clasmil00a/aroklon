@@ -88,10 +88,6 @@
                 <views:DatabaseView />
             </DataTemplate>
 
-            <DataTemplate DataType="{x:Type vm:PaymentTypeViewModel}">
-                <views:PaymentTypeView />
-            </DataTemplate>
-
             <DataTemplate DataType="{x:Type vm:OpenOrdersViewModel}">
                 <views:OpenOrdersView />
             </DataTemplate>
