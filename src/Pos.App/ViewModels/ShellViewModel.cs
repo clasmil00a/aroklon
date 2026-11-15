@@ -54,8 +54,14 @@ public sealed partial class ShellViewModel : ObservableObject
     private ProductGroupService _productGroupService;
     private readonly SettingsService _settingsService;
     private readonly ReportsService _reportsService;
+    private readonly TaxService _taxService;
+    private readonly StockAdjustmentService _stockAdjustmentService;
+    private readonly CashDrawerService _cashDrawer;
 
     private ReportsViewModel? _reportsViewModel;
+    private TaxRateViewModel? _taxRate;
+    private StockAdjustmentViewModel? _stockAdjustment;
+    private ReceiptViewModel? _receiptViewModelForReprint;
 
     [ObservableProperty]
     private object? _currentPage;
@@ -85,7 +91,10 @@ public sealed partial class ShellViewModel : ObservableObject
         DatabaseService database,
         ProductGroupService productGroupService,
         SettingsService settings,
-        ReportsService reportsService)
+        ReportsService reportsService,
+        TaxService taxService,
+        StockAdjustmentService stockAdjustmentService,
+        CashDrawerService cashDrawer)
     {
         Session = session;
         _company = company;
@@ -110,10 +119,13 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsService = settings;
         _reportsService = reportsService;
         _reportsService = reportsService;
+        _taxService = taxService;
+        _stockAdjustmentService = stockAdjustmentService;
+        _cashDrawer = cashDrawer;
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
-            _pos ??= new PosViewModel(_products, _sales, _customers);
+            _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
             _pos.SetSession(Session);
             _pos.ResumeOpenOrder(resumeData);
             Navigate("S02");
@@ -193,7 +205,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
 
             case "S02":
-                _pos ??= new PosViewModel(_products, _sales, _customers);
+                _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
                 _pos.SetSession(Session);
                 _pos.BackRequested += () => Navigate("home");
                 CurrentPage = _pos;
@@ -254,7 +266,15 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
 
             case "S11":
-                CurrentPage = new ReceiptViewModel(_sales);
+                if (_receiptViewModelForReprint is not null)
+                {
+                    CurrentPage = _receiptViewModelForReprint;
+                    _receiptViewModelForReprint = null;
+                }
+                else
+                {
+                    CurrentPage = new ReceiptViewModel(_sales);
+                }
                 ActiveRoute = "home";
                 break;
 
@@ -263,7 +283,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 _openOrders.BackRequested += () => Navigate("home");
                 _openOrders.ResumeRequested += resumeData =>
                 {
-                    _pos ??= new PosViewModel(_products, _sales, _customers);
+                    _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
                     _pos.SetSession(Session);
                     _pos.ResumeOpenOrder(resumeData);
                     Navigate("S02");
@@ -307,6 +327,12 @@ public sealed partial class ShellViewModel : ObservableObject
             case "S32":
                 _salesHistory ??= new SalesHistoryViewModel(_sales);
                 _salesHistory.BackRequested += () => Navigate("home");
+                _salesHistory.ViewDetailsRequested += sale =>
+                {
+                    _receiptViewModelForReprint ??= new ReceiptViewModel(_sales);
+                    _receiptViewModelForReprint.SetSale(sale.Id);
+                    Navigate("S11");
+                };
                 CurrentPage = _salesHistory;
                 ActiveRoute = "home";
                 break;
@@ -315,6 +341,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _endOfDayScreen ??= new EndOfDayViewModel(_endOfDay, _sales);
                 _endOfDayScreen.BackRequested += () => Navigate("home");
                 CurrentPage = _endOfDayScreen;
+                ActiveRoute = "home";
+                break;
+
+            case "S23":
+                _taxRate ??= new TaxRateViewModel(_taxService);
+                _taxRate.BackRequested += () => Navigate("home");
+                CurrentPage = _taxRate;
                 ActiveRoute = "home";
                 break;
 
@@ -350,6 +383,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _reportsViewModel ??= new ReportsViewModel(_reportsService);
                 _reportsViewModel.BackRequested += () => Navigate("home");
                 CurrentPage = _reportsViewModel;
+                ActiveRoute = "home";
+                break;
+
+            case "S45":
+                _stockAdjustment ??= new StockAdjustmentViewModel(_products, _stockAdjustmentService);
+                _stockAdjustment.BackRequested += () => Navigate("home");
+                CurrentPage = _stockAdjustment;
                 ActiveRoute = "home";
                 break;
 

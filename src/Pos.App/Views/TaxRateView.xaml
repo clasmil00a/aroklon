@@ -1,0 +1,164 @@
+<UserControl
+    x:Class="Pos.App.Views.TaxRateView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{DynamicResource Brush.Bg}"
+    Loaded="OnLoaded">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Tarif Pajak" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    Style="{StaticResource Text.Secondary}"
+                    Text="Kelola tarif pajak yang diterapkan pada produk." />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
+                <TextBlock Style="{StaticResource Text.Caption}" Text="S23 · M3" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Form -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Tarif pajak baru" />
+
+                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Tarif (basis poin)" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding RateBp, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <CheckBox
+                        Margin="0,10,0,0"
+                        Content="Tarif bawaan"
+                        IsChecked="{Binding IsDefault}" />
+
+                    <Button
+                        Margin="0,16,0,0"
+                        Height="44"
+                        Command="{Binding SaveCommand}"
+                        Content="Simpan tarif"
+                        IsDefault="True"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Primary}" />
+
+                    <Button
+                        Margin="0,8,0,0"
+                        Height="44"
+                        Command="{Binding ClearCommand}"
+                        Content="Bersihkan"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Ghost}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding ErrorMessage}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+
+                    <Button
+                        Margin="0,24,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding GoBackCommand}"
+                        Content="← Kembali ke beranda"
+                        Style="{StaticResource Button.Ghost}" />
+                </StackPanel>
+            </Border>
+
+            <!-- List -->
+            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Daftar tarif pajak" />
+                    <ItemsControl ItemsSource="{Binding TaxRates}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="10"
+                                    Background="{DynamicResource Brush.Surface}"
+                                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                                    BorderThickness="{StaticResource Border.Width}"
+                                    CornerRadius="{StaticResource Radius.Sm}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                            <TextBlock
+                                                Style="{StaticResource Text.Caption}"
+                                                Text="{Binding RateBp, StringFormat='{}{0:N2}%'}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="{Binding IsDefault, Converter={x:Static Binding.DoNothing}, ConverterParameter='Bawaan', TargetNullValue=''}"
+                                            Foreground="{DynamicResource Brush.Success}" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Content="Ubah"
+                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Ghost}"
+                                            Padding="8,4" />
+                                        <Button
+                                            Grid.Column="3"
+                                            Content="Nonaktifkan"
+                                            Command="{Binding DataContext.DeactivateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Ghost}"
+                                            Padding="8,4" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding TaxRates.Count, StringFormat='{}{0} tarif pajak'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

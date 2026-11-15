@@ -31,6 +31,9 @@ public sealed partial class AppShellViewModel : ObservableObject
     private readonly ProductGroupService _productGroupService;
     private readonly SettingsService _settingsService;
     private readonly ReportsService _reportsService;
+    private readonly TaxService _taxService;
+    private readonly StockAdjustmentService _stockAdjustmentService;
+    private readonly CashDrawerService _cashDrawerService;
 
     private CompanyInfo? _company;
 
@@ -60,7 +63,10 @@ public sealed partial class AppShellViewModel : ObservableObject
         DatabaseService database,
         ProductGroupService productGroupService,
         SettingsService settings,
-        ReportsService reportsService)
+        ReportsService reportsService,
+        TaxService taxService,
+        StockAdjustmentService stockAdjustmentService,
+        CashDrawerService cashDrawerService)
     {
         _auth = auth;
         _theme = theme;
@@ -82,6 +88,9 @@ public sealed partial class AppShellViewModel : ObservableObject
         _productGroupService = productGroupService;
         _settingsService = settings;
         _reportsService = reportsService;
+        _taxService = taxService;
+        _stockAdjustmentService = stockAdjustmentService;
+        _cashDrawerService = cashDrawerService;
     }
 
     public async Task InitializeAsync()
@@ -170,7 +179,10 @@ public sealed partial class AppShellViewModel : ObservableObject
             _database,
             _productGroupService,
             _settingsService,
-            _reportsService);
+            _reportsService,
+            _taxService,
+            _stockAdjustmentService,
+            _cashDrawerService);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
         shell.FullScreenRequested += (_, _) => ToggleFullScreen();

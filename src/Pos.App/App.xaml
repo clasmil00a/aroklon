@@ -124,6 +124,14 @@
                 <views:ReportsView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:TaxRateViewModel}">
+                <views:TaxRateView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:StockAdjustmentViewModel}">
+                <views:StockAdjustmentView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:ScreenStubViewModel}">
                 <views:StubView />
             </DataTemplate>

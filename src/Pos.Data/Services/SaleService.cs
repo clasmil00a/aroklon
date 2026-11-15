@@ -914,6 +914,7 @@ public sealed class SaleService
                   p.price_change_allowed AS PriceChangeAllowed,
                   p.cost_minor AS BaseCostMinor,
                   p.price_minor AS BasePriceMinor,
+                  p.price_includes_tax AS PriceIncludesTax,
                   pu.id AS ProductUnitId,
                   pu.factor_to_base_milli AS UnitFactorMilli,
                   pu.price_minor AS UnitPriceMinor,
@@ -983,28 +984,37 @@ public sealed class SaleService
             var baseQty = UnitMath.ToBase(input.QtyMilli, row.UnitFactorMilli);
             var unitCost = MoneyMath.RoundDiv(row.BaseCostMinor * row.UnitFactorMilli, 1000);
 
-            // Resolve tax rate: input override, then product's default tax rate.
-            var taxRateId = (await connection.QueryFirstOrDefaultAsync<string>(new CommandDefinition(
+            // Resolve tax rates: all active product taxes + optional input override.
+            var productTaxRateIds = await connection.QueryAsync<string>(new CommandDefinition(
                 """
                 SELECT tr.id
                 FROM product_taxes pt
                 JOIN tax_rates tr ON tr.id = pt.tax_rate_id AND tr.active = 1
                 WHERE pt.product_id = @productId
-                ORDER BY tr.rate_bp DESC
-                LIMIT 1;
+                ORDER BY tr.rate_bp DESC;
                 """,
                 new { productId = row.ProductId },
                 transaction,
-                cancellationToken: cancellationToken)).ConfigureAwait(false));
-            var rateBp = taxRateId is not null
-                ? (await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            var taxRateIdList = productTaxRateIds.ToList();
+            var rateBpList = new List<int>();
+            foreach (var trId in taxRateIdList)
+            {
+                var rb = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
                     "SELECT rate_bp FROM tax_rates WHERE id = @id AND active = 1;",
-                    new { id = taxRateId },
+                    new { id = trId },
                     transaction,
-                    cancellationToken: cancellationToken)).ConfigureAwait(false))
-                : 0;
-            var taxableBase = gross - discount;
-            var tax = rateBp > 0 ? MoneyMath.PercentOf(taxableBase, rateBp) : 0;
+                    cancellationToken: cancellationToken)).ConfigureAwait(false);
+                rateBpList.Add(rb);
+            }
+
+            var taxInfos = taxRateIdList.Zip(rateBpList, (id, bp) =>
+                new TaxRateInfo(id, row.Name, bp, true, false)).ToList();
+
+            var priceIncludesTax = row.PriceIncludesTax == 1;
+            var (tax, taxableBase) = TaxService.ComputeLineTax(
+                gross, discount, taxInfos, priceIncludesTax);
 
             resolved.Add(new ResolvedLine(
                 row.ProductId,
@@ -1023,8 +1033,9 @@ public sealed class SaleService
                 discount,
                 tax,
                 gross - discount + tax,
-                taxRateId,
-                rateBp,
+                taxRateIdList,
+                rateBpList,
+                taxableBase,
                 input.Comment,
                 row.IsService,
                 overridden));
@@ -1138,9 +1149,23 @@ public sealed class SaleService
                 transaction,
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
 
-            // Insert per-line tax if applicable.
-            if (line.TaxMinor > 0 && line.TaxRateId is not null)
+            // Insert per-line taxes (one row per applicable tax rate).
+            for (var i = 0; i < line.TaxRateIds.Count; i++)
             {
+                if (line.RateBps[i] <= 0) continue;
+
+                var taxableBaseForLine = line.TaxableBaseMinor;
+                var taxAmountForLine = line.TaxMinor;
+                // If multiple taxes, apportion proportionally by rate.
+                if (line.TaxRateIds.Count > 1)
+                {
+                    var totalBp = line.RateBps.Sum();
+                    if (totalBp > 0)
+                    {
+                        taxAmountForLine = MoneyMath.PercentOf(taxableBaseForLine, line.RateBps[i]);
+                    }
+                }
+
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
                     INSERT INTO sale_item_taxes
@@ -1154,11 +1179,11 @@ public sealed class SaleService
                     {
                         id = Ids.NewId(),
                         saleItemId,
-                        taxRateId = line.TaxRateId,
+                        taxRateId = line.TaxRateIds[i],
                         name = line.Name,
-                        rateBp = line.RateBp,
-                        taxableBase = line.GrossMinor - line.DiscountMinor,
-                        taxAmount = line.TaxMinor,
+                        rateBp = line.RateBps[i],
+                        taxableBase = taxableBaseForLine,
+                        taxAmount = taxAmountForLine,
                         now = SqlText.Now(now)
                     },
                     transaction,
@@ -1494,8 +1519,9 @@ public sealed class SaleService
         long DiscountMinor,
         long TaxMinor,
         long TotalMinor,
-        string? TaxRateId,
-        int RateBp,
+        IReadOnlyList<string> TaxRateIds,
+        IReadOnlyList<int> RateBps,
+        long TaxableBaseMinor,
         string? Comment,
         bool IsService,
         bool PriceOverridden)
@@ -1580,6 +1606,7 @@ public sealed class SaleService
         public bool PriceChangeAllowed { get; set; }
         public long BaseCostMinor { get; set; }
         public long BasePriceMinor { get; set; }
+        public int PriceIncludesTax { get; set; }
         public string ProductUnitId { get; set; } = string.Empty;
         public long UnitFactorMilli { get; set; }
         public long? UnitPriceMinor { get; set; }

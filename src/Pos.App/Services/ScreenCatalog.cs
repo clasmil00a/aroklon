@@ -58,7 +58,10 @@ public static class ScreenCatalog
         new("S39", "Daftar harga", "Daftar harga retail, grosir, dan per satuan.", "M2"),
         new("S40", "Editor daftar harga", "Buat, salin, atau ubah massal daftar harga.", "M2"),
         new("S41", "Harga produk", "Harga semua daftar untuk satu produk.", "M2"),
-        new("S42", "Master satuan", "Nama satuan yang dipakai ulang.", "M2")
+        new("S42", "Master satuan", "Nama satuan yang dipakai ulang.", "M2"),
+        new("S43", "Grup produk", "Kelompokkan produk untuk pencarian.", "M5"),
+        new("S44", "Laporan", "Laporan penjualan, stok, dan kasir.", "M8"),
+        new("S45", "Penyesuaian stok", "Atur stok produk secara cepat (penyesuaian dan penerimaan).", "M9")
     ];
 
     private static readonly Dictionary<string, ScreenDefinition> ById =

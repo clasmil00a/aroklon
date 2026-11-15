@@ -16,6 +16,7 @@ public sealed partial class PosViewModel : ObservableObject
     private readonly ProductService _products;
     private readonly SaleService _sales;
     private readonly CustomerService _customers;
+    private readonly CashDrawerService _cashDrawer;
     private readonly PosCart _cart = new();
 
     [ObservableProperty]
@@ -73,11 +74,16 @@ public sealed partial class PosViewModel : ObservableObject
 
     private UserSession? _session;
 
-    public PosViewModel(ProductService products, SaleService sales, CustomerService customers)
+    public PosViewModel(
+        ProductService products,
+        SaleService sales,
+        CustomerService customers,
+        CashDrawerService cashDrawer)
     {
         _products = products;
         _sales = sales;
         _customers = customers;
+        _cashDrawer = cashDrawer;
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(SearchText) && !string.IsNullOrWhiteSpace(SearchText))
@@ -140,6 +146,21 @@ public sealed partial class PosViewModel : ObservableObject
 
     [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
+
+    [RelayCommand]
+    private async Task KickCashDrawerAsync()
+    {
+        try
+        {
+            await _cashDrawer.KickAsync();
+            InfoMessage = "Laci kas ditekan.";
+        }
+        catch (Exception exception)
+        {
+            Log.Warning(exception, "Cash drawer kick failed");
+            ErrorMessage = "Gagal membuka laci kas. Coba lagi.";
+        }
+    }
 
     [RelayCommand]
     private async Task LoadPaymentTypesAsync()

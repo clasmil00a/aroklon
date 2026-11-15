@@ -3,6 +3,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{DynamicResource Brush.Bg}">
+    <UserControl.InputBindings>
+        <KeyBinding Key="D" Modifiers="Ctrl" Command="{Binding KickCashDrawerCommand}" />
+    </UserControl.InputBindings>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>

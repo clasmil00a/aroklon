@@ -22,7 +22,7 @@ public sealed class MigrationTests
         Assert.Equal(35, tables);
         Assert.Equal(3, views);
         Assert.Equal(2, triggers);
-        Assert.Equal(1, version);
+        Assert.Equal(2, version);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public sealed class MigrationTests
         Assert.Equal(2, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM price_lists;"));
         Assert.Equal(4, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM payment_types;"));
         Assert.Equal(1, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM registers;"));
-        Assert.Equal(17, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM settings;"));
+        Assert.Equal(19, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM settings;"));
         Assert.Equal("My Shop", await connection.ExecuteScalarAsync<string>("SELECT name FROM company WHERE id = 'company';"));
         Assert.Equal(0, await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM users;"));
     }
@@ -49,7 +49,7 @@ public sealed class MigrationTests
         var second = await db.Bootstrapper.InitializeAsync();
         await db.Bootstrapper.VerifyAsync();
 
-        Assert.Equal(1, second.SchemaVersion);
+        Assert.Equal(2, second.SchemaVersion);
         await using var connection = await db.OpenAsync();
         Assert.Equal(1, await connection.ExecuteScalarAsync<long>("PRAGMA foreign_keys;"));
         Assert.Equal("wal", await connection.ExecuteScalarAsync<string>("PRAGMA journal_mode;"));

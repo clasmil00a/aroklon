@@ -97,6 +97,17 @@ public partial class App : Application
                     services.AddSingleton<DatabaseService>();
                     services.AddSingleton<ProductGroupService>();
                     services.AddSingleton<ReportsService>();
+                    services.AddSingleton<TaxService>(sp => new TaxService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<StockAdjustmentService>(sp => new StockAdjustmentService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<CashDrawerService>(sp => new CashDrawerService(
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
                     services.AddSingleton<ThemeService>();
                     services.AddSingleton(new UserPreferencesService(AppPaths.PreferencesPath));
                 })
