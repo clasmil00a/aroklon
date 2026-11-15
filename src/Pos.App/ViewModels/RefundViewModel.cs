@@ -1,14 +1,14 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pos.App.Services;
+using Aroklon.App.Services;
 using Pos.Data.Services;
 using Pos.Domain;
 using Pos.Domain.Models;
 using Pos.Domain.Pos;
 using Serilog;
 
-namespace Pos.App.ViewModels;
+namespace Aroklon.App.ViewModels;
 
 public sealed record RefundSaleLine(
     string SaleItemId,

@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Pos.App.ViewModels;
+using Aroklon.App.ViewModels;
 
-namespace Pos.App.Views;
+namespace Aroklon.App.Views;
 
 public partial class ProductSearchView : UserControl
 {

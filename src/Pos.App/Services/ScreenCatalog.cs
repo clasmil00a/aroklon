@@ -1,4 +1,4 @@
-namespace Pos.App.Services;
+namespace Aroklon.App.Services;
 
 public sealed record ScreenDefinition(
     string Id,

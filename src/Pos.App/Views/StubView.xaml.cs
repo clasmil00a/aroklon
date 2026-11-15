@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace Pos.App.Views;
+namespace Aroklon.App.Views;
 
 public partial class StubView : UserControl
 {

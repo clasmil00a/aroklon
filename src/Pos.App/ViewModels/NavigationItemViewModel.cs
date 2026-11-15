@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Pos.App.ViewModels;
+namespace Aroklon.App.ViewModels;
 
 public sealed partial class NavigationItemViewModel : ObservableObject
 {

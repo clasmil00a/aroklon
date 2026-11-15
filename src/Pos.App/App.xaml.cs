@@ -4,8 +4,8 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Pos.App.Services;
-using Pos.App.ViewModels;
+using Aroklon.App.Services;
+using Aroklon.App.ViewModels;
 using Pos.Data.Database;
 using Pos.Data.Security;
 using Pos.Data.Services;
@@ -13,7 +13,7 @@ using Pos.Domain.Security;
 using Pos.Domain.Time;
 using Serilog;
 
-namespace Pos.App;
+namespace Aroklon.App;
 
 public partial class App : Application
 {

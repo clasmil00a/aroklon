@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace Pos.App.Converters;
+namespace Aroklon.App.Converters;
 
 /// <summary>Converts true to Visible and false to Collapsed.</summary>
 public sealed class BoolToVisibilityConverter : IValueConverter

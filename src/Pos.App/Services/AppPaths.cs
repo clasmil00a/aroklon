@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Pos.App.Services;
+namespace Aroklon.App.Services;
 
 /// <summary>
 /// Per-user application folders. The install directory is never written to.

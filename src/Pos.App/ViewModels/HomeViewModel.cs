@@ -2,7 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Pos.App.ViewModels;
+namespace Aroklon.App.ViewModels;
 
 public sealed record HomeMenuItem(
     string Title,

@@ -1,5 +1,5 @@
 <UserControl
-    x:Class="Pos.App.Views.OnboardingView"
+    x:Class="Aroklon.App.Views.OnboardingView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{DynamicResource Brush.Bg}"

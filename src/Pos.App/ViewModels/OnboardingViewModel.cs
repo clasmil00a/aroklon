@@ -5,7 +5,7 @@ using Pos.Domain;
 using Pos.Domain.Models;
 using Serilog;
 
-namespace Pos.App.ViewModels;
+namespace Aroklon.App.ViewModels;
 
 public sealed partial class OnboardingViewModel : ObservableObject
 {
