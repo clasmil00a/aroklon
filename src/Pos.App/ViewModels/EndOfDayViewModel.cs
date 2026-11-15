@@ -55,6 +55,9 @@ public sealed partial class EndOfDayViewModel : ObservableObject
     [ObservableProperty]
     private long _cashOut;
 
+    [ObservableProperty]
+    private string _xReportText = string.Empty;
+
     private string? _openDayId;
 
     public EndOfDayViewModel(EndOfDayService endOfDay, SaleService sales)
@@ -153,6 +156,53 @@ public sealed partial class EndOfDayViewModel : ObservableObject
         {
             Log.Error(exception, "Failed to close day");
             ErrorMessage = "Gagal menutup hari. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task PrintXReportAsync()
+    {
+        if (IsBusy || !DayOpen) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            var summary = await _endOfDay.GetOpenDaySummaryAsync(RegisterId);
+            if (summary is null)
+            {
+                ErrorMessage = "Tidak ada hari bisnis yang terbuka.";
+                return;
+            }
+
+            var lines = new List<string>
+            {
+                "Laporan X (Belum Ditutup)",
+                $"Tanggal: {summary.BusinessDate}",
+                $"Dicetak: {DateTimeOffset.UtcNow:dd/MM/yyyy HH:mm}",
+                "",
+                $"Transaksi: {summary.SalesCount}",
+                $"Refund: {summary.RefundCount}",
+                $"Total Penjualan: {Pos.Domain.Primitives.MoneyMath.Format(summary.GrandTotalMinor)}",
+                $"Pajak: {Pos.Domain.Primitives.MoneyMath.Format(summary.TaxTotalMinor)}",
+                $"Diskon: {Pos.Domain.Primitives.MoneyMath.Format(summary.DiscountTotalMinor)}",
+                $"Kas Masuk: {Pos.Domain.Primitives.MoneyMath.Format(summary.CashInTotalMinor)}",
+                $"Kas Keluar: {Pos.Domain.Primitives.MoneyMath.Format(summary.CashOutTotalMinor)}",
+                $"Kas Diharapkan: {Pos.Domain.Primitives.MoneyMath.Format(summary.ExpectedCashMinor)}",
+            };
+
+            XReportText = string.Join("\n", lines);
+            InfoMessage = "Laporan X ditampilkan.";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to print X report");
+            ErrorMessage = "Gagal mencetak laporan X. Coba lagi.";
         }
         finally
         {

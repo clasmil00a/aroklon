@@ -30,6 +30,12 @@ public sealed partial class ReportsViewModel : ObservableObject
     [ObservableProperty]
     private string _reportContent = string.Empty;
 
+    [ObservableProperty]
+    private string _exportFormat = "csv";
+
+    [ObservableProperty]
+    private IReadOnlyList<string> _exportFormats = new List<string> { "csv", "txt" };
+
     public ReportsViewModel(ReportsService reportsService)
     {
         _reportsService = reportsService;
@@ -86,6 +92,40 @@ public sealed partial class ReportsViewModel : ObservableObject
         {
             Log.Error(exception, "Failed to generate report");
             ErrorMessage = "Gagal generate laporan. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportReportAsync()
+    {
+        if (IsBusy || string.IsNullOrEmpty(SelectedReportId)) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        InfoMessage = string.Empty;
+
+        try
+        {
+            var bytes = await _reportsService.ExportReportAsync(new ReportParameters(
+                SelectedReportId,
+                null, null, null, null, null, string.Empty
+            ));
+
+            var extension = ExportFormat == "csv" ? "csv" : "txt";
+            var fileName = $"laporan-{SelectedReportId}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.{extension}";
+            var filePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), fileName);
+            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+
+            InfoMessage = "Laporan diekspor ke " + filePath;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to export report");
+            ErrorMessage = "Gagal mengekspor laporan. Coba lagi.";
         }
         finally
         {

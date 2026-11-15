@@ -167,6 +167,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0">
@@ -388,5 +389,65 @@
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- Price override dialog -->
+        <Border
+            Grid.RowSpan="2"
+            Background="#80000000"
+            Visibility="{Binding IsPriceOverrideVisible, Converter={StaticResource BoolToVisibility}}"
+            Panel.ZIndex="10">
+            <Border
+                Width="400"
+                Background="{DynamicResource Brush.Bg}"
+                BorderBrush="{DynamicResource Brush.BorderInput}"
+                BorderThickness="{StaticResource Border.Width}"
+                CornerRadius="{StaticResource Radius.Sm}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="24">
+                <StackPanel>
+                    <TextBlock
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Ubah Harga" />
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="{Binding SelectedLine.Name}" />
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding SelectedLine.UnitName}" />
+
+                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Harga baru" />
+                    <TextBox
+                        Style="{StaticResource Input}"
+                        Text="{Binding NewLinePrice, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Error}"
+                        Text="{Binding PriceOverrideError}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding PriceOverrideError, Converter={StaticResource BoolToVisibility}}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button
+                            Width="100"
+                            Height="44"
+                            Margin="0,0,12,0"
+                            Command="{Binding ApplyPriceOverrideCommand}"
+                            Content="Terapkan"
+                            IsDefault="True"
+                            Style="{StaticResource Button.Primary}" />
+                        <Button
+                            Width="100"
+                            Height="44"
+                            Command="{Binding HidePriceOverrideCommand}"
+                            Content="Batal"
+                            Style="{StaticResource Button.Ghost}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

@@ -29,6 +29,10 @@
         </Grid>
 
         <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" />
                 <ColumnDefinition Width="16" />
@@ -36,7 +40,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Day status -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock
                         Margin="0,0,0,8"
@@ -78,6 +82,14 @@
 
                     <Button
                         Margin="0,16,0,0"
+                        Height="44"
+                        Command="{Binding PrintXReportCommand}"
+                        Content="Cetak Laporan X (Belum Tutup)"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Style="{StaticResource Button.Secondary}" />
+
+                    <Button
+                        Margin="0,8,0,0"
                         HorizontalAlignment="Left"
                         Command="{Binding GoBackCommand}"
                         Content="← Kembali ke beranda"
@@ -93,7 +105,7 @@
             </Border>
 
             <!-- Close day -->
-            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
+            <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource Card.Raised}">
                 <StackPanel>
                     <TextBlock
                         Margin="0,0,0,8"
@@ -134,6 +146,24 @@
                         TextWrapping="Wrap"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
 
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Style="{StaticResource Text.Secondary}"
+                        Text="{Binding InfoMessage}"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- X report preview -->
+            <Border Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource Card.Raised}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Style="{StaticResource Text.SectionTitle}"
+                        Text="Pratinjau Laporan X" />
+                    <Border Padding="12" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderInput}" BorderThickness="{StaticResource Border.Width}" CornerRadius="{StaticResource Radius.Sm}">
+                        <TextBlock FontFamily="{StaticResource Font.Mono}" FontSize="{StaticResource Font.Size.Sm}" TextWrapping="Wrap" Text="{Binding XReportText}" />
+                    </Border>
                     <TextBlock
                         Margin="0,12,0,0"
                         Style="{StaticResource Text.Secondary}"

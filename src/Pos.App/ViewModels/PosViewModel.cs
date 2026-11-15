@@ -378,6 +378,74 @@ public sealed partial class PosViewModel : ObservableObject
         }
     }
 
+    [ObservableProperty]
+    private CartLineViewModel? _selectedLine;
+
+    [ObservableProperty]
+    private long _newLinePrice;
+
+    [ObservableProperty]
+    private string _priceOverrideError = string.Empty;
+
+    [ObservableProperty]
+    private bool _isPriceOverrideVisible;
+
+    [RelayCommand]
+    private void ShowPriceOverride(CartLineViewModel? line)
+    {
+        if (line is null || IsBusy) return;
+
+        SelectedLine = line;
+        NewLinePrice = line.UnitPriceMinor;
+        PriceOverrideError = string.Empty;
+        IsPriceOverrideVisible = true;
+    }
+
+    [RelayCommand]
+    private void HidePriceOverride()
+    {
+        IsPriceOverrideVisible = false;
+        SelectedLine = null;
+        NewLinePrice = 0;
+        PriceOverrideError = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ApplyPriceOverride()
+    {
+        if (SelectedLine is null || IsBusy) return;
+
+        if (NewLinePrice < 0)
+        {
+            PriceOverrideError = "Harga tidak boleh negatif.";
+            return;
+        }
+
+        ErrorMessage = string.Empty;
+        try
+        {
+            var updatedLine = _cart.Lines.First(l => l.LineId == SelectedLine.LineId);
+            var newLine = updatedLine with
+            {
+                UnitPriceMinor = NewLinePrice,
+                PriceOverridden = true,
+            };
+            _cart.ReplaceLine(newLine);
+            RefreshLines();
+            Recalculate();
+            HidePriceOverride();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to change price");
+            PriceOverrideError = exception.Message;
+        }
+        finally
+        {
+            UpdateCanCheckout();
+        }
+    }
+
     [RelayCommand]
     private void AddPaymentType(PaymentTypeInfo? type)
     {

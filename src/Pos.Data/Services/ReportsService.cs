@@ -94,6 +94,19 @@ public sealed class ReportsService
         return reportType;
     }
 
+    /// <summary>
+    /// Exports a report as CSV (Excel-compatible) bytes.
+    /// </summary>
+    public async Task<byte[]> ExportReportAsync(
+        ReportParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession();
+
+        var text = await GenerateReportAsync(parameters, cancellationToken).ConfigureAwait(false);
+        return System.Text.Encoding.UTF8.GetBytes(text);
+    }
+
     private async Task<string> GenerateSalesReportAsync(
         ReportParameters parameters,
         CancellationToken cancellationToken)

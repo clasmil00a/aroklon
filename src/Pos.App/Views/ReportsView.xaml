@@ -89,6 +89,25 @@
                         <TextBlock FontFamily="{StaticResource Font.Mono}" FontSize="{StaticResource Font.Size.Sm}" TextWrapping="Wrap" Text="{Binding ReportContent}" />
                     </Border>
 
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Style="{StaticResource Text.Caption}"
+                            Text="Format:" />
+                        <ComboBox
+                            Margin="8,0,0,0"
+                            Width="100"
+                            ItemsSource="{Binding ExportFormats}"
+                            SelectedItem="{Binding ExportFormat, Mode=TwoWay}" />
+                        <Button
+                            Margin="12,0,0,0"
+                            Height="44"
+                            Command="{Binding ExportReportCommand}"
+                            Content="Ekspor"
+                            IsEnabled="{Binding IsNotBusy}"
+                            Style="{StaticResource Button.Secondary}" />
+                    </StackPanel>
+
                     <Button
                         Margin="0,16,0,0"
                         HorizontalAlignment="Left"
