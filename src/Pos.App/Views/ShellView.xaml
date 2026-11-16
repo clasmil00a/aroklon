@@ -11,25 +11,25 @@
     <Grid>
         <ContentControl Content="{Binding CurrentPage}" />
 
-        <!-- Aronium-style main menu: 294px flyout from the left edge. -->
+        <!-- Aronium-style main menu: 294px flyout from the right edge. -->
         <Grid
             Panel.ZIndex="50"
             Visibility="{Binding IsMenuOpen, Converter={StaticResource BoolToVisibility}}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="294" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="294" />
             </Grid.ColumnDefinitions>
 
             <Border
-                Grid.Column="1"
+                Grid.Column="0"
                 Background="{DynamicResource Brush.Scrim}"
                 MouseLeftButtonDown="OnMenuBackdropMouseDown" />
 
             <Border
-                Grid.Column="0"
+                Grid.Column="1"
                 Background="{DynamicResource Brush.SurfaceRaised}"
                 BorderBrush="{DynamicResource Brush.Border}"
-                BorderThickness="0,0,1,0"
+                BorderThickness="1,0,0,0"
                 Effect="{DynamicResource Effect.Pop}">
                 <Grid>
                     <Grid.RowDefinitions>
