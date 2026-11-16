@@ -66,6 +66,18 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="PosTile.Dark" TargetType="Button" BasedOn="{StaticResource PosTile}">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="PosSearchInput" TargetType="TextBox" BasedOn="{StaticResource Input}">
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="0" />
@@ -265,7 +277,7 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource Text.BodyStrong}"
-                                Text="Jumlah" />
+                                Text="Qty" />
                             <TextBlock
                                 Grid.Column="3"
                                 HorizontalAlignment="Right"
@@ -277,7 +289,7 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource Text.BodyStrong}"
-                                Text="Total" />
+                                Text="Jumlah" />
                         </Grid>
                     </Border>
 
@@ -803,7 +815,7 @@
                         Grid.Row="0"
                         Grid.Column="3"
                         Command="{Binding SaveSaleCommand}"
-                        Style="{StaticResource PosTile}">
+                        Style="{StaticResource PosTile.Dark}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
