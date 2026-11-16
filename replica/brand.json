@@ -1,0 +1,5 @@
+{
+  "avoid": ["Aronium"],
+  "domains": ["aronium.com"],
+  "colors": ["#006bff", "#0078d4", "#1a73e8", "#4285f4", "#67c9f2"]
+}
