@@ -25,6 +25,3 @@ logs/
 # OS noise
 .DS_Store
 Thumbs.db
-
-# MSBuild temporary project files
-*_wpftmp.csproj
