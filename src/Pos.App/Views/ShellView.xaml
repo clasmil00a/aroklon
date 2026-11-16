@@ -4,56 +4,76 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{DynamicResource Brush.Bg}">
 
+    <UserControl.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseMenuCommand}" />
+    </UserControl.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
-            <!-- RowDefinition.Height is GridLength; the Double token Layout.TopBar
-                 cannot be assigned here directly. -->
-            <RowDefinition Height="56" />
+            <RowDefinition Height="48" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- Aronium-style top bar: brand on the left, page title and main menu on the right. -->
         <Border
             Grid.Row="0"
-            Background="{DynamicResource Brush.Surface}"
+            Background="{DynamicResource Brush.SurfaceRaised}"
             BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="0,0,0,1">
-            <Grid Margin="16,0">
+            <Grid Margin="10,0,8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <Border
-                        Width="30"
-                        Height="30"
-                        Background="{DynamicResource Brush.Accent}"
-                        CornerRadius="{StaticResource Radius.Sm}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="15"
-                            FontWeight="{StaticResource Font.Weight.Bold}"
-                            Foreground="{DynamicResource Brush.OnAccent}"
-                            Text="P" />
-                    </Border>
-                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock
-                            FontWeight="{StaticResource Font.Weight.SemiBold}"
-                            Text="{Binding CompanyName}" />
-                        <TextBlock Style="{StaticResource Text.Caption}" Text="POS · Kasir desktop" />
+                <Button
+                    Padding="4,0"
+                    Command="{Binding NavigateCommand}"
+                    CommandParameter="home"
+                    Style="{StaticResource Button.Ghost}">
+                    <StackPanel Orientation="Horizontal">
+                        <Border
+                            Width="28"
+                            Height="28"
+                            Background="{DynamicResource Brush.Accent}"
+                            CornerRadius="{StaticResource Radius.Sm}">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                FontWeight="{StaticResource Font.Weight.Bold}"
+                                Foreground="{DynamicResource Brush.OnAccent}"
+                                Text="A" />
+                        </Border>
+                        <StackPanel Margin="9,0,0,0" VerticalAlignment="Center">
+                            <TextBlock
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Text="Aroklon" />
+                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding CompanyName}" />
+                        </StackPanel>
                     </StackPanel>
+                </Button>
+
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="20,0,0,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock
+                        FontSize="{StaticResource Font.Size.Base}"
+                        FontWeight="{StaticResource Font.Weight.SemiBold}"
+                        Text="{Binding PageTitle}" />
+                    <Border Margin="12,0,0,0" Style="{StaticResource Badge}">
+                        <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding RoleName}" />
+                    </Border>
                 </StackPanel>
 
                 <StackPanel
                     Grid.Column="2"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
-                    <Border Style="{StaticResource Badge}" Margin="0,0,12,0">
-                        <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding RoleName}" />
-                    </Border>
-                    <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                    <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
                         <TextBlock
                             HorizontalAlignment="Right"
                             FontWeight="{StaticResource Font.Weight.Medium}"
@@ -64,77 +84,162 @@
                             Text="{Binding DatabaseLabel}" />
                     </StackPanel>
                     <Border
-                        Width="32"
-                        Height="32"
+                        Width="30"
+                        Height="30"
                         Background="{DynamicResource Brush.Accent}"
-                        CornerRadius="16">
+                        CornerRadius="15">
                         <TextBlock
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            FontSize="{StaticResource Font.Size.Sm}"
+                            FontSize="{StaticResource Font.Size.Xs}"
                             FontWeight="{StaticResource Font.Weight.Bold}"
                             Foreground="{DynamicResource Brush.OnAccent}"
                             Text="{Binding Initials}" />
                     </Border>
                     <Button
-                        Margin="12,0,0,0"
-                        Command="{Binding SignOutCommand}"
-                        Content="Keluar"
-                        Style="{StaticResource Button.Ghost}" />
+                        Margin="8,0,0,0"
+                        Command="{Binding ToggleMenuCommand}"
+                        Content="&#xE712;"
+                        Style="{StaticResource Button.Icon}"
+                        ToolTip="Menu utama" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="208" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" />
+
+        <!-- Right-side flyout menu, modelled after Aronium's main menu. -->
+        <Grid
+            Grid.Row="1"
+            Panel.ZIndex="20"
+            Visibility="{Binding IsMenuOpen, Converter={StaticResource BoolToVisibility}}">
+            <Border
+                Background="#A0000000"
+                MouseLeftButtonDown="OnMenuBackdropMouseDown" />
 
             <Border
-                Grid.Column="0"
-                Padding="12"
+                Width="340"
+                HorizontalAlignment="Right"
+                Background="{DynamicResource Brush.SurfaceRaised}"
                 BorderBrush="{DynamicResource Brush.Border}"
-                BorderThickness="0,0,1,0">
+                BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <ItemsControl ItemsSource="{Binding NavigationItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <RadioButton
-                                    Margin="0,2"
-                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding Route}"
-                                    Content="{Binding Label}"
-                                    GroupName="MainNav"
-                                    IsChecked="{Binding IsActive, Mode=OneWay}"
-                                    Style="{StaticResource NavItem}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <Border Padding="20,16,12,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock
+                                    FontSize="{StaticResource Font.Size.Lg}"
+                                    FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                    Text="{Binding MenuHeader}" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="{Binding CompanyName}" />
+                            </StackPanel>
+                            <Button
+                                Grid.Column="1"
+                                Command="{Binding CloseMenuCommand}"
+                                Content="&#xE76C;"
+                                Style="{StaticResource Button.Icon}"
+                                ToolTip="Tutup menu" />
+                        </Grid>
+                    </Border>
 
-                    <StackPanel Grid.Row="1" Margin="0,12,0,0">
-                        <Border
-                            Height="1"
-                            Margin="0,0,0,12"
-                            Background="{DynamicResource Brush.Border}" />
+                    <Border
+                        Grid.Row="1"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,1,0,1">
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly">
+                            <ItemsControl ItemsSource="{Binding MenuItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock
+                                                Margin="16,14,16,4"
+                                                FontSize="{StaticResource Font.Size.Xs}"
+                                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                                Foreground="{DynamicResource Brush.TextMuted}"
+                                                Text="{Binding Section}"
+                                                Visibility="{Binding Section, Converter={StaticResource StringToVisibility}}" />
+                                            <Button
+                                                Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding Route}"
+                                                Style="{StaticResource Button.Menu}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="30" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock
+                                                        VerticalAlignment="Center"
+                                                        FontFamily="Segoe MDL2 Assets"
+                                                        FontSize="15"
+                                                        Foreground="{DynamicResource Brush.TextMuted}"
+                                                        Text="{Binding Icon}" />
+                                                    <TextBlock
+                                                        Grid.Column="1"
+                                                        VerticalAlignment="Center"
+                                                        Text="{Binding Label}" />
+                                                    <TextBlock
+                                                        Grid.Column="2"
+                                                        VerticalAlignment="Center"
+                                                        Style="{StaticResource Text.Caption}"
+                                                        Text="{Binding Shortcut}" />
+                                                </Grid>
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Grid.Row="2" Margin="12,10,12,12">
                         <TextBlock
+                            HorizontalAlignment="Center"
                             Style="{StaticResource Text.Caption}"
-                            Text="{Binding DatabaseLabel}"
-                            TextWrapping="Wrap" />
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            Style="{StaticResource Text.Caption}"
-                            Text="{Binding Version, StringFormat=Versi {0} · M0}" />
+                            Text="{Binding MenuDate}" />
+                        <StackPanel
+                            Margin="0,6,0,0"
+                            HorizontalAlignment="Center"
+                            Orientation="Horizontal">
+                            <Button
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="settings"
+                                Content="&#xE713;"
+                                Style="{StaticResource Button.Icon}"
+                                ToolTip="Pengaturan" />
+                            <Button
+                                Margin="8,0,0,0"
+                                Command="{Binding ToggleWindowCommand}"
+                                Content="&#xE740;"
+                                Style="{StaticResource Button.Icon}"
+                                ToolTip="Perbesar / kecilkan jendela" />
+                            <Button
+                                Margin="8,0,0,0"
+                                Command="{Binding ExitCommand}"
+                                Content="&#xE7E8;"
+                                Style="{StaticResource Button.Icon}"
+                                ToolTip="Keluar aplikasi" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>
-
-            <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
         </Grid>
     </Grid>
 </UserControl>

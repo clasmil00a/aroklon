@@ -59,6 +59,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly TaxService _taxService;
     private readonly StockAdjustmentService _stockAdjustmentService;
     private readonly CashDrawerService _cashDrawer;
+    private readonly PrinterService _printerService = new();
 
     private ReportsViewModel? _reportsViewModel;
     private TaxRateViewModel? _taxRate;
@@ -70,6 +71,18 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty]
     private string _activeRoute = "home";
+
+    [ObservableProperty]
+    private string _pageTitle = "Beranda";
+
+    [ObservableProperty]
+    private bool _isMenuOpen;
+
+    public string MenuHeader => "POS - " + UserDisplayName;
+
+    public string MenuDate => DateTime.Now.ToString("dd/MM/yyyy");
+
+    public IReadOnlyList<ShellMenuItem> MenuItems { get; }
 
     public ShellViewModel(
         UserSession session,
@@ -133,19 +146,36 @@ public sealed partial class ShellViewModel : ObservableObject
             Navigate("S02");
         };
 
-        NavigationItems =
-        [
-            new NavigationItemViewModel("home", "Beranda"),
-            new NavigationItemViewModel("management", "Manajemen"),
-            new NavigationItemViewModel("settings", "Pengaturan")
-        ];
+        var menuItems = new List<ShellMenuItem>
+        {
+            new("Beranda", "home", "\uE80F", "Utama"),
+            new("Manajemen", "management", "\uE90F"),
+            new("Riwayat penjualan", "S32", "\uE81C", "Penjualan"),
+            new("Pesanan terbuka", "S12", "\uE81E"),
+            new("Kas masuk / keluar", "S31", "\uE8C7"),
+            new("Refund", "S34", "\uE7A7"),
+            new("Tutup hari", "S35", "\uE787")
+        };
+
+        var hasUserSection = Session.Can(PermissionKeys.UsersManage);
+        if (hasUserSection)
+        {
+            menuItems.Add(new ShellMenuItem(
+                "Pengguna & akses", "S25", "\uE77B", "Akun"));
+        }
+
+        menuItems.Add(new ShellMenuItem(
+            "Ganti pengguna",
+            "signout",
+            "\uF3B1",
+            hasUserSection ? string.Empty : "Akun"));
+
+        MenuItems = menuItems;
 
         Navigate("home");
     }
 
     public UserSession Session { get; }
-
-    public IReadOnlyList<NavigationItemViewModel> NavigationItems { get; }
 
     public string CompanyName => _company.Name;
 
@@ -161,7 +191,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public event EventHandler? SignOutRequested;
 
-    public event EventHandler? FullScreenRequested;
+    public event EventHandler? WindowStateRequested;
 
     public event EventHandler? ExitRequested;
 
@@ -173,13 +203,29 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
+        IsMenuOpen = false;
+
+        if (string.Equals(route, "signout", StringComparison.Ordinal))
+        {
+            _ = SignOutAsync();
+            return;
+        }
+
+        if (string.Equals(route, "exit", StringComparison.Ordinal))
+        {
+            RequestExit();
+            return;
+        }
+
+        PageTitle = TitleFor(route);
+
         switch (route)
         {
             case "home":
                 _home ??= new HomeViewModel(
                     FirstName(Session.FullName),
                     Navigate,
-                    RequestFullScreen,
+                    RequestWindowState,
                     SignOutAsync,
                     RequestExit,
                     Version);
@@ -194,15 +240,21 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
 
             case "settings":
-                _settings ??= new SettingsViewModel(
-                    _theme,
-                    _preferences,
-                    _backups,
-                    _databaseOptions,
-                    _databaseInfo,
-                    _company,
-                    _settingsService,
-                    Session.Can(PermissionKeys.SettingsManage));
+                if (_settings is null)
+                {
+                    _settings = new SettingsViewModel(
+                        _theme,
+                        _preferences,
+                        _backups,
+                        _databaseOptions,
+                        _databaseInfo,
+                        _company,
+                        _settingsService,
+                        _printerService,
+                        Session.Can(PermissionKeys.SettingsManage));
+                    _settings.CloseRequested += () => Navigate("home");
+                }
+
                 CurrentPage = _settings;
                 ActiveRoute = "settings";
                 _ = _settings.InitializeAsync();
@@ -414,8 +466,6 @@ public sealed partial class ShellViewModel : ObservableObject
 
                 break;
         }
-
-        UpdateActiveNavigation();
     }
 
     [RelayCommand]
@@ -436,22 +486,28 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void FullScreen() => RequestFullScreen();
+    private void ToggleMenu() => IsMenuOpen = !IsMenuOpen;
+
+    [RelayCommand]
+    private void CloseMenu() => IsMenuOpen = false;
+
+    [RelayCommand]
+    private void ToggleWindow() => RequestWindowState();
 
     [RelayCommand]
     private void Exit() => RequestExit();
 
-    private void RequestFullScreen() => FullScreenRequested?.Invoke(this, EventArgs.Empty);
+    private void RequestWindowState() => WindowStateRequested?.Invoke(this, EventArgs.Empty);
 
     private void RequestExit() => ExitRequested?.Invoke(this, EventArgs.Empty);
 
-    private void UpdateActiveNavigation()
+    private static string TitleFor(string route) => route switch
     {
-        foreach (var item in NavigationItems)
-        {
-            item.IsActive = string.Equals(item.Route, ActiveRoute, StringComparison.Ordinal);
-        }
-    }
+        "home" => "Beranda",
+        "management" => "Manajemen",
+        "settings" => "Pengaturan",
+        _ => ScreenCatalog.TryGet(route, out var screen) ? screen.Title : "POS"
+    };
 
     private static string FirstName(string fullName)
     {

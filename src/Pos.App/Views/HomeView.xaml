@@ -190,8 +190,8 @@
                 <StackPanel Margin="0,20,0,0" Orientation="Horizontal">
                     <Button
                         Margin="0,0,8,0"
-                        Command="{Binding FullScreenCommand}"
-                        Content="Layar penuh"
+                        Command="{Binding ToggleWindowCommand}"
+                        Content="Ukuran jendela"
                         Style="{StaticResource Button.Ghost}" />
                     <Button
                         Margin="0,0,8,0"

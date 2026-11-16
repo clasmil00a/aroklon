@@ -5,15 +5,17 @@ namespace Pos.Domain.Tests;
 
 public sealed class PasswordPolicyTests
 {
-    [Fact]
-    public void Eight_characters_is_accepted()
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("Rahasia1")]
+    public void Three_or_more_characters_is_accepted(string password)
     {
-        PasswordPolicy.Validate("Rahasia1");
+        PasswordPolicy.Validate(password);
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("1234567")]
+    [InlineData("12")]
     [InlineData(null)]
     public void Short_or_empty_password_is_rejected(string? password)
     {

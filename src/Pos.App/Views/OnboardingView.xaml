@@ -186,7 +186,7 @@
                     <TextBlock
                         Margin="0,14,0,0"
                         Style="{StaticResource Text.Caption}"
-                        Text="Minimal 8 karakter. Gunakan kata sandi yang tidak dipakai di layanan lain."
+                        Text="Minimal 3 karakter. Gunakan kata sandi yang tidak dipakai di layanan lain."
                         TextWrapping="Wrap" />
 
                     <Button

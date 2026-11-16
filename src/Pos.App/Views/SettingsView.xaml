@@ -4,6 +4,41 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{DynamicResource Brush.Bg}">
 
+    <UserControl.Resources>
+        <Style x:Key="SettingsCategoryItem" TargetType="ListBoxItem">
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="Root"
+                            Padding="{TemplateBinding Padding}"
+                            Background="Transparent"
+                            CornerRadius="{StaticResource Radius.Sm}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -20,7 +55,7 @@
                 <TextBlock
                     Margin="0,4,0,0"
                     Style="{StaticResource Text.Secondary}"
-                    Text="Tampilan, perilaku kasir, struk, dan database lokal."
+                    Text="Pilih kategori di kiri, lalu ubah pengaturannya di kanan."
                     TextWrapping="Wrap" />
                 <TextBlock
                     Margin="0,6,0,0"
@@ -35,381 +70,531 @@
                     TextWrapping="Wrap"
                     Visibility="{Binding CannotManageSettings, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S27" />
-            </Border>
+            <Button
+                Grid.Column="1"
+                VerticalAlignment="Top"
+                Command="{Binding CloseCommand}"
+                Content="&#xE711;"
+                Style="{StaticResource Button.Icon}"
+                ToolTip="Tutup pengaturan" />
         </Grid>
 
-        <TabControl
-            Grid.Row="1"
-            VerticalAlignment="Stretch"
-            HorizontalAlignment="Stretch"
-            PreviewMouseWheel="OnTabControlPreviewMouseWheel"
-            Style="{StaticResource TabControl.Settings}">
-            <TabItem Header="Umum" Style="{StaticResource TabItem.Settings}">
-                <ScrollViewer
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto"
-                    CanContentScroll="False"
-                    PanningMode="VerticalOnly">
-                    <StackPanel MaxWidth="780" HorizontalAlignment="Left">
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Tampilan" />
-                                <TextBlock
-                                    Margin="0,4,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Tema berlaku langsung dan disimpan untuk pengguna Windows ini."
-                                    TextWrapping="Wrap" />
-                                <Border
-                                    HorizontalAlignment="Left"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <RadioButton
-                                            GroupName="AppTheme"
-                                            IsChecked="{Binding IsDarkTheme, Mode=TwoWay}"
-                                            Content="Gelap"
-                                            Style="{StaticResource Segment}" />
-                                        <RadioButton
-                                            GroupName="AppTheme"
-                                            IsChecked="{Binding IsLightTheme, Mode=TwoWay}"
-                                            Content="Terang"
-                                            Style="{StaticResource Segment}" />
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Padding="8"
+                Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock
+                        Margin="8,6,8,8"
+                        Style="{StaticResource Text.Caption}"
+                        Text="KATEGORI" />
+                    <ListBox
+                        Grid.Row="1"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemContainerStyle="{StaticResource SettingsCategoryItem}"
+                        ItemsSource="{Binding Categories}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectedValue="{Binding SelectedCategory, Mode=TwoWay}"
+                        SelectedValuePath="Key">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="26"
+                                        VerticalAlignment="Center"
+                                        FontFamily="Segoe MDL2 Assets"
+                                        FontSize="14"
+                                        Text="{Binding Icon}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Text="{Binding Title}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border
+                Grid.Column="2"
+                Style="{StaticResource Card.Raised}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Margin="0,0,0,14">
+                        <TextBlock
+                            Style="{StaticResource Text.SectionTitle}"
+                            Text="{Binding SelectedCategoryTitle}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource Text.Secondary}"
+                            Text="{Binding SelectedCategoryDescription}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="1">
+                        <!-- Umum -->
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly"
+                            Visibility="{Binding IsGeneralCategory, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Tampilan" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Tema berlaku langsung dan disimpan untuk pengguna Windows ini."
+                                            TextWrapping="Wrap" />
+                                        <Border
+                                            HorizontalAlignment="Left"
+                                            Background="{DynamicResource Brush.Surface}"
+                                            BorderBrush="{DynamicResource Brush.BorderInput}"
+                                            BorderThickness="{StaticResource Border.Width}"
+                                            CornerRadius="{StaticResource Radius.Sm}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <RadioButton
+                                                    GroupName="AppTheme"
+                                                    IsChecked="{Binding IsDarkTheme, Mode=TwoWay}"
+                                                    Content="Gelap"
+                                                    Style="{StaticResource Segment}" />
+                                                <RadioButton
+                                                    GroupName="AppTheme"
+                                                    IsChecked="{Binding IsLightTheme, Mode=TwoWay}"
+                                                    Content="Terang"
+                                                    Style="{StaticResource Segment}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Margin="0,0,0,4"
+                                            Style="{StaticResource Text.SectionTitle}"
+                                            Text="Saat aplikasi dibuka" />
+                                        <TextBlock
+                                            Margin="0,0,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Preferensi ini hanya berlaku di komputer dan akun Windows ini."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Content="Mulai dalam jendela maksimal"
+                                            IsChecked="{Binding StartFullScreen, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Margin="0,4,0,14"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Jendela tetap menampilkan title bar dan taskbar Windows. Tekan F11 atau tombol ukuran jendela untuk mengubahnya."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Content="Ingat nama pengguna terakhir"
+                                            IsChecked="{Binding RememberUsername, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Nama pengguna akan diisi otomatis di layar masuk. Kata sandi tidak pernah disimpan."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Margin="0,0,0,12"
+                                            Style="{StaticResource Text.SectionTitle}"
+                                            Text="Bahasa &amp; format" />
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Bahasa" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding LocaleLabel}" />
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Mata uang" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding CurrencyLabel}" />
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Zona waktu" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding Timezone}" />
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Toko" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding ShopName}" />
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                        </Border>
+                        </ScrollViewer>
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock
-                                    Margin="0,0,0,4"
-                                    Style="{StaticResource Text.SectionTitle}"
-                                    Text="Saat aplikasi dibuka" />
-                                <TextBlock
-                                    Margin="0,0,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Preferensi ini hanya berlaku di komputer dan akun Windows ini."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Content="Mulai dalam layar penuh"
-                                    IsChecked="{Binding StartFullScreen, Mode=TwoWay}" />
-                                <TextBlock
-                                    Margin="0,4,0,14"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="Jika dimatikan, jendela dibuka dalam ukuran normal. Tekan F11 atau tombol Layar penuh untuk mengubahnya kapan saja."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Content="Ingat nama pengguna terakhir"
-                                    IsChecked="{Binding RememberUsername, Mode=TwoWay}" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="Nama pengguna akan diisi otomatis di layar masuk. Kata sandi tidak pernah disimpan."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
+                        <!-- Pesanan & pembayaran -->
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly"
+                            Visibility="{Binding IsOrderCategory, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel
+                                MaxWidth="820"
+                                HorizontalAlignment="Left"
+                                IsEnabled="{Binding CanEditSettings}">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Stok" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Atur apakah transaksi boleh melewati jumlah stok yang tersedia."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Content="Blokir penjualan jika stok tidak mencukupi"
+                                            IsChecked="{Binding NegativeStockBlock, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Jika dimatikan, penjualan tetap dapat diselesaikan meskipun stok menjadi negatif."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock
-                                    Margin="0,0,0,12"
-                                    Style="{StaticResource Text.SectionTitle}"
-                                    Text="Bahasa &amp; format" />
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Bahasa" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding LocaleLabel}" />
-                                </Grid>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Mata uang" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding CurrencyLabel}" />
-                                </Grid>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Zona waktu" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding Timezone}" />
-                                </Grid>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Toko" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding ShopName}" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Diskon &amp; harga" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Kontrol yang dipakai saat kasir menyusun pesanan."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Margin="0,0,0,10"
+                                            Content="Aktifkan diskon baris dan diskon keranjang"
+                                            IsChecked="{Binding DiscountEnabled, Mode=TwoWay}" />
+                                        <CheckBox
+                                            Content="Izinkan kasir mengubah harga satuan"
+                                            IsChecked="{Binding AllowPriceOverride, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Perubahan harga tetap dicatat di transaksi. Produk yang tidak mengizinkan ubah harga tetap terkunci."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
 
-                        <TextBlock
-                            Margin="0,12,0,0"
-                            Style="{StaticResource Text.Caption}"
-                            Text="{Binding AppVersion, StringFormat=POS versi {0}. Bahasa dan mata uang mengikuti profil toko.}"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pembayaran &amp; pembatalan" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Pilih perilaku pembayaran dan pembatalan pesanan."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Margin="0,0,0,10"
+                                            Content="Aktifkan pembayaran kredit (bayar sebagian)"
+                                            IsChecked="{Binding CreditPaymentsEnabled, Mode=TwoWay}" />
+                                        <CheckBox
+                                            Content="Wajibkan alasan saat membatalkan pesanan"
+                                            IsChecked="{Binding RequireVoidReason, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Border>
 
-            <TabItem Header="Pesanan &amp; pembayaran" Style="{StaticResource TabItem.Settings}">
-                <ScrollViewer
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto"
-                    CanContentScroll="False"
-                    PanningMode="VerticalOnly">
-                    <StackPanel
-                        MaxWidth="780"
-                        HorizontalAlignment="Left"
-                        IsEnabled="{Binding CanEditSettings}">
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Stok" />
-                                <TextBlock
-                                    Margin="0,4,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Atur apakah transaksi boleh melewati jumlah stok yang tersedia."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Content="Blokir penjualan jika stok tidak mencukupi"
-                                    IsChecked="{Binding NegativeStockBlock, Mode=TwoWay}" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="Jika dimatikan, penjualan tetap dapat diselesaikan meskipun stok menjadi negatif."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Diskon &amp; harga" />
-                                <TextBlock
-                                    Margin="0,4,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Kontrol yang dipakai saat kasir menyusun pesanan."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Margin="0,0,0,10"
-                                    Content="Aktifkan diskon baris dan diskon keranjang"
-                                    IsChecked="{Binding DiscountEnabled, Mode=TwoWay}" />
-                                <CheckBox
-                                    Content="Izinkan kasir mengubah harga satuan"
-                                    IsChecked="{Binding AllowPriceOverride, Mode=TwoWay}" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="Perubahan harga tetap dicatat di transaksi. Produk yang tidak mengizinkan ubah harga tetap terkunci."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pembayaran &amp; pembatalan" />
-                                <TextBlock
-                                    Margin="0,4,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Pilih perilaku pembayaran dan pembatalan pesanan."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Margin="0,0,0,10"
-                                    Content="Aktifkan pembayaran kredit (bayar sebagian)"
-                                    IsChecked="{Binding CreditPaymentsEnabled, Mode=TwoWay}" />
-                                <CheckBox
-                                    Content="Wajibkan alasan saat membatalkan pesanan"
-                                    IsChecked="{Binding RequireVoidReason, Mode=TwoWay}" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Laci kas" />
-                                <TextBlock
-                                    Margin="0,4,0,12"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Laci kas dibuka dari layar kasir dengan tombol cepat atau Ctrl+D."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Content="Aktifkan laci kas"
-                                    IsChecked="{Binding CashDrawerEnabled, Mode=TwoWay}" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="Jika dimatikan, perintah buka laci diabaikan sampai opsi ini dinyalakan kembali."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock
-                            Margin="0,12,0,0"
-                            Style="{StaticResource Text.Caption}"
-                            Text="Perubahan pada halaman ini langsung disimpan."
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="Cetak &amp; struk" Style="{StaticResource TabItem.Settings}">
-                <ScrollViewer
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto"
-                    CanContentScroll="False"
-                    PanningMode="VerticalOnly">
-                    <StackPanel
-                        MaxWidth="780"
-                        HorizontalAlignment="Left"
-                        IsEnabled="{Binding CanEditSettings}">
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Isi struk" />
-                                <TextBlock
-                                    Margin="0,4,0,16"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Header dan footer ini dipakai saat struk transaksi dicetak atau dilihat kembali."
-                                    TextWrapping="Wrap" />
-
-                                <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Header struk (opsional)" />
-                                <TextBox
-                                    Height="76"
-                                    Margin="0,0,0,12"
-                                    AcceptsReturn="True"
-                                    MaxLength="500"
-                                    Style="{StaticResource Input.Multiline}"
-                                    Text="{Binding ReceiptHeader, UpdateSourceTrigger=PropertyChanged}"
-                                    TextWrapping="Wrap" />
-
-                                <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Footer struk (opsional)" />
-                                <TextBox
-                                    Height="76"
-                                    Margin="0,0,0,12"
-                                    AcceptsReturn="True"
-                                    MaxLength="500"
-                                    Style="{StaticResource Input.Multiline}"
-                                    Text="{Binding ReceiptFooter, UpdateSourceTrigger=PropertyChanged}"
-                                    TextWrapping="Wrap" />
-
-                                <CheckBox
-                                    Margin="0,0,0,0"
-                                    Content="Tampilkan satuan jual pada struk"
-                                    IsChecked="{Binding ShowReceiptUnits, Mode=TwoWay}" />
-
-                                <Button
-                                    Margin="0,16,0,0"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding SaveReceiptSettingsCommand}"
-                                    Content="Simpan header &amp; footer"
-                                    Style="{StaticResource Button.Primary}" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.BodyStrong}" Text="Printer" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Struk selalu dapat dilihat dari layar struk. Koneksi printer ESC/POS akan ditambahkan pada pembaruan berikutnya."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="Database" Style="{StaticResource TabItem.Settings}">
-                <ScrollViewer
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto"
-                    CanContentScroll="False"
-                    PanningMode="VerticalOnly">
-                    <StackPanel MaxWidth="780" HorizontalAlignment="Left">
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Database lokal" />
-                                <TextBlock
-                                    Margin="0,4,0,16"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Data toko disimpan di komputer ini. Cadangan harian dibuat otomatis saat aplikasi dibuka."
-                                    TextWrapping="Wrap" />
-
-                                <TextBlock Margin="0,0,0,4" Style="{StaticResource Text.Caption}" Text="Lokasi database" />
-                                <TextBlock
-                                    Margin="0,0,0,12"
-                                    Style="{StaticResource Text.Mono}"
-                                    Text="{Binding DatabasePath}"
-                                    TextWrapping="Wrap" />
-
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Versi skema" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding SchemaVersionText}" />
-                                </Grid>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Ukuran file" />
-                                    <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding DatabaseSize}" />
-                                </Grid>
-
-                                <TextBlock Margin="0,0,0,4" Style="{StaticResource Text.Caption}" Text="Folder cadangan" />
-                                <TextBlock
-                                    Margin="0,0,0,16"
-                                    Style="{StaticResource Text.Mono}"
-                                    Text="{Binding BackupDirectory}"
-                                    TextWrapping="Wrap" />
-
-                                <StackPanel Orientation="Horizontal">
-                                    <Button
-                                        Margin="0,0,8,0"
-                                        Command="{Binding BackupNowCommand}"
-                                        Content="Cadangkan sekarang"
-                                        IsEnabled="{Binding IsNotBackingUp}"
-                                        Style="{StaticResource Button.Primary}" />
-                                    <Button
-                                        Command="{Binding OpenDataFolderCommand}"
-                                        Content="Buka folder data"
-                                        Style="{StaticResource Button.Secondary}" />
-                                </StackPanel>
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Laci kas" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Laci kas dibuka dari layar kasir dengan tombol cepat atau Ctrl+D."
+                                            TextWrapping="Wrap" />
+                                        <CheckBox
+                                            Content="Aktifkan laci kas"
+                                            IsChecked="{Binding CashDrawerEnabled, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Jika dimatikan, perintah buka laci diabaikan sampai opsi ini dinyalakan kembali."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
 
                                 <TextBlock
                                     Margin="0,12,0,0"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="{Binding BackupMessage}"
-                                    TextWrapping="Wrap"
-                                    Visibility="{Binding HasBackupMessage, Converter={StaticResource BoolToVisibility}}" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Text.BodyStrong}" Text="Pemulihan database" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    Style="{StaticResource Text.Secondary}"
-                                    Text="Salin file cadangan dari folder di atas, lalu tutup aplikasi sebelum mengganti database. Pemulihan otomatis akan ditambahkan pada pembaruan berikutnya."
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="Perubahan pada halaman ini langsung disimpan."
                                     TextWrapping="Wrap" />
                             </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-        </TabControl>
+                        </ScrollViewer>
+
+                        <!-- Cetak & struk -->
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly"
+                            Visibility="{Binding IsPrintCategory, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Printer Windows" />
+                                        <TextBlock
+                                            Margin="0,4,0,12"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Daftar ini berasal dari printer yang terpasang di Windows. Pilih printer, lalu kirim halaman uji."
+                                            TextWrapping="Wrap" />
+
+                                        <CheckBox
+                                            Margin="0,0,0,12"
+                                            Content="Aktifkan pencetakan struk"
+                                            IsChecked="{Binding PrintReceiptEnabled, Mode=TwoWay}"
+                                            IsEnabled="{Binding CanEditSettings}" />
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox
+                                                ItemsSource="{Binding Printers}"
+                                                SelectedItem="{Binding SelectedPrinter, Mode=TwoWay}"
+                                                IsEnabled="{Binding CanEditSettings}" />
+                                            <Button
+                                                Grid.Column="1"
+                                                Margin="8,0,0,0"
+                                                Command="{Binding RefreshPrintersCommand}"
+                                                Content="&#xE72C;"
+                                                Style="{StaticResource Button.Icon}"
+                                                ToolTip="Muat ulang daftar printer" />
+                                            <Button
+                                                Grid.Column="2"
+                                                Margin="8,0,0,0"
+                                                Command="{Binding TestPrintCommand}"
+                                                Content="Cetak uji"
+                                                Style="{StaticResource Button.Secondary}" />
+                                        </Grid>
+
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Tidak ada printer Windows terdeteksi. Pasang printer dan driver terlebih dahulu, lalu muat ulang daftar."
+                                            TextWrapping="Wrap"
+                                            Visibility="{Binding HasNoPrinters, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Style="{StaticResource Text.Caption}"
+                                            Text="Jika tidak ada printer yang dipilih, cetak uji memakai printer bawaan Windows."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel IsEnabled="{Binding CanEditSettings}">
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Isi struk" />
+                                        <TextBlock
+                                            Margin="0,4,0,16"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Header dan footer ini dipakai saat struk transaksi dicetak atau dilihat kembali."
+                                            TextWrapping="Wrap" />
+
+                                        <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Header struk (opsional)" />
+                                        <TextBox
+                                            Height="76"
+                                            Margin="0,0,0,12"
+                                            AcceptsReturn="True"
+                                            MaxLength="500"
+                                            Style="{StaticResource Input.Multiline}"
+                                            Text="{Binding ReceiptHeader, UpdateSourceTrigger=PropertyChanged}"
+                                            TextWrapping="Wrap" />
+
+                                        <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Footer struk (opsional)" />
+                                        <TextBox
+                                            Height="76"
+                                            Margin="0,0,0,12"
+                                            AcceptsReturn="True"
+                                            MaxLength="500"
+                                            Style="{StaticResource Input.Multiline}"
+                                            Text="{Binding ReceiptFooter, UpdateSourceTrigger=PropertyChanged}"
+                                            TextWrapping="Wrap" />
+
+                                        <CheckBox
+                                            Content="Tampilkan satuan jual pada struk"
+                                            IsChecked="{Binding ShowReceiptUnits, Mode=TwoWay}" />
+
+                                        <Button
+                                            Margin="0,16,0,0"
+                                            HorizontalAlignment="Left"
+                                            Command="{Binding SaveReceiptSettingsCommand}"
+                                            Content="Simpan header &amp; footer"
+                                            Style="{StaticResource Button.Primary}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Database -->
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly"
+                            Visibility="{Binding IsDatabaseCategory, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Database lokal" />
+                                        <TextBlock
+                                            Margin="0,4,0,16"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Data toko disimpan di komputer ini. Cadangan harian dibuat otomatis saat aplikasi dibuka."
+                                            TextWrapping="Wrap" />
+
+                                        <TextBlock Margin="0,0,0,4" Style="{StaticResource Text.Caption}" Text="Lokasi database" />
+                                        <TextBlock
+                                            Margin="0,0,0,12"
+                                            Style="{StaticResource Text.Mono}"
+                                            Text="{Binding DatabasePath}"
+                                            TextWrapping="Wrap" />
+
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Versi skema" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding SchemaVersionText}" />
+                                        </Grid>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Ukuran file" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding DatabaseSize}" />
+                                        </Grid>
+
+                                        <TextBlock Margin="0,0,0,4" Style="{StaticResource Text.Caption}" Text="Folder cadangan" />
+                                        <TextBlock
+                                            Margin="0,0,0,16"
+                                            Style="{StaticResource Text.Mono}"
+                                            Text="{Binding BackupDirectory}"
+                                            TextWrapping="Wrap" />
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button
+                                                Margin="0,0,8,0"
+                                                Command="{Binding BackupNowCommand}"
+                                                Content="Cadangkan sekarang"
+                                                IsEnabled="{Binding IsNotBackingUp}"
+                                                Style="{StaticResource Button.Primary}" />
+                                            <Button
+                                                Command="{Binding OpenDataFolderCommand}"
+                                                Content="Buka folder data"
+                                                Style="{StaticResource Button.Secondary}" />
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Margin="0,12,0,0"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="{Binding BackupMessage}"
+                                            TextWrapping="Wrap"
+                                            Visibility="{Binding HasBackupMessage, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,12,0,0" Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.BodyStrong}" Text="Pemulihan database" />
+                                        <TextBlock
+                                            Margin="0,4,0,0"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Salin file cadangan dari folder di atas, lalu tutup aplikasi sebelum mengganti database. Pemulihan otomatis akan ditambahkan pada pembaruan berikutnya."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Tentang -->
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto"
+                            CanContentScroll="False"
+                            PanningMode="VerticalOnly"
+                            Visibility="{Binding IsAboutCategory, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Aroklon POS" />
+                                        <Grid Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Versi aplikasi" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding AppVersion}" />
+                                        </Grid>
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Versi skema" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding SchemaVersionText}" />
+                                        </Grid>
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Text.Body}" Text="Toko" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding ShopName}" />
+                                        </Grid>
+                                        <TextBlock
+                                            Margin="0,16,0,0"
+                                            Style="{StaticResource Text.Secondary}"
+                                            Text="Aplikasi kasir desktop dengan database SQLite lokal. Tidak memerlukan server dan tidak mengirim data ke internet."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

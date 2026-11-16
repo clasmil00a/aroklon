@@ -18,20 +18,20 @@ public sealed record HomeStatusItem(
 public sealed partial class HomeViewModel : ObservableObject
 {
     private readonly Action<string> _navigate;
-    private readonly Action _fullScreen;
+    private readonly Action _toggleWindow;
     private readonly Func<Task> _signOut;
     private readonly Action _exit;
 
     public HomeViewModel(
         string firstName,
         Action<string> navigate,
-        Action fullScreen,
+        Action toggleWindow,
         Func<Task> signOut,
         Action exit,
         string version)
     {
         _navigate = navigate;
-        _fullScreen = fullScreen;
+        _toggleWindow = toggleWindow;
         _signOut = signOut;
         _exit = exit;
 
@@ -93,7 +93,7 @@ public sealed partial class HomeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void FullScreen() => _fullScreen();
+    private void ToggleWindow() => _toggleWindow();
 
     [RelayCommand]
     private async Task SignOutAsync() => await _signOut();

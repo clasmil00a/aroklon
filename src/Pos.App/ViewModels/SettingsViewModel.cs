@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,6 +12,8 @@ using Serilog;
 
 namespace Pos.App.ViewModels;
 
+public sealed record SettingsCategoryInfo(string Key, string Title, string Icon);
+
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private static readonly string[] StoreSettingKeys =
@@ -22,6 +25,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         "pos.require_void_reason",
         "pos.credit_payments_enabled",
         "receipt.show_units",
+        "receipt.print_enabled",
+        "receipt.printer_name",
         "receipt.header",
         "receipt.footer"
     ];
@@ -32,6 +37,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly DatabaseOptions _databaseOptions;
     private readonly DatabaseInfo _databaseInfo;
     private readonly SettingsService _settings;
+    private readonly PrinterService _printers;
 
     private bool _isDarkTheme;
     private bool _isLightTheme;
@@ -52,6 +58,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isLoading = true;
+
+    [ObservableProperty]
+    private string _selectedCategory = "general";
 
     [ObservableProperty]
     private bool _negativeStockBlock = true;
@@ -75,6 +84,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _showReceiptUnits = true;
 
     [ObservableProperty]
+    private bool _printReceiptEnabled;
+
+    [ObservableProperty]
+    private string? _selectedPrinter;
+
+    [ObservableProperty]
     private string _receiptHeader = string.Empty;
 
     [ObservableProperty]
@@ -94,6 +109,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         DatabaseInfo databaseInfo,
         CompanyInfo company,
         SettingsService settings,
+        PrinterService printers,
         bool canManageSettings)
     {
         _theme = theme;
@@ -102,7 +118,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         _databaseOptions = databaseOptions;
         _databaseInfo = databaseInfo;
         _settings = settings;
+        _printers = printers;
         CanManageSettings = canManageSettings;
+
+        Categories =
+        [
+            new("general", "Umum", "\uE713"),
+            new("order", "Pesanan & pembayaran", "\uE8A1"),
+            new("print", "Cetak & struk", "\uE749"),
+            new("database", "Database", "\uE8B7"),
+            new("about", "Tentang", "\uE946")
+        ];
 
         ShopName = company.Name;
         CurrencyLabel = company.Currency == "IDR"
@@ -116,6 +142,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         SchemaVersionText = "Versi " + databaseInfo.SchemaVersion;
         AppVersion = AppInfo.Version;
         RefreshDatabaseSize();
+        LoadPrinters();
 
         var preferencesValue = preferences.Load();
         _suppressSave = true;
@@ -133,11 +160,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public IReadOnlyList<SettingsCategoryInfo> Categories { get; }
+
+    public ObservableCollection<string> Printers { get; } = [];
+
     public bool CanManageSettings { get; }
 
     public bool CanEditSettings => CanManageSettings && !IsLoading;
 
     public bool CannotManageSettings => !CanManageSettings;
+
+    public bool HasPrinters => Printers.Count > 0;
+
+    public bool HasNoPrinters => !HasPrinters;
 
     public string ShopName { get; }
 
@@ -156,6 +191,34 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string SchemaVersionText { get; }
 
     public string AppVersion { get; }
+
+    public bool IsGeneralCategory => SelectedCategory == "general";
+
+    public bool IsOrderCategory => SelectedCategory == "order";
+
+    public bool IsPrintCategory => SelectedCategory == "print";
+
+    public bool IsDatabaseCategory => SelectedCategory == "database";
+
+    public bool IsAboutCategory => SelectedCategory == "about";
+
+    public string SelectedCategoryTitle => SelectedCategory switch
+    {
+        "order" => "Pesanan & pembayaran",
+        "print" => "Cetak & struk",
+        "database" => "Database",
+        "about" => "Tentang aplikasi",
+        _ => "Umum"
+    };
+
+    public string SelectedCategoryDescription => SelectedCategory switch
+    {
+        "order" => "Atur perilaku stok, diskon, pembayaran, dan laci kas.",
+        "print" => "Pilih printer Windows, aktifkan cetak struk, dan atur isi struk.",
+        "database" => "Lokasi database, cadangan, dan pemulihan data lokal.",
+        "about" => "Versi aplikasi dan informasi teknis lainnya.",
+        _ => "Tema, preferensi saat aplikasi dibuka, serta bahasa dan format."
+    };
 
     public bool IsDarkTheme
     {
@@ -187,6 +250,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool HasSettingsMessage => !string.IsNullOrWhiteSpace(SettingsMessage);
 
+    public event Action? CloseRequested;
+
     partial void OnBackupMessageChanged(string value) => OnPropertyChanged(nameof(HasBackupMessage));
 
     partial void OnIsBackingUpChanged(bool value) => OnPropertyChanged(nameof(IsNotBackingUp));
@@ -194,6 +259,17 @@ public sealed partial class SettingsViewModel : ObservableObject
     partial void OnSettingsMessageChanged(string value) => OnPropertyChanged(nameof(HasSettingsMessage));
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(CanEditSettings));
+
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsGeneralCategory));
+        OnPropertyChanged(nameof(IsOrderCategory));
+        OnPropertyChanged(nameof(IsPrintCategory));
+        OnPropertyChanged(nameof(IsDatabaseCategory));
+        OnPropertyChanged(nameof(IsAboutCategory));
+        OnPropertyChanged(nameof(SelectedCategoryTitle));
+        OnPropertyChanged(nameof(SelectedCategoryDescription));
+    }
 
     partial void OnNegativeStockBlockChanged(bool value) =>
         SaveSetting("pos.negative_stock", value ? "block" : "allow");
@@ -215,6 +291,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     partial void OnShowReceiptUnitsChanged(bool value) =>
         SaveSetting("receipt.show_units", value);
+
+    partial void OnPrintReceiptEnabledChanged(bool value) =>
+        SaveSetting("receipt.print_enabled", value);
+
+    partial void OnSelectedPrinterChanged(string? value) =>
+        SaveSetting("receipt.printer_name", value ?? string.Empty);
 
     partial void OnRememberUsernameChanged(bool value)
     {
@@ -254,7 +336,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            Log.Error(exception, "Could not save full screen preference");
+            Log.Error(exception, "Could not save maximized window preference");
             SettingsMessage = "Preferensi gagal disimpan.";
         }
     }
@@ -286,8 +368,20 @@ public sealed partial class SettingsViewModel : ObservableObject
             RequireVoidReason = ReadBoolean(values, "pos.require_void_reason", defaultValue: true);
             CreditPaymentsEnabled = ReadBoolean(values, "pos.credit_payments_enabled", defaultValue: false);
             ShowReceiptUnits = ReadBoolean(values, "receipt.show_units", defaultValue: true);
+            PrintReceiptEnabled = ReadBoolean(values, "receipt.print_enabled", defaultValue: false);
             ReceiptHeader = Read(values, "receipt.header") ?? string.Empty;
             ReceiptFooter = Read(values, "receipt.footer") ?? string.Empty;
+
+            var printer = Read(values, "receipt.printer_name");
+            if (!string.IsNullOrWhiteSpace(printer) &&
+                !Printers.Any(name => string.Equals(name, printer, StringComparison.OrdinalIgnoreCase)))
+            {
+                Printers.Add(printer);
+                OnPropertyChanged(nameof(HasPrinters));
+                OnPropertyChanged(nameof(HasNoPrinters));
+            }
+
+            SelectedPrinter = string.IsNullOrWhiteSpace(printer) ? null : printer;
         }
         catch (PosException exception)
         {
@@ -302,6 +396,38 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             _suppressSave = false;
             IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshPrinters()
+    {
+        LoadPrinters();
+        SettingsMessage = HasPrinters
+            ? "Daftar printer diperbarui."
+            : "Tidak ada printer Windows terdeteksi. Pasang printer di Windows terlebih dahulu.";
+    }
+
+    [RelayCommand]
+    private void TestPrint()
+    {
+        try
+        {
+            var target = string.IsNullOrWhiteSpace(SelectedPrinter)
+                ? "printer bawaan Windows"
+                : SelectedPrinter;
+            _printers.PrintText(
+                SelectedPrinter,
+                "Uji printer",
+                "Aroklon POS\nUji printer berhasil.\n" +
+                DateTime.Now.ToString("dd/MM/yyyy HH:mm") +
+                "\n\nTerima kasih.");
+            SettingsMessage = "Halaman uji dikirim ke " + target + ".";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Test print failed");
+            SettingsMessage = "Cetak uji gagal. Periksa printer dan driver Windows.";
         }
     }
 
@@ -381,6 +507,29 @@ public sealed partial class SettingsViewModel : ObservableObject
             Log.Warning(exception, "Could not open the data folder");
             BackupMessage = "Folder data tidak dapat dibuka.";
         }
+    }
+
+    [RelayCommand]
+    private void Close() => CloseRequested?.Invoke();
+
+    private void LoadPrinters()
+    {
+        var selected = SelectedPrinter;
+        Printers.Clear();
+        foreach (var printer in _printers.GetPrinterNames())
+        {
+            Printers.Add(printer);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selected) &&
+            !Printers.Any(name => string.Equals(name, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            Printers.Add(selected);
+        }
+
+        SelectedPrinter = selected;
+        OnPropertyChanged(nameof(HasPrinters));
+        OnPropertyChanged(nameof(HasNoPrinters));
     }
 
     private static string? Read(IReadOnlyDictionary<string, string> values, string key) =>

@@ -188,18 +188,18 @@ public sealed partial class AppShellViewModel : ObservableObject
             _cashDrawerService);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
-        shell.FullScreenRequested += (_, _) => ToggleFullScreen();
+        shell.WindowStateRequested += (_, _) => ToggleMaximized();
         shell.ExitRequested += (_, _) => Application.Current.Shutdown();
 
         WindowTitle = "POS — " + shell.CompanyName;
         Current = shell;
     }
 
-    private static void ToggleFullScreen()
+    private static void ToggleMaximized()
     {
         if (Application.Current.MainWindow is MainWindow window)
         {
-            window.ToggleFullScreen();
+            window.ToggleMaximized();
         }
     }
 }

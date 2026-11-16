@@ -188,10 +188,12 @@ public sealed class AdminUserService
 
             if (request.NewPassword is not null)
             {
-                if (request.NewPassword.Length < 8)
+                if (request.NewPassword.Length < PasswordPolicy.MinimumLength)
                 {
                     await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-                    throw new ValidationException(ErrorCodes.Validation, "Kata sandi minimal 8 karakter.");
+                    throw new ValidationException(
+                        ErrorCodes.Validation,
+                        "Kata sandi minimal " + PasswordPolicy.MinimumLength + " karakter.");
                 }
 
                 var hash = await _hasher.HashAsync(request.NewPassword);
@@ -343,9 +345,12 @@ public sealed class AdminUserService
             throw new ValidationException(ErrorCodes.Validation, "Nama lengkap minimal 2 karakter.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+        if (string.IsNullOrWhiteSpace(request.Password) ||
+            request.Password.Length < PasswordPolicy.MinimumLength)
         {
-            throw new ValidationException(ErrorCodes.Validation, "Kata sandi minimal 8 karakter.");
+            throw new ValidationException(
+                ErrorCodes.Validation,
+                "Kata sandi minimal " + PasswordPolicy.MinimumLength + " karakter.");
         }
 
         if (string.IsNullOrWhiteSpace(request.RoleId))

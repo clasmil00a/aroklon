@@ -8,8 +8,6 @@
     MinWidth="{StaticResource Layout.Window.MinWidth}"
     MinHeight="{StaticResource Layout.Window.MinHeight}"
     WindowStartupLocation="CenterScreen"
-    WindowStyle="None"
-    ResizeMode="NoResize"
     WindowState="Maximized"
     Background="{DynamicResource Brush.Bg}">
 

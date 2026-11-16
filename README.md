@@ -47,12 +47,13 @@ Argon2id 64 MB, 3 iterasi, paralelisme 2.
 
 - Onboarding pertama: nama toko, akun administrator, database dibuat otomatis.
 - Login dengan Argon2id, sesi di memori, lockout 5 percobaan / 15 menit.
-- Shell aplikasi: bilah atas, navigasi Beranda / Manajemen / Pengaturan.
+- Shell aplikasi: bilah atas dan menu utama di sisi kanan seperti Aronium.
 - Menu utama S13 dengan status setiap tujuan.
 - Kerangka Manajemen S14 dan Pengaturan S27.
 - Tema gelap (bawaan) dan terang, tersimpan per pengguna Windows.
-- Aplikasi terbuka layar penuh secara bawaan; F11 atau tombol Layar penuh
-  mengganti antara layar penuh dan jendela normal.
+- Aplikasi terbuka dalam jendela maksimal secara bawaan, sehingga title bar
+  dan taskbar Windows tetap terlihat. F11 atau tombol Ukuran jendela
+  mengganti antara jendela maksimal dan jendela normal.
 - Layar masuk dapat mengingat nama pengguna terakhir (kata sandi tidak pernah
   disimpan).
 - Cadangan harian `VACUUM INTO` saat start, retensi 30 file, tombol cadangan
@@ -73,7 +74,7 @@ Semua data pengguna berada di profil Windows, bukan di folder instalasi:
 ```
 
 `ui.json` menyimpan pilihan tema, nama pengguna terakhir (opsional), dan
-preferensi layar penuh. Pengaturan toko ada di tabel `settings` di SQLite.
+preferensi jendela maksimal. Pengaturan toko ada di tabel `settings` di SQLite.
 
 ## Arsitektur
 

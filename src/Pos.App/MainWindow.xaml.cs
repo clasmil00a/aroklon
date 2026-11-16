@@ -9,38 +9,37 @@ public partial class MainWindow : Window
     private const double NormalWidth = 1366;
     private const double NormalHeight = 768;
 
-    private bool _isFullScreen = true;
-
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += OnLoaded;
     }
 
     /// <summary>
     /// Applies the per-user startup preference before the window is shown.
+    /// A maximized window keeps the Windows title bar and taskbar visible,
+    /// unlike a borderless full-screen window.
     /// </summary>
-    public void ApplyStartupMode(bool fullScreen)
+    public void ApplyStartupMode(bool maximized)
     {
-        if (fullScreen)
+        if (maximized)
         {
-            EnterFullScreen();
+            Maximize();
         }
         else
         {
-            LeaveFullScreen();
+            RestoreWindow();
         }
     }
 
-    public void ToggleFullScreen()
+    public void ToggleMaximized()
     {
-        if (_isFullScreen)
+        if (WindowState == WindowState.Maximized)
         {
-            LeaveFullScreen();
+            RestoreWindow();
         }
         else
         {
-            EnterFullScreen();
+            Maximize();
         }
     }
 
@@ -48,7 +47,7 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.F11)
         {
-            ToggleFullScreen();
+            ToggleMaximized();
             e.Handled = true;
             return;
         }
@@ -56,22 +55,14 @@ public partial class MainWindow : Window
         base.OnPreviewKeyDown(e);
     }
 
-    private void EnterFullScreen()
+    private void Maximize()
     {
-        // Reset first so a window that was restored with a title bar gets a
-        // clean borderless maximize on the current monitor.
-        WindowState = WindowState.Normal;
-        WindowStyle = WindowStyle.None;
-        ResizeMode = ResizeMode.NoResize;
         WindowState = WindowState.Maximized;
-        _isFullScreen = true;
     }
 
-    private void LeaveFullScreen()
+    private void RestoreWindow()
     {
         WindowState = WindowState.Normal;
-        WindowStyle = WindowStyle.SingleBorderWindow;
-        ResizeMode = ResizeMode.CanResize;
 
         var workArea = SystemParameters.WorkArea;
         var width = Math.Min(NormalWidth, workArea.Width);
@@ -80,19 +71,5 @@ public partial class MainWindow : Window
         Height = height;
         Left = workArea.Left + ((workArea.Width - width) / 2);
         Top = workArea.Top + ((workArea.Height - height) / 2);
-
-        _isFullScreen = false;
-    }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        if (_isFullScreen)
-        {
-            // Re-assert after the window handle exists; some Windows versions
-            // drop WindowStyle=None while creating a maximized window.
-            WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
-            WindowState = WindowState.Maximized;
-        }
     }
 }

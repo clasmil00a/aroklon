@@ -164,9 +164,9 @@ public sealed class AuthTests
         await Assert.ThrowsAsync<ValidationException>(
             () => db.Auth.CreateFirstAdminAsync("Toko Uji", "Admin Uji", "ab", "Admin1234"));
         await Assert.ThrowsAsync<ValidationException>(
-            () => db.Auth.CreateFirstAdminAsync("Toko Uji", "Admin Uji", "admin", "pendek"));
+            () => db.Auth.CreateFirstAdminAsync("Toko Uji", "Admin Uji", "admin", "12"));
         await Assert.ThrowsAsync<ValidationException>(
-            () => db.Auth.CreateFirstAdminAsync("Toko Uji", "Admin Uji", "admin", "admin"));
+            () => db.Auth.CreateFirstAdminAsync("Toko Uji", "Admin Uji", "admin", ""));
 
         Assert.True((await db.Auth.GetBootstrapAsync()).NeedsOnboarding);
     }

@@ -18,6 +18,7 @@
             <conv:BoolToTextConverter x:Key="BoolToText" />
             <conv:StringEqualsConverter x:Key="StringEquals" />
             <conv:StringMapConverter x:Key="StringMap" />
+            <conv:StringToVisibilityConverter x:Key="StringToVisibility" />
 
             <DataTemplate DataType="{x:Type vm:OnboardingViewModel}">
                 <views:OnboardingView />

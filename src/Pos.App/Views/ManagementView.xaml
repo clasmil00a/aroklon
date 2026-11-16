@@ -80,90 +80,106 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="270" />
                 <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
+            <Border
+                Grid.Column="0"
+                Padding="12"
+                Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
                     <TextBlock
                         Margin="0,0,0,10"
                         Style="{StaticResource Text.Caption}"
                         Text="Modul back-office" />
                     <ListBox
+                        Grid.Row="1"
                         Background="Transparent"
                         BorderThickness="0"
                         ItemContainerStyle="{StaticResource ModuleItem}"
                         ItemsSource="{Binding Modules}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
                         SelectedItem="{Binding SelectedModule, Mode=TwoWay}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Title}" />
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
                                     <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding MilestoneLabel}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                </StackPanel>
+                </Grid>
             </Border>
 
             <Border Grid.Column="2" Style="{StaticResource Card}">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Border Style="{StaticResource Badge}">
-                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.ScreenId}" />
-                        </Border>
-                        <Border Margin="8,0,0,0" Style="{StaticResource Badge}">
-                            <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.MilestoneLabel}" />
-                        </Border>
-                    </StackPanel>
-
-                    <TextBlock
-                        Margin="0,14,0,4"
-                        Style="{StaticResource Text.PageTitle}"
-                        Text="{Binding SelectedModule.Title}" />
-                    <TextBlock
-                        Style="{StaticResource Text.Body}"
-                        Text="{Binding SelectedModule.Purpose}"
-                        TextWrapping="Wrap" />
-
-                    <Border
-                        Height="1"
-                        Margin="0,20"
-                        Background="{DynamicResource Brush.Border}" />
-
-                    <TextBlock
-                        Margin="0,0,0,6"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Status modul" />
-                    <TextBlock
-                        Style="{StaticResource Text.Body}"
-                        TextWrapping="Wrap">
-                        Rute, izin, dan navigasi modul ini sudah terdaftar di kerangka aplikasi. Layar kerja akan dibangun sesuai urutan milestone.
-                    </TextBlock>
-
-                    <Border Margin="0,16,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
-                        <StackPanel>
-                            <TextBlock
-                                Margin="0,0,0,8"
-                                Style="{StaticResource Text.BodyStrong}"
-                                Text="Yang sudah siap" />
-                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Sesi login dan peran pengguna" />
-                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Database lokal dan cadangan harian" />
-                            <TextBlock Style="{StaticResource Text.Secondary}" Text="• Navigasi ke seluruh layar terjadwal" />
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
+                    CanContentScroll="False"
+                    PanningMode="VerticalOnly">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource Badge}">
+                                <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.ScreenId}" />
+                            </Border>
+                            <Border Margin="8,0,0,0" Style="{StaticResource Badge}">
+                                <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding SelectedModule.MilestoneLabel}" />
+                            </Border>
                         </StackPanel>
-                    </Border>
 
-                    <StackPanel Margin="0,20,0,0" Orientation="Horizontal">
-                        <Button
-                            Margin="0,0,8,0"
-                            Command="{Binding OpenSettingsCommand}"
-                            Content="Buka pengaturan"
-                            Style="{StaticResource Button.Secondary}" />
+                        <TextBlock
+                            Margin="0,14,0,4"
+                            Style="{StaticResource Text.PageTitle}"
+                            Text="{Binding SelectedModule.Title}" />
+                        <TextBlock
+                            Style="{StaticResource Text.Body}"
+                            Text="{Binding SelectedModule.Purpose}"
+                            TextWrapping="Wrap" />
+
+                        <Border
+                            Height="1"
+                            Margin="0,20"
+                            Background="{DynamicResource Brush.Border}" />
+
+                        <TextBlock
+                            Margin="0,0,0,6"
+                            Style="{StaticResource Text.SectionTitle}"
+                            Text="Status modul" />
+                        <TextBlock
+                            Style="{StaticResource Text.Body}"
+                            TextWrapping="Wrap">
+                            Rute, izin, dan navigasi modul ini sudah terdaftar di kerangka aplikasi. Layar kerja akan dibangun sesuai urutan milestone.
+                        </TextBlock>
+
+                        <Border Margin="0,16,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                            <StackPanel>
+                                <TextBlock
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource Text.BodyStrong}"
+                                    Text="Yang sudah siap" />
+                                <TextBlock Style="{StaticResource Text.Secondary}" Text="• Sesi login dan peran pengguna" />
+                                <TextBlock Style="{StaticResource Text.Secondary}" Text="• Database lokal dan cadangan harian" />
+                                <TextBlock Style="{StaticResource Text.Secondary}" Text="• Navigasi ke seluruh layar terjadwal" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Margin="0,20,0,0" Orientation="Horizontal">
+                            <Button
+                                Margin="0,0,8,0"
+                                Command="{Binding OpenSettingsCommand}"
+                                Content="Buka pengaturan"
+                                Style="{StaticResource Button.Secondary}" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
     </Grid>

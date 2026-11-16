@@ -5,7 +5,12 @@
     Background="{DynamicResource Brush.Bg}"
     Loaded="OnLoaded">
 
-    <Grid Margin="24">
+    <ScrollViewer
+        HorizontalScrollBarVisibility="Disabled"
+        VerticalScrollBarVisibility="Auto"
+        CanContentScroll="False"
+        PanningMode="VerticalOnly">
+        <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -154,5 +159,6 @@
                 </StackPanel>
             </Border>
         </Grid>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

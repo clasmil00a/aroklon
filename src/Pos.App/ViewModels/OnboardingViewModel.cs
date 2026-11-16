@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Pos.Data.Services;
 using Pos.Domain;
 using Pos.Domain.Models;
+using Pos.Domain.Security;
 using Serilog;
 
 namespace Pos.App.ViewModels;
@@ -83,9 +84,9 @@ public sealed partial class OnboardingViewModel : ObservableObject
             return;
         }
 
-        if (Password.Length < 8)
+        if (Password.Length < PasswordPolicy.MinimumLength)
         {
-            ErrorMessage = "Kata sandi minimal 8 karakter.";
+            ErrorMessage = "Kata sandi minimal " + PasswordPolicy.MinimumLength + " karakter.";
             return;
         }
 
