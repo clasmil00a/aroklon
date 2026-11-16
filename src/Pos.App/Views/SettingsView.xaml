@@ -682,7 +682,7 @@
                             <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Aroklon POS" />
+                                        <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Aroklon" />
                                         <Grid Margin="0,12,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="180" />

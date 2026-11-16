@@ -42,7 +42,7 @@ public sealed partial class AppShellViewModel : ObservableObject
     private object? _current;
 
     [ObservableProperty]
-    private string _windowTitle = "POS";
+    private string _windowTitle = "Aroklon";
 
     public AppShellViewModel(
         AuthService auth,
@@ -140,7 +140,7 @@ public sealed partial class AppShellViewModel : ObservableObject
         };
         onboarding.ExitRequested += () => Application.Current.Shutdown();
 
-        WindowTitle = "POS — Siapkan toko";
+        WindowTitle = "Aroklon — Siapkan toko";
         Current = onboarding;
     }
 
@@ -155,7 +155,7 @@ public sealed partial class AppShellViewModel : ObservableObject
         login.SignedIn += ShowShell;
         login.ExitRequested += () => Application.Current.Shutdown();
 
-        WindowTitle = "POS — Masuk";
+        WindowTitle = "Aroklon — Masuk";
         Current = login;
     }
 
@@ -192,11 +192,11 @@ public sealed partial class AppShellViewModel : ObservableObject
             _aroniumImport);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
-        shell.CompanyNameChanged += (_, _) => WindowTitle = "POS — " + shell.CompanyName;
+        shell.CompanyNameChanged += (_, _) => WindowTitle = "Aroklon — " + shell.CompanyName;
         shell.WindowStateRequested += (_, _) => ToggleMaximized();
         shell.ExitRequested += (_, _) => Application.Current.Shutdown();
 
-        WindowTitle = "POS — " + shell.CompanyName;
+        WindowTitle = "Aroklon — " + shell.CompanyName;
         Current = shell;
     }
 

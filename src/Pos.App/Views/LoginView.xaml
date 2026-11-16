@@ -25,13 +25,13 @@
                             FontSize="24"
                             FontWeight="{StaticResource Font.Weight.Bold}"
                             Foreground="{DynamicResource Brush.OnAccent}"
-                            Text="P" />
+                            Text="A" />
                     </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock
                             FontSize="{StaticResource Font.Size.Xl}"
                             FontWeight="{StaticResource Font.Weight.SemiBold}"
-                            Text="POS" />
+                            Text="Aroklon" />
                         <TextBlock
                             Style="{StaticResource Text.Secondary}"
                             Text="{Binding ShopName}" />

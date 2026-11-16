@@ -220,13 +220,20 @@ public sealed class ProductService
         await using var transaction = connection.BeginTransaction(deferred: false);
         try
         {
+            var groupId = await ResolveGroupIdAsync(
+                connection,
+                transaction,
+                request.GroupId,
+                request.GroupName,
+                cancellationToken).ConfigureAwait(false);
+
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 INSERT INTO products
-                  (id, name, code, active, default_qty_milli, is_service, cost_minor,
+                  (id, name, code, group_id, active, default_qty_milli, is_service, cost_minor,
                    price_minor, price_change_allowed, created_at, updated_at)
                 VALUES
-                  (@id, @name, @code, 1, 1000, @isService, @cost,
+                  (@id, @name, @code, @groupId, 1, 1000, @isService, @cost,
                    @price, @priceChangeAllowed, @now, @now);
                 """,
                 new
@@ -234,6 +241,7 @@ public sealed class ProductService
                     id = productId,
                     name = request.Name.Trim(),
                     code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code.Trim(),
+                    groupId,
                     isService = request.IsService ? 1 : 0,
                     cost = request.CostMinor,
                     price = request.PriceMinor,
@@ -333,6 +341,133 @@ public sealed class ProductService
         return await GetAsync(productId, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<ProductDetail> UpdateAsync(
+        string productId,
+        ProductUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var session = RequireSession();
+        if (!session.Can(PermissionKeys.CatalogManage))
+        {
+            throw new PermissionException("Anda tidak memiliki izin untuk mengubah produk.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length < 2)
+        {
+            throw new ValidationException(ErrorCodes.Validation, "Nama produk minimal 2 karakter.");
+        }
+
+        if (request.Name.Trim().Length > 120)
+        {
+            throw new ValidationException(ErrorCodes.Validation, "Nama produk maksimal 120 karakter.");
+        }
+
+        if (request.PriceMinor < 0 || request.CostMinor < 0)
+        {
+            throw new ValidationException(ErrorCodes.Validation, "Harga dan biaya tidak boleh negatif.");
+        }
+
+        var now = _clock.UtcNow;
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            var groupId = await ResolveGroupIdAsync(
+                connection,
+                transaction,
+                request.GroupId,
+                null,
+                cancellationToken).ConfigureAwait(false);
+
+            var affected = await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE products
+                SET name = @name,
+                    code = @code,
+                    group_id = @groupId,
+                    price_minor = @price,
+                    cost_minor = @cost,
+                    is_service = @isService,
+                    price_change_allowed = @priceChangeAllowed,
+                    updated_at = @now
+                WHERE id = @productId AND active = 1;
+                """,
+                new
+                {
+                    productId,
+                    name = request.Name.Trim(),
+                    code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code.Trim(),
+                    groupId,
+                    price = request.PriceMinor,
+                    cost = request.CostMinor,
+                    isService = request.IsService ? 1 : 0,
+                    priceChangeAllowed = request.PriceChangeAllowed ? 1 : 0,
+                    now = SqlText.Now(now)
+                },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            if (affected == 0)
+            {
+                throw new NotFoundException("product.not_found", "Produk tidak ditemukan.");
+            }
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE product_units
+                SET price_minor = @price, updated_at = @now
+                WHERE product_id = @productId AND is_base = 1;
+                """,
+                new { productId, price = request.PriceMinor, now = SqlText.Now(now) },
+                transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+            await AuditWriter.WriteAsync(
+                connection,
+                transaction,
+                session.UserId,
+                "product.updated",
+                "product",
+                productId,
+                new { name = request.Name.Trim(), price = request.PriceMinor },
+                now,
+                cancellationToken).ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw new ConflictException(
+                "product.duplicate",
+                "Kode produk sudah dipakai produk lain.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+
+        return await GetProductDetailAsync(productId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<ProductGroup>> ListGroupsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession();
+        await using var connection = await _factory.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await connection.QueryAsync<ProductGroup>(new CommandDefinition(
+            """
+            SELECT id AS Id, name AS Name, description AS Description,
+                   sort_order AS SortOrder, active AS Active
+            FROM product_groups
+            WHERE active = 1
+            ORDER BY sort_order, name;
+            """,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+        return rows.ToList();
+    }
+
     public async Task<IReadOnlyList<(string Id, string Name, string Symbol)>> ListUnitsAsync(
         CancellationToken cancellationToken = default)
     {
@@ -368,7 +503,12 @@ public sealed class ProductService
               p.cost_minor AS CostMinor,
               p.is_service AS IsService,
               p.price_change_allowed AS PriceChangeAllowed,
-              NULL AS Barcode,
+              (SELECT b.barcode
+               FROM product_barcodes b
+               JOIN product_units pu2 ON pu2.id = b.product_unit_id
+               WHERE pu2.product_id = p.id
+               ORDER BY b.is_primary DESC
+               LIMIT 1) AS Barcode,
               g.name AS GroupName
             FROM products p
             JOIN product_units bpu ON bpu.product_id = p.id AND bpu.is_base = 1
@@ -827,6 +967,30 @@ public sealed class ProductService
 
     private UserSession RequireSession() =>
         _sessions.Current ?? throw new PermissionException("Sesi tidak ditemukan. Silakan masuk kembali.");
+
+    private async Task<string?> ResolveGroupIdAsync(
+        System.Data.IDbConnection connection,
+        System.Data.IDbTransaction transaction,
+        string? groupId,
+        string? groupName,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(groupId))
+        {
+            return groupId;
+        }
+
+        if (string.IsNullOrWhiteSpace(groupName))
+        {
+            return null;
+        }
+
+        return await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(
+            "SELECT id FROM product_groups WHERE name = @name COLLATE NOCASE LIMIT 1;",
+            new { name = groupName.Trim() },
+            transaction,
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
 
     private static void Validate(ProductCreateRequest request)
     {

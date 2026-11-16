@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pos.App.Services;
 using Pos.Data.Services;
+using Pos.Domain;
 using Pos.Domain.Models;
 using Serilog;
 
@@ -11,15 +12,54 @@ namespace Pos.App.ViewModels;
 public sealed partial class ProductEditorViewModel : ObservableObject
 {
     private readonly ProductService _products;
+    private readonly UnitService _units;
+    private readonly ProductGroupService _productGroups;
 
     [ObservableProperty]
     private ProductDetail? _detail;
 
+    // Core product fields (create + edit)
     [ObservableProperty]
-    private string _newUnitName = string.Empty;
+    private string _name = string.Empty;
 
     [ObservableProperty]
-    private string? _newUnitSymbol;
+    private string? _code;
+
+    [ObservableProperty]
+    private long _priceMinor;
+
+    [ObservableProperty]
+    private long _costMinor;
+
+    [ObservableProperty]
+    private long _openingStock;
+
+    [ObservableProperty]
+    private string? _barcode;
+
+    [ObservableProperty]
+    private bool _isService;
+
+    [ObservableProperty]
+    private bool _priceChangeAllowed = true;
+
+    [ObservableProperty]
+    private ObservableCollection<UnitOption> _unitOptions = new();
+
+    [ObservableProperty]
+    private UnitOption? _selectedBaseUnit;
+
+    [ObservableProperty]
+    private ObservableCollection<ProductGroup> _groupOptions = new();
+
+    [ObservableProperty]
+    private ProductGroup? _selectedGroup;
+
+    [ObservableProperty]
+    private bool _isNewProduct = true;
+
+    [ObservableProperty]
+    private UnitOption? _newUnitOption;
 
     [ObservableProperty]
     private long _newFactor = 1000;
@@ -60,22 +100,70 @@ public sealed partial class ProductEditorViewModel : ObservableObject
 
     private string _productId = string.Empty;
 
-    public ProductEditorViewModel(ProductService products)
+    public ProductEditorViewModel(
+        ProductService products,
+        UnitService units,
+        ProductGroupService productGroups)
     {
         _products = products;
+        _units = units;
+        _productGroups = productGroups;
     }
 
-    public void SetProduct(string productId) => _productId = productId;
+    public void SetProduct(string productId)
+    {
+        _productId = productId;
+        IsNewProduct = string.IsNullOrWhiteSpace(productId);
+    }
+
+    public void NewProduct()
+    {
+        _productId = string.Empty;
+        Detail = null;
+        IsNewProduct = true;
+        Name = string.Empty;
+        Code = null;
+        PriceMinor = 0;
+        CostMinor = 0;
+        OpeningStock = 0;
+        Barcode = null;
+        IsService = false;
+        PriceChangeAllowed = true;
+        SelectedGroup = null;
+        SelectedBaseUnit = UnitOptions.FirstOrDefault();
+        ErrorMessage = string.Empty;
+        InfoMessage = string.Empty;
+    }
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsNotBusy => !IsBusy;
+    public bool IsExistingProduct => !IsNewProduct;
+    public bool ShowVariantEditor => !IsNewProduct && Detail is not null;
+    public bool ShowNewProductHint => !ShowVariantEditor;
+    public string EditorTitle => IsNewProduct ? "Produk baru" : "Edit produk";
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+    partial void OnIsNewProductChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsExistingProduct));
+        OnPropertyChanged(nameof(ShowVariantEditor));
+        OnPropertyChanged(nameof(ShowNewProductHint));
+        OnPropertyChanged(nameof(EditorTitle));
+    }
+
+    partial void OnDetailChanged(ProductDetail? value)
+    {
+        OnPropertyChanged(nameof(ShowVariantEditor));
+        OnPropertyChanged(nameof(ShowNewProductHint));
+    }
+
+    [RelayCommand]
+    private void ClearGroup() => SelectedGroup = null;
 
     public async Task InitializeAsync()
     {
-        if (IsBusy || string.IsNullOrEmpty(_productId))
+        if (IsBusy)
         {
             return;
         }
@@ -84,7 +172,37 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         ErrorMessage = string.Empty;
         try
         {
-            Detail = await _products.GetProductDetailAsync(_productId);
+            UnitOptions = new ObservableCollection<UnitOption>(
+                await _units.ListActiveAsync());
+            GroupOptions = new ObservableCollection<ProductGroup>(
+                await _products.ListGroupsAsync());
+
+            if (IsNewProduct || string.IsNullOrEmpty(_productId))
+            {
+                IsNewProduct = true;
+                Detail = null;
+                if (Name.Length == 0)
+                {
+                    Name = string.Empty;
+                }
+
+                SelectedBaseUnit ??= UnitOptions.FirstOrDefault();
+                return;
+            }
+
+            var detail = await _products.GetProductDetailAsync(_productId);
+            Detail = detail;
+            Name = detail.Name;
+            Code = detail.Code;
+            PriceMinor = detail.PriceMinor;
+            CostMinor = detail.CostMinor;
+            Barcode = detail.Barcode;
+            IsService = detail.IsService;
+            PriceChangeAllowed = detail.PriceChangeAllowed;
+            SelectedBaseUnit = UnitOptions.FirstOrDefault(unit => unit.Id == detail.BaseUnitId)
+                ?? new UnitOption(detail.BaseUnitId, detail.BaseUnitName, null);
+            SelectedGroup = GroupOptions.FirstOrDefault(group => group.Name == detail.GroupName);
+            IsNewProduct = false;
         }
         catch (Exception exception)
         {
@@ -95,6 +213,95 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task SaveProductAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        ErrorMessage = string.Empty;
+        InfoMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(Name) || Name.Trim().Length < 2)
+        {
+            ErrorMessage = "Nama produk minimal 2 karakter.";
+            return;
+        }
+
+        if (IsNewProduct && SelectedBaseUnit is null)
+        {
+            ErrorMessage = "Pilih satuan dasar terlebih dahulu.";
+            return;
+        }
+
+        if (PriceMinor < 0 || CostMinor < 0 || OpeningStock < 0)
+        {
+            ErrorMessage = "Harga, biaya, dan stok awal tidak boleh negatif.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            if (IsNewProduct)
+            {
+                var created = await _products.CreateAsync(new ProductCreateRequest(
+                    Name.Trim(),
+                    string.IsNullOrWhiteSpace(Code) ? null : Code.Trim(),
+                    SelectedBaseUnit!.Id,
+                    PriceMinor,
+                    CostMinor,
+                    checked(OpeningStock * 1000),
+                    string.IsNullOrWhiteSpace(Barcode) ? null : Barcode.Trim(),
+                    IsService,
+                    PriceChangeAllowed,
+                    SelectedGroup?.Name,
+                    SelectedGroup?.Id));
+
+                _productId = created.ProductId;
+                IsNewProduct = false;
+                InfoMessage = "Produk baru berhasil dibuat. Tambahkan varian satuan bila perlu.";
+            }
+            else
+            {
+                await _products.UpdateAsync(_productId, new ProductUpdateRequest(
+                    Name.Trim(),
+                    string.IsNullOrWhiteSpace(Code) ? null : Code.Trim(),
+                    PriceMinor,
+                    CostMinor,
+                    IsService,
+                    PriceChangeAllowed,
+                    SelectedGroup?.Id));
+
+                InfoMessage = "Perubahan produk disimpan.";
+            }
+        }
+        catch (ConflictException)
+        {
+            ErrorMessage = "Kode produk sudah dipakai produk lain.";
+            return;
+        }
+        catch (PosException exception)
+        {
+            ErrorMessage = exception.Message;
+            return;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to save product");
+            ErrorMessage = "Gagal menyimpan produk. Coba lagi.";
+            return;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+
+        await InitializeAsync();
     }
 
     [RelayCommand]
@@ -113,7 +320,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(NewUnitName))
+        if (NewUnitOption is null)
         {
             ErrorMessage = "Satuan wajib dipilih.";
             return;
@@ -134,20 +341,11 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var unit = Detail.Variants.FirstOrDefault(v =>
-                v.UnitName.Equals(NewUnitName, StringComparison.OrdinalIgnoreCase))?.UnitId;
-            if (unit is null)
-            {
-                ErrorMessage = "Satuan tidak tersedia. Tambahkan dulu di Master Satuan.";
-                return;
-            }
-
             await _products.CreateProductUnitAsync(new(
-                _productId, unit, NewFactor, NewIsDefaultSale, NewPrice, 0));
+                _productId, NewUnitOption.Id, NewFactor, NewIsDefaultSale, NewPrice, 0));
 
             InfoMessage = "Varian satuan ditambahkan.";
-            NewUnitName = string.Empty;
-            NewUnitSymbol = null;
+            NewUnitOption = null;
             NewFactor = 1000;
             NewIsDefaultSale = false;
             NewPrice = null;

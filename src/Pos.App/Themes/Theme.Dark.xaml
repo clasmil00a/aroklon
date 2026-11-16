@@ -31,6 +31,9 @@
     <Color x:Key="Color.WarningSolidHover">#FF5F3D00</Color>
     <Color x:Key="Color.OnWarning">#FFFFFFFF</Color>
     <Color x:Key="Color.Focus">#FF67C9F2</Color>
+    <Color x:Key="Color.SelectedRow">#FF1D6F9C</Color>
+    <Color x:Key="Color.OnSelectedRow">#FFFFFFFF</Color>
+
     <Color x:Key="Color.Scrim">#FF000000</Color>
 
     <SolidColorBrush x:Key="Brush.Bg" Color="{StaticResource Color.Bg}" />
@@ -60,6 +63,8 @@
     <SolidColorBrush x:Key="Brush.WarningSolidHover" Color="{StaticResource Color.WarningSolidHover}" />
     <SolidColorBrush x:Key="Brush.OnWarning" Color="{StaticResource Color.OnWarning}" />
     <SolidColorBrush x:Key="Brush.Focus" Color="{StaticResource Color.Focus}" />
+    <SolidColorBrush x:Key="Brush.SelectedRow" Color="{StaticResource Color.SelectedRow}" />
+    <SolidColorBrush x:Key="Brush.OnSelectedRow" Color="{StaticResource Color.OnSelectedRow}" />
     <SolidColorBrush x:Key="Brush.Scrim" Color="#8C000000" />
 
     <DropShadowEffect x:Key="Effect.Pop" Color="#FF000000" BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.45" />

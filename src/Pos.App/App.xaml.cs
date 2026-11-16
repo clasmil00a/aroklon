@@ -33,8 +33,8 @@ public partial class App : Application
         if (!isFirstInstance)
         {
             MessageBox.Show(
-                "Aplikasi POS sudah berjalan di komputer ini.",
-                "POS",
+                "Aplikasi Aroklon sudah berjalan di komputer ini.",
+                "Aroklon",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             Shutdown();
@@ -46,7 +46,7 @@ public partial class App : Application
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.File(
-                Path.Combine(AppPaths.LogDirectory, "pos-.log"),
+                Path.Combine(AppPaths.LogDirectory, "aroklon-.log"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
                 shared: true)
@@ -176,14 +176,14 @@ public partial class App : Application
             MainWindow = window;
             window.Show();
 
-            Log.Information("POS started with database {Path}", databaseInfo.Path);
+            Log.Information("Aroklon started with database {Path}", databaseInfo.Path);
         }
         catch (Exception exception)
         {
             Log.Fatal(exception, "Startup failed");
             MessageBox.Show(
                 "Aplikasi tidak dapat dimulai.\n\n" + exception.Message,
-                "POS",
+                "Aroklon",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             Shutdown(1);
@@ -225,7 +225,7 @@ public partial class App : Application
             Log.Fatal(e.Exception, "Unhandled dispatcher exception");
             MessageBox.Show(
                 "Terjadi kesalahan tak terduga. Aplikasi akan ditutup. Data yang sudah tersimpan tetap aman.",
-                "POS",
+                "Aroklon",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }

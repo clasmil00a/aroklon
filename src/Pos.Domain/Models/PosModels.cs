@@ -27,6 +27,11 @@ public sealed record ProductLookup(
         UnitFactorMilli <= 0
             ? 0
             : UnitMath.FromBase(StockBaseMilli, UnitFactorMilli);
+
+    public string StockDisplay =>
+        IsService ? "—" : UnitMath.FormatQuantity(StockInSellingUnitMilli);
+
+    public string PriceDisplay => UnitMath.FormatQuantity(1) + " " + UnitName;
 }
 
 /// <summary>Tax rate applicable to products.</summary>
@@ -42,7 +47,18 @@ public sealed record ProductCreateRequest(
     string? Barcode,
     bool IsService,
     bool PriceChangeAllowed = true,
-    string? GroupName = null);
+    string? GroupName = null,
+    string? GroupId = null);
+
+/// <summary>Perubahan data inti produk (nama, kode, harga, grup).</summary>
+public sealed record ProductUpdateRequest(
+    string Name,
+    string? Code,
+    long PriceMinor,
+    long CostMinor,
+    bool IsService,
+    bool PriceChangeAllowed,
+    string? GroupId = null);
 
 public sealed record SaleLineInput(
     string ProductId,

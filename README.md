@@ -1,11 +1,11 @@
-# Aroklon POS
+# Aroklon
 
 Aplikasi kasir Windows untuk toko sendiri. WPF native, database SQLite lokal,
 tanpa server dan tanpa Chromium. Antarmuka berbahasa Indonesia dengan sapaan
 formal “Anda”.
 
-Status: **M0 — fondasi selesai**. Alur kasir inti (M1) belum dibangun; menu
-yang belum tersedia membuka halaman status, bukan tautan mati.
+Status: aplikasi kasir siap dipakai untuk penjualan harian. Menu yang belum
+tersedia membuka halaman status, bukan tautan mati.
 
 ## Persyaratan
 
@@ -21,15 +21,15 @@ yang belum tersedia membuka halaman status, bukan tautan mati.
 Di Windows:
 
 ```powershell
-dotnet build src/Pos.App/Aroklon.App.csproj
-dotnet run --project src/Pos.App/Aroklon.App.csproj
+dotnet build src/Pos.App/Pos.App.csproj
+dotnet run --project src/Pos.App/Pos.App.csproj
 ```
 
 Di Linux (kompilasi saja):
 
 ```bash
 export PATH=/root/.dotnet:$PATH
-dotnet build src/Pos.App/Aroklon.App.csproj
+dotnet build src/Pos.App/Pos.App.csproj
 ```
 
 ## Tes
@@ -47,9 +47,15 @@ Argon2id 64 MB, 3 iterasi, paralelisme 2.
 
 - Onboarding pertama: nama toko, akun administrator, database dibuat otomatis.
 - Login dengan Argon2id, sesi di memori, lockout 5 percobaan / 15 menit.
-- Shell aplikasi: bilah atas dan menu utama di sisi kanan seperti Aronium.
-- Menu utama S13 dengan status setiap tujuan.
-- Kerangka Manajemen S14 dan Pengaturan S27.
+- Shell aplikasi bergaya Aronium: bilah atas dan menu utama berupa flyout di
+  sisi kiri, dengan pintasan papan tombol.
+- Kasir standar: pencarian produk dan barcode, keranjang yang dapat digulir,
+  jumlah, diskon, komentar, ubah harga, parkir/pulihkan pesanan, pembayaran
+  tunai/non-tunai, kembalian, dan struk.
+- Manajemen: produk baru/edit, varian satuan dan harga, grup produk, stok,
+  pelanggan, daftar harga, pajak, tipe pembayaran, pengguna, laporan, satuan,
+  serta database dan cadangan.
+- Pengaturan toko, printer struk, tema, dan impor data Aronium Lite.
 - Tema gelap (bawaan) dan terang, tersimpan per pengguna Windows.
 - Aplikasi terbuka dalam jendela maksimal secara bawaan, sehingga title bar
   dan taskbar Windows tetap terlihat. F11 atau tombol Ukuran jendela
@@ -69,7 +75,7 @@ Semua data pengguna berada di profil Windows, bukan di folder instalasi:
 %LOCALAPPDATA%\Aroklon\
   data\pos.db
   backups\pos-YYYYMMDD-HHmmss.db
-  logs\pos-YYYYMMDD.log
+  logs\aroklon-YYYYMMDD.log
   ui.json
 ```
 

@@ -30,7 +30,6 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly AdminUserService _users;
     private readonly DatabaseService _database;
 
-    private HomeViewModel? _home;
     private ManagementViewModel? _management;
     private SettingsViewModel? _settings;
     private PosViewModel? _pos;
@@ -71,15 +70,15 @@ public sealed partial class ShellViewModel : ObservableObject
     private object? _currentPage;
 
     [ObservableProperty]
-    private string _activeRoute = "home";
+    private string _activeRoute = "S02";
 
     [ObservableProperty]
-    private string _pageTitle = "Beranda";
+    private string _pageTitle = "Kasir";
 
     [ObservableProperty]
     private bool _isMenuOpen;
 
-    public string MenuHeader => "POS - " + UserDisplayName;
+    public string MenuHeader => "Aroklon - " + UserDisplayName;
 
     public string MenuDate => DateTime.Now.ToString("dd/MM/yyyy");
 
@@ -143,39 +142,38 @@ public sealed partial class ShellViewModel : ObservableObject
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
-            _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
-            _pos.SetSession(Session);
-            _pos.ResumeOpenOrder(resumeData);
+            EnsurePos().ResumeOpenOrder(resumeData);
             Navigate("S02");
         };
 
         var menuItems = new List<ShellMenuItem>
         {
-            new("Beranda", "home", "\uE80F", "Utama"),
             new("Manajemen", "management", "\uE90F"),
-            new("Riwayat penjualan", "S32", "\uE81C", "Penjualan"),
+            new(
+                "Riwayat penjualan",
+                "S32",
+                "\uE81C",
+                SeparatorBefore: true),
             new("Pesanan terbuka", "S12", "\uE81E"),
             new("Kas masuk / keluar", "S31", "\uE8C7"),
-            new("Refund", "S34", "\uE7A7"),
-            new("Tutup hari", "S35", "\uE787")
+            new("Pembayaran kredit", "credit", "\uE8A5"),
+            new("Tutup hari", "S35", "\uE787"),
+            new(
+                "Info pengguna",
+                "S25",
+                "\uE77B",
+                Section: "Pengguna"),
+            new("Keluar", "signout", "\uE7E8"),
+            new(
+                "Masukan",
+                "feedback",
+                "\uE939",
+                SeparatorBefore: true)
         };
-
-        var hasUserSection = Session.Can(PermissionKeys.UsersManage);
-        if (hasUserSection)
-        {
-            menuItems.Add(new ShellMenuItem(
-                "Pengguna & akses", "S25", "\uE77B", "Akun"));
-        }
-
-        menuItems.Add(new ShellMenuItem(
-            "Ganti pengguna",
-            "signout",
-            "\uF3B1",
-            hasUserSection ? string.Empty : "Akun"));
 
         MenuItems = menuItems;
 
-        Navigate("home");
+        Navigate("S02");
     }
 
     public UserSession Session { get; }
@@ -227,15 +225,9 @@ public sealed partial class ShellViewModel : ObservableObject
         switch (route)
         {
             case "home":
-                _home ??= new HomeViewModel(
-                    FirstName(Session.FullName),
-                    Navigate,
-                    RequestWindowState,
-                    SignOutAsync,
-                    RequestExit,
-                    Version);
-                CurrentPage = _home;
-                ActiveRoute = "home";
+            case "S02":
+                CurrentPage = EnsurePos();
+                ActiveRoute = "S02";
                 break;
 
             case "management":
@@ -272,14 +264,6 @@ public sealed partial class ShellViewModel : ObservableObject
                 _ = _settings.InitializeAsync();
                 break;
 
-            case "S02":
-                _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
-                _pos.SetSession(Session);
-                _pos.BackRequested += () => Navigate("home");
-                CurrentPage = _pos;
-                ActiveRoute = "home";
-                break;
-
             case "S03":
                 _visualWorkspace ??= new VisualWorkspaceViewModel(_products, _sales, _customers);
                 _visualWorkspace.SetSession(Session);
@@ -304,29 +288,34 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
 
             case "S15":
-                _productList ??= new ProductListViewModel(_products);
-                _productList.ProductSelected += pid =>
+                if (_productList is null)
                 {
-                    _productEditor ??= new ProductEditorViewModel(_products);
-                    _productEditor.SetProduct(pid);
-                    Navigate("S16");
-                };
+                    _productList = new ProductListViewModel(_products);
+                    _productList.ProductSelected += pid =>
+                    {
+                        var editor = EnsureProductEditor();
+                        editor.SetProduct(pid);
+                        Navigate("S16");
+                    };
+                    _productList.NewProductRequested += () =>
+                    {
+                        var editor = EnsureProductEditor();
+                        editor.NewProduct();
+                        Navigate("S16");
+                    };
+                    _productList.NavigateRequested += Navigate;
+                    _productList.BackRequested += () => Navigate("management");
+                }
+
                 CurrentPage = _productList;
-                ActiveRoute = "home";
+                ActiveRoute = "S15";
                 break;
 
             case "S16":
-                _productEditor ??= new ProductEditorViewModel(_products);
-                _productEditor.BackRequested += () => Navigate("S15");
-                _productEditor.PriceViewRequested += pid =>
-                {
-                    _productPrice ??= new ProductPriceViewModel(_products, _priceLists);
-                    _productPrice.SetProduct(pid);
-                    _productPrice.BackRequested += () => Navigate("S16");
-                    Navigate("S41");
-                };
-                CurrentPage = _productEditor;
-                ActiveRoute = "home";
+                var productEditor = EnsureProductEditor();
+                CurrentPage = productEditor;
+                ActiveRoute = "S16";
+                _ = productEditor.InitializeAsync();
                 break;
 
             case "S41":
@@ -359,9 +348,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 _openOrders.BackRequested += () => Navigate("home");
                 _openOrders.ResumeRequested += resumeData =>
                 {
-                    _pos ??= new PosViewModel(_products, _sales, _customers, _cashDrawer);
-                    _pos.SetSession(Session);
-                    _pos.ResumeOpenOrder(resumeData);
+                    EnsurePos().ResumeOpenOrder(resumeData);
                     Navigate("S02");
                 };
                 CurrentPage = _openOrders;
@@ -469,6 +456,28 @@ public sealed partial class ShellViewModel : ObservableObject
                 ActiveRoute = "home";
                 break;
 
+            case "credit":
+                CurrentPage = new ScreenStubViewModel(
+                    new ScreenDefinition(
+                        "S46",
+                        "Pembayaran kredit",
+                        "Pantau sisa pembayaran kredit pelanggan.",
+                        "M9"),
+                    () => Navigate("S02"));
+                ActiveRoute = "credit";
+                break;
+
+            case "feedback":
+                CurrentPage = new ScreenStubViewModel(
+                    new ScreenDefinition(
+                        "S47",
+                        "Masukan",
+                        "Kirim masukan untuk pengembangan Aroklon.",
+                        "M9"),
+                    () => Navigate("S02"));
+                ActiveRoute = "feedback";
+                break;
+
             default:
                 if (ScreenCatalog.TryGet(route, out var screen))
                 {
@@ -478,6 +487,44 @@ public sealed partial class ShellViewModel : ObservableObject
 
                 break;
         }
+    }
+
+    private ProductEditorViewModel EnsureProductEditor()
+    {
+        if (_productEditor is null)
+        {
+            _productEditor = new ProductEditorViewModel(
+                _products,
+                _units,
+                _productGroupService);
+            _productEditor.BackRequested += () => Navigate("S15");
+            _productEditor.PriceViewRequested += pid =>
+            {
+                _productPrice ??= new ProductPriceViewModel(_products, _priceLists);
+                _productPrice.SetProduct(pid);
+                _productPrice.BackRequested += () => Navigate("S16");
+                Navigate("S41");
+            };
+        }
+
+        return _productEditor;
+    }
+
+    private PosViewModel EnsurePos()
+    {
+        if (_pos is null)
+        {
+            _pos = new PosViewModel(_products, _sales, _customers, _cashDrawer);
+            _pos.MenuRequested += () => IsMenuOpen = true;
+            _pos.RefundRequested += () => Navigate("S34");
+            _pos.LockRequested += () => _ = SignOutAsync();
+            _pos.OpenOrdersRequested += () => Navigate("S12");
+            _pos.SalesHistoryRequested += () => Navigate("S32");
+            _pos.BackRequested += () => Navigate("S02");
+        }
+
+        _pos.SetSession(Session);
+        return _pos;
     }
 
     [RelayCommand]
@@ -515,23 +562,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string TitleFor(string route) => route switch
     {
-        "home" => "Beranda",
+        "home" => "Kasir",
+        "S02" => "Kasir",
         "management" => "Manajemen",
         "settings" => "Pengaturan",
-        _ => ScreenCatalog.TryGet(route, out var screen) ? screen.Title : "POS"
+        "credit" => "Pembayaran kredit",
+        "feedback" => "Masukan",
+        _ => ScreenCatalog.TryGet(route, out var screen) ? screen.Title : "Aroklon"
     };
-
-    private static string FirstName(string fullName)
-    {
-        var trimmed = fullName.Trim();
-        if (trimmed.Length == 0)
-        {
-            return "Pengguna";
-        }
-
-        var space = trimmed.IndexOf(' ');
-        return space > 0 ? trimmed[..space] : trimmed;
-    }
 
     private static string BuildInitials(string fullName, string username)
     {

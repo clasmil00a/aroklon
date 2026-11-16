@@ -31,6 +31,8 @@ public sealed record ProductUnitVariant(
         FactorToBaseMilli <= 0
             ? 0
             : UnitMath.FromBase(StockBaseMilli, FactorToBaseMilli);
+
+    public string StockDisplay => UnitMath.FormatQuantity(StockInSellingUnitMilli);
 }
 
 /// <summary>Request to add a selling variant ("isi") to a product.</summary>

@@ -19,12 +19,18 @@ public sealed partial class ProductListViewModel : ObservableObject
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    private ProductLookup? _selectedProduct;
+
+    [ObservableProperty]
     private string _errorMessage = string.Empty;
 
     [ObservableProperty]
     private bool _isBusy;
 
     public event Action<string>? ProductSelected;
+    public event Action? NewProductRequested;
+    public event Action<string>? NavigateRequested;
+    public event Action? BackRequested;
 
     public ProductListViewModel(ProductService products)
     {
@@ -33,9 +39,20 @@ public sealed partial class ProductListViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsNotBusy => !IsBusy;
+    public bool HasSelection => SelectedProduct is not null;
+    public bool HasProducts => ProductList.Count > 0;
+    public bool HasNoProducts => !HasProducts;
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+    partial void OnSelectedProductChanged(ProductLookup? value) =>
+        OnPropertyChanged(nameof(HasSelection));
+    partial void OnSearchTextChanged(string value) => _ = LoadAsync();
+    partial void OnProductListChanged(ObservableCollection<ProductLookup> value)
+    {
+        OnPropertyChanged(nameof(HasProducts));
+        OnPropertyChanged(nameof(HasNoProducts));
+    }
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -73,6 +90,30 @@ public sealed partial class ProductListViewModel : ObservableObject
             ProductSelected?.Invoke(product.ProductId);
         }
     }
+
+    [RelayCommand]
+    private void EditSelectedProduct()
+    {
+        if (SelectedProduct is not null)
+        {
+            ProductSelected?.Invoke(SelectedProduct.ProductId);
+        }
+    }
+
+    [RelayCommand]
+    private void NewProduct() => NewProductRequested?.Invoke();
+
+    [RelayCommand]
+    private void OpenProductGroups() => NavigateRequested?.Invoke("S43");
+
+    [RelayCommand]
+    private void OpenReports() => NavigateRequested?.Invoke("S44");
+
+    [RelayCommand]
+    private void OpenHistory() => NavigateRequested?.Invoke("S32");
+
+    [RelayCommand]
+    private void GoBack() => BackRequested?.Invoke();
 
     [RelayCommand]
     private async Task SearchAsync()

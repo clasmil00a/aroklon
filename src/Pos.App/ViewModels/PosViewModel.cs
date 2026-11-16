@@ -19,6 +19,7 @@ public sealed partial class PosViewModel : ObservableObject
     private readonly CashDrawerService _cashDrawer;
     private readonly ProductSearchViewModel _productSearch;
     private readonly PosCart _cart = new();
+    private int _searchVersion;
 
     public ProductSearchViewModel ProductSearchVm => _productSearch;
 
@@ -64,7 +65,7 @@ public sealed partial class PosViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<PaymentSelectionViewModel> _selectedPayments = new();
 
-    public long TotalTendered => _selectedPayments.Sum(p => p.AmountMinor);
+    public long TotalTendered => SelectedPayments.Sum(p => p.AmountMinor);
 
     [ObservableProperty]
     private string _infoMessage = string.Empty;
@@ -78,7 +79,101 @@ public sealed partial class PosViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSearchModalOpen;
 
+    [ObservableProperty]
+    private string _searchMode = "all";
+
+    [ObservableProperty]
+    private bool _isQuantityVisible;
+
+    [ObservableProperty]
+    private string _quantityText = "1";
+
+    [ObservableProperty]
+    private string _quantityError = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDiscountVisible;
+
+    [ObservableProperty]
+    private string _discountPercentText = string.Empty;
+
+    [ObservableProperty]
+    private string _discountAmountText = string.Empty;
+
+    [ObservableProperty]
+    private string _discountError = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCommentVisible;
+
+    [ObservableProperty]
+    private string _commentText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isPaymentVisible;
+
+    [ObservableProperty]
+    private bool _isBarcodeVisible;
+
+    [ObservableProperty]
+    private bool _isCustomerVisible;
+
+    [ObservableProperty]
+    private string _customerSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _customerError = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<CustomerSummary> _customerResults = new();
+
+    private IReadOnlyList<CustomerSummary> _allCustomers = Array.Empty<CustomerSummary>();
+
+    [ObservableProperty]
+    private bool _isSearchResultsOpen;
+
+    [ObservableProperty]
+    private string _quantityLineName = string.Empty;
+
+    [ObservableProperty]
+    private string _quantityUnitLabel = string.Empty;
+
+    [ObservableProperty]
+    private bool _discountIsLine;
+
+    [ObservableProperty]
+    private string _discountTargetLabel = "Seluruh transaksi";
+
+    [ObservableProperty]
+    private string _paymentAmountText = string.Empty;
+
+    [ObservableProperty]
+    private string _paymentError = string.Empty;
+
+    [ObservableProperty]
+    private string _paymentChangeText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVoidConfirmVisible;
+
+    [ObservableProperty]
+    private string _parkedSaleLabel = string.Empty;
+
+    [ObservableProperty]
+    private int _parkedOrderCount;
+
+    private string? _parkedSaleId;
     private UserSession? _session;
+
+    public event Action? MenuRequested;
+    public event Action? RefundRequested;
+    public event Action? LockRequested;
+    public event Action? OpenOrdersRequested;
+    public event Action? SalesHistoryRequested;
+
+    public string SearchHint => SearchMode == "code"
+        ? "Cari kode / SKU produk"
+        : "Cari produk berdasarkan nama";
 
     public PosViewModel(
         ProductService products,
@@ -95,9 +190,22 @@ public sealed partial class PosViewModel : ObservableObject
         _productSearch.CloseRequested += () => IsSearchModalOpen = false;
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(SearchText) && !string.IsNullOrWhiteSpace(SearchText))
+            if (e.PropertyName is nameof(SearchText))
             {
-                _ = SearchAsync();
+                if (string.IsNullOrWhiteSpace(SearchText))
+                {
+                    _searchVersion++;
+                    SearchResults = new ObservableCollection<ProductLookup>();
+                    IsSearchResultsOpen = false;
+                }
+                else
+                {
+                    _ = SearchAsync();
+                }
+            }
+            else if (e.PropertyName is nameof(SearchMode))
+            {
+                OnPropertyChanged(nameof(SearchHint));
             }
             else if (e.PropertyName is nameof(CartDiscountKind) or nameof(CartDiscountValue))
             {
@@ -112,12 +220,6 @@ public sealed partial class PosViewModel : ObservableObject
             }
         };
 
-        _selectedPayments.CollectionChanged += (_, e) =>
-        {
-            OnPropertyChanged(nameof(TotalTendered));
-            UpdateCanCheckout();
-        };
-
         _ = LoadPaymentTypesAsync();
     }
 
@@ -126,6 +228,11 @@ public sealed partial class PosViewModel : ObservableObject
     public async Task ResumeOpenOrder(OpenOrderResumeData data)
     {
         _cart.Clear();
+        _cart.ClearCartDiscount();
+        CartDiscountKind = DiscountKind.None;
+        CartDiscountValue = 0;
+        _parkedSaleId = data.SaleId;
+        ParkedSaleLabel = data.Number;
         Lines = new ObservableCollection<CartLineViewModel>();
 
         foreach (var input in data.Lines)
@@ -147,11 +254,40 @@ public sealed partial class PosViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsNotBusy => !IsBusy;
+    public bool HasCartDiscount => Totals.DiscountMinor > 0;
+    public bool HasLines => Lines.Count > 0;
+    public bool HasNoLines => !HasLines;
+    public bool HasParkedOrders => ParkedOrderCount > 0;
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+    partial void OnPaymentAmountTextChanged(string value) => UpdatePaymentChange();
 
-    public void UpdateCanCheckout() => CanCheckout = !IsBusy && _cart.Lines.Count > 0 && _selectedPayments.Count > 0;
+    partial void OnSelectedPaymentsChanged(
+        ObservableCollection<PaymentSelectionViewModel> value)
+    {
+        if (value is not null)
+        {
+            value.CollectionChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(TotalTendered));
+                UpdateCanCheckout();
+            };
+        }
+
+        OnPropertyChanged(nameof(TotalTendered));
+        UpdateCanCheckout();
+    }
+    partial void OnParkedOrderCountChanged(int value) =>
+        OnPropertyChanged(nameof(HasParkedOrders));
+
+    public void UpdateCanCheckout()
+    {
+        CanCheckout = !IsBusy && _cart.Lines.Count > 0 && SelectedPayments.Count > 0;
+        OnPropertyChanged(nameof(HasLines));
+        OnPropertyChanged(nameof(HasNoLines));
+        OnPropertyChanged(nameof(HasParkedOrders));
+    }
 
     [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
@@ -205,24 +341,31 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchAsync()
     {
-        if (IsBusy) return;
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return;
+        }
+
+        var version = ++_searchVersion;
         ErrorMessage = string.Empty;
-        IsBusy = true;
-        UpdateCanCheckout();
         try
         {
             var results = await _products.SearchAsync(SearchText, 20);
+            if (version != _searchVersion)
+            {
+                return;
+            }
+
             SearchResults = new ObservableCollection<ProductLookup>(results);
+            IsSearchResultsOpen = results.Count > 0;
         }
         catch (Exception exception)
         {
             Log.Error(exception, "Product search failed");
-            ErrorMessage = "Pencarian produk gagal. Coba lagi.";
-        }
-        finally
-        {
-            IsBusy = false;
-            UpdateCanCheckout();
+            if (version == _searchVersion)
+            {
+                ErrorMessage = "Pencarian produk gagal. Coba lagi.";
+            }
         }
     }
 
@@ -249,12 +392,14 @@ public sealed partial class PosViewModel : ObservableObject
                 return;
             }
 
-            var line = _cart.Add(product, 1);
+            var line = _cart.Add(product, 1000);
             ReplaceOrAddLine(line);
             Recalculate();
             BarcodeInput = string.Empty;
+            IsBarcodeVisible = false;
             SearchText = string.Empty;
             SearchResults = new ObservableCollection<ProductLookup>();
+            IsSearchResultsOpen = false;
         }
         catch (Exception exception)
         {
@@ -275,11 +420,12 @@ public sealed partial class PosViewModel : ObservableObject
         ErrorMessage = string.Empty;
         try
         {
-            var line = _cart.Add(product, 1);
+            var line = _cart.Add(product, 1000);
             ReplaceOrAddLine(line);
             Recalculate();
             SearchText = string.Empty;
             SearchResults = new ObservableCollection<ProductLookup>();
+            IsSearchResultsOpen = false;
         }
         catch (Exception exception)
         {
@@ -311,27 +457,531 @@ public sealed partial class PosViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task SelectCustomerAsync()
+    private void OpenMenu() => MenuRequested?.Invoke();
+
+    [RelayCommand]
+    private void OpenRefund() => RefundRequested?.Invoke();
+
+    [RelayCommand]
+    private void LockScreen() => LockRequested?.Invoke();
+
+    [RelayCommand]
+    private void OpenOrders() => OpenOrdersRequested?.Invoke();
+
+    [RelayCommand]
+    private void OpenHistory() => SalesHistoryRequested?.Invoke();
+
+    [RelayCommand]
+    private void ToggleSearchMode()
     {
-        ErrorMessage = string.Empty;
+        SearchMode = SearchMode == "code" ? "all" : "code";
+        OnPropertyChanged(nameof(SearchHint));
+    }
+
+    [RelayCommand]
+    private void ShowBarcode()
+    {
+        BarcodeInput = string.Empty;
+        IsBarcodeVisible = true;
+    }
+
+    [RelayCommand]
+    private void HideBarcode() => IsBarcodeVisible = false;
+
+    [RelayCommand]
+    private async Task SubmitSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return;
+        }
+
+        if (SearchResults.Count == 0)
+        {
+            await SearchAsync();
+        }
+
+        var first = SearchResults.FirstOrDefault();
+        if (first is null)
+        {
+            ErrorMessage = "Produk tidak ditemukan.";
+            return;
+        }
+
+        AddProductToCart(first, 1_000);
+        SearchText = string.Empty;
+        SearchResults = new ObservableCollection<ProductLookup>();
+        IsSearchResultsOpen = false;
+    }
+
+    [RelayCommand]
+    private void ShowQuantity()
+    {
+        if (SelectedLine is null)
+        {
+            SelectedLine = Lines.FirstOrDefault();
+        }
+
+        if (SelectedLine is null)
+        {
+            ErrorMessage = "Pilih baris keranjang terlebih dahulu.";
+            return;
+        }
+
+        QuantityLineName = SelectedLine.Name;
+        QuantityUnitLabel = SelectedLine.UnitName;
+        QuantityText = (SelectedLine.QtyMilli / 1000m).ToString(
+            "0.###",
+            System.Globalization.CultureInfo.GetCultureInfo("id-ID"));
+        QuantityError = string.Empty;
+        IsQuantityVisible = true;
+    }
+
+    [RelayCommand]
+    private void HideQuantity() => IsQuantityVisible = false;
+
+    [RelayCommand]
+    private void ApplyQuantity()
+    {
+        if (SelectedLine is null)
+        {
+            return;
+        }
+
+        if (!UnitMath.TryParseQuantity(QuantityText, out var qtyMilli) || qtyMilli <= 0)
+        {
+            QuantityError = "Jumlah harus lebih dari nol.";
+            return;
+        }
+
         try
         {
-            var customers = await _customers.ListActiveAsync();
-            if (customers.Count == 0)
+            _cart.SetQuantity(SelectedLine.LineId, qtyMilli);
+            var lineId = SelectedLine.LineId;
+            RefreshLines();
+            SelectedLine = Lines.FirstOrDefault(line => line.LineId == lineId);
+            Recalculate();
+            IsQuantityVisible = false;
+        }
+        catch (Exception exception)
+        {
+            QuantityError = exception.Message;
+        }
+        finally
+        {
+            UpdateCanCheckout();
+        }
+    }
+
+    [RelayCommand]
+    private void ShowDiscount()
+    {
+        DiscountIsLine = SelectedLine is not null;
+        DiscountTargetLabel = SelectedLine is null
+            ? "Seluruh transaksi"
+            : "Baris: " + SelectedLine.Name;
+
+        var kind = SelectedLine?.DiscountKind ?? CartDiscountKind;
+        var value = SelectedLine?.DiscountValue ?? CartDiscountValue;
+        DiscountPercentText = kind == DiscountKind.Percent
+            ? (value / 100m).ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("id-ID"))
+            : string.Empty;
+        DiscountAmountText = kind == DiscountKind.Amount
+            ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : string.Empty;
+        DiscountError = string.Empty;
+        IsDiscountVisible = true;
+    }
+
+    [RelayCommand]
+    private void HideDiscount() => IsDiscountVisible = false;
+
+    [RelayCommand]
+    private void ApplyDiscount()
+    {
+        var hasPercent = !string.IsNullOrWhiteSpace(DiscountPercentText);
+        var hasAmount = !string.IsNullOrWhiteSpace(DiscountAmountText);
+        if (hasPercent && hasAmount)
+        {
+            DiscountError = "Isi salah satu: persen atau nominal.";
+            return;
+        }
+
+        var kind = DiscountKind.None;
+        var value = 0L;
+        if (hasPercent)
+        {
+            if (!decimal.TryParse(
+                    DiscountPercentText,
+                    System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.GetCultureInfo("id-ID"),
+                    out var percent) ||
+                percent < 0 ||
+                percent > 100)
             {
-                ErrorMessage = "Belum ada pelanggan aktif.";
+                DiscountError = "Persen diskon harus antara 0 dan 100.";
                 return;
             }
 
-            var first = customers[0];
-            SelectedCustomer = first;
-            CustomerLabel = first.Name + (first.PriceListName is not null ? " · " + first.PriceListName : string.Empty);
+            kind = DiscountKind.Percent;
+            value = (long)decimal.Round(percent * 100m, 0, MidpointRounding.AwayFromZero);
+        }
+        else if (hasAmount)
+        {
+            if (!TryParseMoney(DiscountAmountText, out value) || value < 0)
+            {
+                DiscountError = "Nominal diskon tidak valid.";
+                return;
+            }
+
+            kind = DiscountKind.Amount;
+        }
+
+        try
+        {
+            if (DiscountIsLine && SelectedLine is not null)
+            {
+                _cart.SetDiscount(SelectedLine.LineId, kind, value);
+                var lineId = SelectedLine.LineId;
+                RefreshLines();
+                SelectedLine = Lines.FirstOrDefault(line => line.LineId == lineId);
+            }
+            else
+            {
+                CartDiscountKind = kind;
+                CartDiscountValue = value;
+            }
+
+            Recalculate();
+            IsDiscountVisible = false;
+        }
+        catch (Exception exception)
+        {
+            DiscountError = exception.Message;
+        }
+        finally
+        {
+            UpdateCanCheckout();
+        }
+    }
+
+    [RelayCommand]
+    private void ShowComment()
+    {
+        if (SelectedLine is null)
+        {
+            SelectedLine = Lines.FirstOrDefault();
+        }
+
+        if (SelectedLine is null)
+        {
+            ErrorMessage = "Pilih baris keranjang terlebih dahulu.";
+            return;
+        }
+
+        CommentText = SelectedLine.Comment ?? string.Empty;
+        IsCommentVisible = true;
+    }
+
+    [RelayCommand]
+    private void HideComment() => IsCommentVisible = false;
+
+    [RelayCommand]
+    private void ApplyComment()
+    {
+        if (SelectedLine is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _cart.SetComment(
+                SelectedLine.LineId,
+                string.IsNullOrWhiteSpace(CommentText) ? null : CommentText.Trim());
+            var lineId = SelectedLine.LineId;
+            RefreshLines();
+            SelectedLine = Lines.FirstOrDefault(line => line.LineId == lineId);
+            IsCommentVisible = false;
+        }
+        catch (Exception exception)
+        {
+            ErrorMessage = exception.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShowPaymentAsync()
+    {
+        if (_cart.Lines.Count == 0)
+        {
+            ErrorMessage = "Keranjang masih kosong.";
+            return;
+        }
+
+        // A saved non-cash payment (card/transfer) already covers the sale.
+        if (SelectedPayments.Count > 0 &&
+            SelectedPayments.All(payment => !payment.MarkAsPaid) &&
+            SelectedPayments.Sum(payment => payment.AmountMinor) >= Totals.TotalMinor)
+        {
+            await CheckoutAsync();
+            return;
+        }
+
+        PaymentAmountText = Totals.TotalMinor.ToString(
+            System.Globalization.CultureInfo.InvariantCulture);
+        PaymentError = string.Empty;
+        UpdatePaymentChange();
+        IsPaymentVisible = true;
+    }
+
+    [RelayCommand]
+    private void HidePayment() => IsPaymentVisible = false;
+
+    [RelayCommand]
+    private void SetPaymentAmount(long amount)
+    {
+        PaymentAmountText = amount.ToString(
+            System.Globalization.CultureInfo.InvariantCulture);
+        PaymentError = string.Empty;
+        UpdatePaymentChange();
+    }
+
+    [RelayCommand]
+    private void SetExactPayment() =>
+        SetPaymentAmount(Totals.TotalMinor);
+
+    [RelayCommand]
+    private async Task ApplyPaymentAsync()
+    {
+        if (!TryParseMoney(PaymentAmountText, out var amount) || amount <= 0)
+        {
+            PaymentError = "Jumlah pembayaran tidak valid.";
+            return;
+        }
+
+        if (amount < Totals.TotalMinor)
+        {
+            PaymentError = "Jumlah pembayaran kurang dari total.";
+            return;
+        }
+
+        var type = PaymentTypes.FirstOrDefault(t => t.MarkAsPaid && t.IsDefault)
+            ?? PaymentTypes.FirstOrDefault(t => t.MarkAsPaid)
+            ?? PaymentTypes.FirstOrDefault();
+        if (type is null)
+        {
+            PaymentError = "Belum ada tipe pembayaran. Hubungi administrator.";
+            return;
+        }
+
+        SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>
+        {
+            new(type) { AmountMinor = amount }
+        };
+        IsPaymentVisible = false;
+        PaymentError = string.Empty;
+        await CheckoutAsync();
+    }
+
+    [RelayCommand]
+    private void ChoosePaymentType(PaymentTypeInfo? type)
+    {
+        if (type is null || IsBusy)
+        {
+            return;
+        }
+
+        SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>
+        {
+            new(type) { AmountMinor = Totals.TotalMinor }
+        };
+        PaymentError = string.Empty;
+
+        if (type.MarkAsPaid)
+        {
+            PaymentAmountText = Totals.TotalMinor.ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+            UpdatePaymentChange();
+            IsPaymentVisible = true;
+        }
+
+        UpdateCanCheckout();
+    }
+
+    [RelayCommand]
+    private void ShowVoidConfirm()
+    {
+        if (_cart.Lines.Count == 0)
+        {
+            return;
+        }
+
+        IsVoidConfirmVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelVoidConfirm() => IsVoidConfirmVisible = false;
+
+    [RelayCommand]
+    private void ConfirmVoid()
+    {
+        ClearSale();
+        IsVoidConfirmVisible = false;
+        InfoMessage = "Pesanan dibatalkan.";
+    }
+
+    [RelayCommand]
+    private void NewSale()
+    {
+        if (_cart.Lines.Count == 0 && _parkedSaleId is null)
+        {
+            SearchText = string.Empty;
+            return;
+        }
+
+        ClearSale();
+        InfoMessage = "Penjualan baru dimulai.";
+    }
+
+    [RelayCommand]
+    private async Task SaveSaleAsync()
+    {
+        if (IsBusy || _cart.Lines.Count == 0)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        try
+        {
+            var result = await _sales.ParkAsync(new ParkSaleRequest(
+                _cart.Lines.Select(line => new SaleLineInput(
+                    line.ProductId,
+                    line.ProductUnitId,
+                    line.QtyMilli,
+                    line.PriceOverridden ? line.UnitPriceMinor : null,
+                    line.DiscountKind,
+                    line.DiscountValue,
+                    null,
+                    line.Comment)).ToList(),
+                SelectedCustomer?.Id,
+                Note: null));
+
+            InfoMessage = "Pesanan disimpan: " + result.Number;
+            ParkedSaleLabel = result.Number;
+            ParkedOrderCount++;
+            ClearSale();
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Failed to park sale");
+            ErrorMessage = "Gagal menyimpan pesanan. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateCanCheckout();
+        }
+    }
+
+    [RelayCommand]
+    private void CloseDialogs()
+    {
+        IsSearchResultsOpen = false;
+        IsQuantityVisible = false;
+        IsDiscountVisible = false;
+        IsCommentVisible = false;
+        IsPaymentVisible = false;
+        IsPriceOverrideVisible = false;
+        IsBarcodeVisible = false;
+        IsVoidConfirmVisible = false;
+        IsSearchModalOpen = false;
+        IsCustomerVisible = false;
+    }
+
+    private void ClearSale()
+    {
+        _cart.Clear();
+        _cart.ClearCartDiscount();
+        _parkedSaleId = null;
+        ParkedSaleLabel = string.Empty;
+        Lines = new ObservableCollection<CartLineViewModel>();
+        SelectedLine = null;
+        SelectedCustomer = null;
+        CustomerLabel = "Pelanggan (umum)";
+        CartDiscountKind = DiscountKind.None;
+        CartDiscountValue = 0;
+        SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>();
+        SearchText = string.Empty;
+        SearchResults = new ObservableCollection<ProductLookup>();
+        IsSearchResultsOpen = false;
+        PaymentAmountText = string.Empty;
+        PaymentChangeText = string.Empty;
+        Recalculate();
+        UpdateCanCheckout();
+    }
+
+    private void UpdatePaymentChange()
+    {
+        if (!TryParseMoney(PaymentAmountText, out var amount))
+        {
+            PaymentChangeText = string.Empty;
+            return;
+        }
+
+        var change = amount - Totals.TotalMinor;
+        PaymentChangeText = change > 0 ? MoneyMath.Format(change) : string.Empty;
+    }
+
+    private static bool TryParseMoney(string? text, out long value)
+    {
+        value = 0;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var cleaned = text
+            .Trim()
+            .Replace("Rp", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(".", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace(",", string.Empty, StringComparison.Ordinal);
+        return long.TryParse(cleaned, out value) && value >= 0;
+    }
+
+    [RelayCommand]
+    private async Task ShowCustomerAsync()
+    {
+        CustomerSearchText = string.Empty;
+        CustomerError = string.Empty;
+        IsCustomerVisible = true;
+        try
+        {
+            _allCustomers = await _customers.ListActiveAsync();
+            FilterCustomers();
         }
         catch (Exception exception)
         {
             Log.Error(exception, "Failed to load customers");
-            ErrorMessage = "Gagal memuat daftar pelanggan. Coba lagi.";
+            CustomerError = "Gagal memuat daftar pelanggan. Coba lagi.";
         }
+    }
+
+    [RelayCommand]
+    private void HideCustomer() => IsCustomerVisible = false;
+
+    [RelayCommand]
+    private void ApplyCustomer(CustomerSummary? customer)
+    {
+        SelectedCustomer = customer;
+        CustomerLabel = customer is null
+            ? "Pelanggan (umum)"
+            : customer.Name +
+              (customer.PriceListName is not null ? " · " + customer.PriceListName : string.Empty);
+        IsCustomerVisible = false;
     }
 
     [RelayCommand]
@@ -340,6 +990,19 @@ public sealed partial class PosViewModel : ObservableObject
         SelectedCustomer = null;
         CustomerLabel = "Pelanggan (umum)";
     }
+
+    private void FilterCustomers()
+    {
+        var query = CustomerSearchText.Trim();
+        var filtered = string.IsNullOrWhiteSpace(query)
+            ? _allCustomers
+            : _allCustomers.Where(customer =>
+                customer.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                (customer.Code?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+        CustomerResults = new ObservableCollection<CustomerSummary>(filtered);
+    }
+
+    partial void OnCustomerSearchTextChanged(string value) => FilterCustomers();
 
     private void ChangeQuantity(CartLineViewModel? line, long delta)
     {
@@ -501,9 +1164,9 @@ public sealed partial class PosViewModel : ObservableObject
 
         // Find first payment type that is MarkAsPaid (cash-type), default to first payment type
         var paymentType = SelectedPayments.FirstOrDefault()?.PaymentTypeId;
-        if (paymentType == null && _paymentTypes.Count > 0)
+        if (paymentType == null && PaymentTypes.Count > 0)
         {
-            paymentType = _paymentTypes.First().Id;
+            paymentType = PaymentTypes.First().Id;
         }
 
         if (paymentType == null) return;
@@ -519,7 +1182,10 @@ public sealed partial class PosViewModel : ObservableObject
             return;
         }
 
-        var vm = new PaymentSelectionViewModel(_paymentTypes.FirstOrDefault(p => p.Id == paymentType) ?? _paymentTypes.FirstOrDefault());
+        var selectedType = PaymentTypes.FirstOrDefault(p => p.Id == paymentType);
+        if (selectedType is null) return;
+
+        var vm = new PaymentSelectionViewModel(selectedType);
         vm.AmountMinor = amount;
         vm.PropertyChanged += (_, e) =>
         {
@@ -586,26 +1252,21 @@ public sealed partial class PosViewModel : ObservableObject
                     p.AmountMinor)).ToList(),
                 CustomerId: SelectedCustomer?.Id,
                 CartDiscountKind: CartDiscountKind,
-                CartDiscountValue: CartDiscountValue);
+                CartDiscountValue: CartDiscountValue,
+                ParkedSaleId: _parkedSaleId);
 
             var result = await _sales.CheckoutAsync(request);
-            ErrorMessage = "Transaksi selesai. " + result.Number + " · Total " +
+            InfoMessage = "Transaksi selesai. " + result.Number + " · Total " +
                 MoneyMath.Format(result.TotalMinor) +
                 (result.ChangeMinor > 0
                     ? " · Kembali " + MoneyMath.Format(result.ChangeMinor)
                     : string.Empty);
+            ErrorMessage = string.Empty;
 
             // Show receipt after checkout (S11).
             await ShowReceiptAsync(result);
 
-            _cart.Clear();
-            Lines = new ObservableCollection<CartLineViewModel>();
-            SelectedCustomer = null;
-            CustomerLabel = "Pelanggan (umum)";
-            CartDiscountKind = DiscountKind.None;
-            CartDiscountValue = 0;
-            SelectedPayments = new ObservableCollection<PaymentSelectionViewModel>();
-            Recalculate();
+            ClearSale();
         }
         catch (PosException exception)
         {
@@ -655,11 +1316,19 @@ public sealed partial class PosViewModel : ObservableObject
 
     private void RefreshLines()
     {
+        var selectedId = SelectedLine?.LineId;
         Lines = new ObservableCollection<CartLineViewModel>(
             _cart.Lines.Select(line => new CartLineViewModel(line)));
+        SelectedLine = selectedId is null
+            ? null
+            : Lines.FirstOrDefault(line => line.LineId == selectedId);
     }
 
-    private void Recalculate() => Totals = _cart.Totals;
+    private void Recalculate()
+    {
+        Totals = _cart.Totals;
+        OnPropertyChanged(nameof(HasCartDiscount));
+    }
 
     public void AddProductToCart(ProductLookup product, long qtyMilli)
     {
@@ -714,6 +1383,20 @@ public sealed record CartLineViewModel(
 
     public string DisplayText =>
         UnitMath.FormatQuantity(QtyMilli, UnitName) + " × " + MoneyMath.Format(UnitPriceMinor);
+
+    public string QuantityDisplay => UnitMath.FormatQuantity(QtyMilli);
+
+    public string SubTitle => string.IsNullOrWhiteSpace(Code)
+        ? UnitName
+        : Code + " · " + UnitName;
+
+    public bool HasDiscount => DiscountMinor > 0;
+
+    public string DiscountDisplay => HasDiscount
+        ? "-" + MoneyMath.Format(DiscountMinor)
+        : string.Empty;
+
+    public bool HasComment => !string.IsNullOrWhiteSpace(Comment);
 
     public CartLineViewModel UpdateFrom(CartLine line) => this with
     {

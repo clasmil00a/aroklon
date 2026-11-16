@@ -557,7 +557,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             _printers.PrintText(
                 SelectedPrinter,
                 "Uji printer",
-                "Aroklon POS\nUji printer berhasil.\n" +
+                "Aroklon\nUji printer berhasil.\n" +
                 DateTime.Now.ToString("dd/MM/yyyy HH:mm") +
                 "\n\nTerima kasih.");
             SettingsMessage = "Halaman uji dikirim ke " + target + ".";

@@ -9,4 +9,5 @@ public sealed record ShellMenuItem(
     string Route,
     string Icon,
     string Section = "",
-    string Shortcut = "");
+    string Shortcut = "",
+    bool SeparatorBefore = false);

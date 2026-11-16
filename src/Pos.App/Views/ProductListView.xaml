@@ -5,112 +5,382 @@
     Background="{DynamicResource Brush.Bg}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <UserControl.Resources>
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+            <Setter Property="Width" Value="86" />
+            <Setter Property="Height" Value="58" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="ProductRow" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="Row"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="0,0,0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SelectedRow}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="52" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Daftar Produk" />
+        <!-- Path bar, as in Aronium Management screens -->
+        <Border
+            Grid.Row="0"
+            Background="{DynamicResource Brush.SurfaceRaised}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali ke manajemen" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Pilih produk untuk mengedit satuan jual dan harga varian." />
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Style="{StaticResource Text.Body}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="8,0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="•" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontWeight="{StaticResource Font.Weight.SemiBold}"
+                    Style="{StaticResource Text.Body}"
+                    Text="Produk" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S15 · M2" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <!-- Toolbar -->
+        <Border
+            Grid.Row="1"
+            Background="{DynamicResource Brush.Surface}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <Grid Margin="10,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <!-- Search -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.Caption}"
-                        Text="Cari produk" />
-                    <TextBox
-                        Style="{StaticResource Input}"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Button
-                        Margin="0,8,0,0"
-                        Command="{Binding SearchCommand}"
-                        Content="Cari"
-                        Style="{StaticResource Button.Primary}" />
+                        Command="{Binding LoadCommand}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Muat ulang daftar produk">
+                        <StackPanel>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="22"
+                                Text="&#xE72C;" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                Text="Muat ulang" />
+                        </StackPanel>
+                    </Button>
+                    <Border
+                        Width="1"
+                        Height="44"
+                        Margin="8,0"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource Brush.Border}" />
+                    <Button
+                        Command="{Binding OpenProductGroupsCommand}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Kelola grup produk">
+                        <StackPanel>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="22"
+                                Text="&#xE8F4;" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                Text="Grup" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Command="{Binding NewProductCommand}"
+                        Foreground="{DynamicResource Brush.Accent}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Tambah produk baru">
+                        <StackPanel>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="24"
+                                Text="&#xE710;" />
+                            <TextBlock
+                                Margin="0,2,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Text="Produk baru" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Command="{Binding EditSelectedProductCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Edit produk terpilih">
+                        <StackPanel>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="22"
+                                Text="&#xE70F;" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                Text="Edit produk" />
+                        </StackPanel>
+                    </Button>
+                    <Border
+                        Width="1"
+                        Height="44"
+                        Margin="8,0"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource Brush.Border}" />
+                    <Button
+                        Command="{Binding OpenReportsCommand}"
+                        Style="{StaticResource ToolButton}"
+                        ToolTip="Buka laporan">
+                        <StackPanel>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="22"
+                                Text="&#xE9D2;" />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                Text="Laporan" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
-                    <TextBlock
-                        Margin="0,16,0,0"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Hasil" />
-                    <ItemsControl ItemsSource="{Binding ProductList}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
-                                            <TextBlock
-                                                Style="{StaticResource Text.Caption}"
-                                                Text="{Binding Code, TargetNullValue='—'}" />
-                                            <TextBlock
-                                                Style="{StaticResource Text.Secondary}"
-                                                Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}'}" />
-                                        </StackPanel>
-                                        <Button
-                                            Grid.Column="1"
-                                            Margin="8,0,0,0"
-                                            Command="{Binding DataContext.SelectProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="Pilih"
-                                            Style="{StaticResource Button.Ghost}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <Border
+                    Grid.Column="2"
+                    Width="330"
+                    Height="38"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource Brush.SurfaceRaised}"
+                    BorderBrush="{DynamicResource Brush.BorderInput}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource Radius.Sm}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="38" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="15"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="&#xE721;" />
+                        <TextBox
+                            Grid.Column="1"
+                            Height="32"
+                            Padding="0"
+                            VerticalContentAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Style="{StaticResource Input}"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
 
+        <!-- Products table -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="34" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="28" />
+            </Grid.RowDefinitions>
+
+            <Border
+                Grid.Row="0"
+                Background="{DynamicResource Brush.SurfaceRaised}"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,0,0,1">
+                <Grid Margin="12,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="140" />
+                        <ColumnDefinition Width="170" />
+                        <ColumnDefinition Width="140" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
                     <TextBlock
-                        Margin="0,8,0,0"
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Nama produk" />
+                    <TextBlock
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Kode" />
+                    <TextBlock
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Grup" />
+                    <TextBlock
+                        Grid.Column="3"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Harga" />
+                    <TextBlock
+                        Grid.Column="4"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Stok" />
+                    <TextBlock
+                        Grid.Column="5"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource Text.BodyStrong}"
+                        Text="Satuan" />
+                </Grid>
+            </Border>
+
+            <ListBox
+                Grid.Row="1"
+                Background="Transparent"
+                BorderThickness="0"
+                ItemContainerStyle="{StaticResource ProductRow}"
+                ItemsSource="{Binding ProductList}"
+                MouseDoubleClick="OnProductDoubleClick"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
+                Style="{StaticResource ListBox.Plain}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid MinHeight="40" Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="{Binding Barcode, TargetNullValue='—'}" />
+                            </StackPanel>
+                            <TextBlock
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding Code, TargetNullValue='—'}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding GroupName, TargetNullValue='—'}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Text="{Binding PriceMinor, Converter={StaticResource Currency}}" />
+                            <TextBlock
+                                Grid.Column="4"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding StockDisplay}" />
+                            <TextBlock
+                                Grid.Column="5"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding UnitName}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock
+                Grid.Row="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource Text.Secondary}"
+                Text="Belum ada produk. Klik Produk baru untuk menambahkan."
+                Visibility="{Binding HasNoProducts, Converter={StaticResource BoolToVisibility}}" />
+
+            <Border
+                Grid.Row="2"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,1,0,0">
+                <Grid Margin="12,0">
+                    <TextBlock
+                        VerticalAlignment="Center"
                         Style="{StaticResource Text.Caption}"
                         Text="{Binding ProductList.Count, StringFormat='{}{0} produk'}" />
-
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding DataContext.GoBackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Content="← Kembali ke beranda"
-                        Style="{StaticResource Button.Ghost}" />
-                </StackPanel>
+                    <TextBlock
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource Brush.Danger}"
+                        Style="{StaticResource Text.Caption}"
+                        Text="{Binding ErrorMessage}"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </UserControl>
