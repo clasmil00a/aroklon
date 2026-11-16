@@ -76,6 +76,34 @@ Semua data pengguna berada di profil Windows, bukan di folder instalasi:
 `ui.json` menyimpan pilihan tema, nama pengguna terakhir (opsional), dan
 preferensi jendela maksimal. Pengaturan toko ada di tabel `settings` di SQLite.
 
+## Impor dari Aronium
+
+Aronium Lite menyimpan seluruh data di satu file SQLite bernama `pos.db`.
+Aplikasi dapat membacanya langsung tanpa mengubah file sumber:
+
+1. Tutup Aronium Lite.
+2. Salin file dari `%LOCALAPPDATA%\Aronium\Data\pos.db` ke folder lain bila
+   ingin menyimpan cadangan.
+3. Di aplikasi ini buka **Pengaturan > Database > Impor dari Aronium Lite**.
+4. Pilih `pos.db`, klik **Periksa**, lalu tinjau jumlah dan peringatan.
+5. Pilih data yang ingin digabungkan dan klik **Impor data Aronium**.
+
+Yang diimpor: profil toko, grup produk (termasuk subgrup), produk, satuan
+dasar, barcode, pajak persentase, pelanggan/pemasok, tipe pembayaran, dan
+opsional stok awal. Data lama tidak dihapus. SKU, barcode, nama, atau kode
+pelanggan yang sama akan diperbarui bila opsi **Perbarui data yang sudah ada**
+dicentang, sehingga impor dapat diulang tanpa membuat duplikat.
+
+Yang belum diimpor: riwayat transaksi Aronium, pajak nominal tetap, diskon
+khusus pelanggan, dan foto produk. Stok awal hanya dimasukkan untuk produk
+yang belum memiliki pergerakan stok di aplikasi ini, agar stok tidak terhitung
+dua kali.
+
+Aronium Pro memakai SQL Server, jadi file cadangan `.bak` tidak dapat dibaca
+langsung sebagai SQLite. Untuk Aronium Pro, ekspor produk dan pelanggan ke CSV
+dari Aronium sebagai cadangan untuk migrasi manual; impor CSV belum tersedia
+di aplikasi ini.
+
 ## Arsitektur
 
 | Proyek | Isi |
@@ -107,6 +135,9 @@ Peta layar dan alur ada di `../replica/recon.md`.
   `TabControl` kustom masih perlu dicek di mesin Windows.
 - Keyboard layar dan tombol daya pada layar login belum dibuat.
 - Pemulihan database dan penjadwalan cadangan kustom belum ada.
+- Impor Aronium Lite belum memindahkan riwayat transaksi, pajak nominal tetap,
+  diskon khusus pelanggan, dan foto produk. File `.bak` Aronium Pro belum dapat
+  dibaca langsung.
 - Layar M1–M8 masih berupa stub status.
 - Resolusi target 1366×768; belum ada uji DPI atau layar sentuh.
 

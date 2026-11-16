@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using Pos.App.Services;
 using Pos.Data.Database;
 using Pos.Data.Services;
@@ -38,6 +39,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly DatabaseInfo _databaseInfo;
     private readonly SettingsService _settings;
     private readonly PrinterService _printers;
+    private readonly AroniumImportService _aroniumImport;
 
     private bool _isDarkTheme;
     private bool _isLightTheme;
@@ -52,6 +54,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _databaseSize = string.Empty;
+
+    [ObservableProperty]
+    private string _shopName = string.Empty;
 
     [ObservableProperty]
     private string _settingsMessage = string.Empty;
@@ -101,6 +106,36 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _startFullScreen = true;
 
+    [ObservableProperty]
+    private string _aroniumPath = string.Empty;
+
+    [ObservableProperty]
+    private string _aroniumMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isAroniumBusy;
+
+    [ObservableProperty]
+    private AroniumImportPreview? _aroniumPreview;
+
+    [ObservableProperty]
+    private bool _aroniumImportCompany = true;
+
+    [ObservableProperty]
+    private bool _aroniumImportCustomers = true;
+
+    [ObservableProperty]
+    private bool _aroniumImportPaymentTypes = true;
+
+    [ObservableProperty]
+    private bool _aroniumImportStock;
+
+    [ObservableProperty]
+    private bool _aroniumUpdateExisting = true;
+
+    [ObservableProperty]
+    private string _aroniumResultDetails = string.Empty;
+
     public SettingsViewModel(
         ThemeService theme,
         UserPreferencesService preferences,
@@ -110,6 +145,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         CompanyInfo company,
         SettingsService settings,
         PrinterService printers,
+        AroniumImportService aroniumImport,
         bool canManageSettings)
     {
         _theme = theme;
@@ -119,6 +155,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _databaseInfo = databaseInfo;
         _settings = settings;
         _printers = printers;
+        _aroniumImport = aroniumImport;
         CanManageSettings = canManageSettings;
 
         Categories =
@@ -174,7 +211,77 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool HasNoPrinters => !HasPrinters;
 
-    public string ShopName { get; }
+    public bool HasAroniumPath => !string.IsNullOrWhiteSpace(AroniumPath);
+
+    public bool HasAroniumMessage => !string.IsNullOrWhiteSpace(AroniumMessage);
+
+    public bool HasAroniumPreview => AroniumPreview is not null;
+
+    public bool IsNotAroniumBusy => !IsAroniumBusy;
+
+    public bool CanInspectAronium =>
+        CanManageSettings && !IsAroniumBusy && HasAroniumPath;
+
+    public bool CanImportAronium =>
+        CanManageSettings && !IsAroniumBusy && AroniumPreview?.CanImport == true;
+
+    public bool HasAroniumWarnings => !string.IsNullOrWhiteSpace(AroniumWarningsText);
+
+    public bool HasAroniumResultDetails =>
+        !string.IsNullOrWhiteSpace(AroniumResultDetails);
+
+    public string AroniumFileInfo
+    {
+        get
+        {
+            if (AroniumPreview is null)
+            {
+                return string.Empty;
+            }
+
+            var size = AroniumPreview.FileSizeBytes switch
+            {
+                >= 1024L * 1024L => string.Format(
+                    "{0:0.#} MB",
+                    AroniumPreview.FileSizeBytes / (1024d * 1024d)),
+                >= 1024 => string.Format("{0:0.#} KB", AroniumPreview.FileSizeBytes / 1024d),
+                _ => AroniumPreview.FileSizeBytes + " byte"
+            };
+            return AroniumPreview.FileName + " · " + size;
+        }
+    }
+
+    public string AroniumCountsText
+    {
+        get
+        {
+            if (AroniumPreview is null)
+            {
+                return string.Empty;
+            }
+
+            return string.Join(" · ",
+                AroniumPreview.ProductCount.ToString("N0") + " produk",
+                AroniumPreview.GroupCount.ToString("N0") + " grup",
+                AroniumPreview.BarcodeCount.ToString("N0") + " barcode",
+                AroniumPreview.TaxCount.ToString("N0") + " pajak",
+                AroniumPreview.CustomerCount.ToString("N0") + " pelanggan",
+                AroniumPreview.SupplierCount.ToString("N0") + " pemasok",
+                AroniumPreview.PaymentTypeCount.ToString("N0") + " pembayaran",
+                AroniumPreview.StockProductCount.ToString("N0") + " produk berstok");
+        }
+    }
+
+    public string AroniumWarningsText
+    {
+        get
+        {
+            var warnings = AroniumPreview?.Warnings ?? [];
+            return warnings.Count == 0
+                ? string.Empty
+                : "• " + string.Join("\n• ", warnings);
+        }
+    }
 
     public string CurrencyLabel { get; }
 
@@ -215,7 +322,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         "order" => "Atur perilaku stok, diskon, pembayaran, dan laci kas.",
         "print" => "Pilih printer Windows, aktifkan cetak struk, dan atur isi struk.",
-        "database" => "Lokasi database, cadangan, dan pemulihan data lokal.",
+        "database" => "Lokasi database, cadangan, pemulihan, dan impor data dari Aronium Lite.",
         "about" => "Versi aplikasi dan informasi teknis lainnya.",
         _ => "Tema, preferensi saat aplikasi dibuka, serta bahasa dan format."
     };
@@ -252,6 +359,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public event Action? CloseRequested;
 
+    public event Action<string>? CompanyNameChanged;
+
     partial void OnBackupMessageChanged(string value) => OnPropertyChanged(nameof(HasBackupMessage));
 
     partial void OnIsBackingUpChanged(bool value) => OnPropertyChanged(nameof(IsNotBackingUp));
@@ -259,6 +368,35 @@ public sealed partial class SettingsViewModel : ObservableObject
     partial void OnSettingsMessageChanged(string value) => OnPropertyChanged(nameof(HasSettingsMessage));
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(CanEditSettings));
+
+    partial void OnAroniumPathChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasAroniumPath));
+        OnPropertyChanged(nameof(CanInspectAronium));
+    }
+
+    partial void OnAroniumMessageChanged(string value) =>
+        OnPropertyChanged(nameof(HasAroniumMessage));
+
+    partial void OnIsAroniumBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotAroniumBusy));
+        OnPropertyChanged(nameof(CanInspectAronium));
+        OnPropertyChanged(nameof(CanImportAronium));
+    }
+
+    partial void OnAroniumPreviewChanged(AroniumImportPreview? value)
+    {
+        OnPropertyChanged(nameof(HasAroniumPreview));
+        OnPropertyChanged(nameof(CanImportAronium));
+        OnPropertyChanged(nameof(AroniumFileInfo));
+        OnPropertyChanged(nameof(AroniumCountsText));
+        OnPropertyChanged(nameof(AroniumWarningsText));
+        OnPropertyChanged(nameof(HasAroniumWarnings));
+    }
+
+    partial void OnAroniumResultDetailsChanged(string value) =>
+        OnPropertyChanged(nameof(HasAroniumResultDetails));
 
     partial void OnSelectedCategoryChanged(string value)
     {
@@ -510,7 +648,208 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task BrowseAroniumDatabaseAsync()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Pilih database Aronium Lite (pos.db)",
+            Filter =
+                "Database Aronium (*.db;*.db3;*.sqlite;*.sqlite3;*.bak)|*.db;*.db3;*.sqlite;*.sqlite3;*.bak|" +
+                "Semua file (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        AroniumPath = dialog.FileName;
+        AroniumPreview = null;
+        AroniumResultDetails = string.Empty;
+        await InspectAroniumCoreAsync().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task InspectAroniumAsync()
+    {
+        if (!CanInspectAronium)
+        {
+            if (!HasAroniumPath)
+            {
+                AroniumMessage = "Pilih file pos.db Aronium terlebih dahulu.";
+            }
+
+            return;
+        }
+
+        await InspectAroniumCoreAsync().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task ImportAroniumAsync()
+    {
+        if (!CanImportAronium || AroniumPreview is null)
+        {
+            AroniumMessage = "Periksa file Aronium terlebih dahulu sebelum mengimpor.";
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            $"Impor data dari \"{AroniumPreview.FileName}\"?\n\n" +
+            $"{AroniumPreview.ProductCount:N0} produk, {AroniumPreview.CustomerCount:N0} pelanggan, " +
+            $"dan {AroniumPreview.PaymentTypeCount:N0} tipe pembayaran akan digabungkan.\n\n" +
+            "Data yang sudah ada tidak dihapus. Produk dengan SKU atau barcode yang sama " +
+            "akan diperbarui bila opsi \"Perbarui data yang sudah ada\" dicentang.",
+            "Impor database Aronium",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question,
+            System.Windows.MessageBoxResult.No);
+        if (confirmation != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        IsAroniumBusy = true;
+        AroniumMessage = "Mengimpor data Aronium...";
+        AroniumResultDetails = string.Empty;
+        try
+        {
+            var result = await _aroniumImport.ImportAsync(new AroniumImportOptions(
+                AroniumPath,
+                ImportCompany: AroniumImportCompany,
+                ImportCustomers: AroniumImportCustomers,
+                ImportPaymentTypes: AroniumImportPaymentTypes,
+                ImportStock: AroniumImportStock,
+                UpdateExisting: AroniumUpdateExisting)).ConfigureAwait(true);
+
+            var parts = new List<string>();
+            if (result.ProductsCreated > 0)
+            {
+                parts.Add(result.ProductsCreated + " produk baru");
+            }
+
+            if (result.ProductsUpdated > 0)
+            {
+                parts.Add(result.ProductsUpdated + " produk diperbarui");
+            }
+
+            if (result.GroupsCreated > 0)
+            {
+                parts.Add(result.GroupsCreated + " grup");
+            }
+
+            if (result.BarcodesCreated > 0)
+            {
+                parts.Add(result.BarcodesCreated + " barcode");
+            }
+
+            if (result.TaxesCreated > 0)
+            {
+                parts.Add(result.TaxesCreated + " pajak");
+            }
+
+            if (result.CustomersCreated > 0 || result.CustomersUpdated > 0)
+            {
+                parts.Add(
+                    (result.CustomersCreated + result.CustomersUpdated) + " pelanggan/pemasok");
+            }
+
+            if (result.PaymentTypesCreated > 0 || result.PaymentTypesUpdated > 0)
+            {
+                parts.Add(
+                    (result.PaymentTypesCreated + result.PaymentTypesUpdated) + " tipe pembayaran");
+            }
+
+            if (result.StockMovementsCreated > 0)
+            {
+                parts.Add(result.StockMovementsCreated + " stok awal");
+            }
+
+            AroniumMessage = parts.Count == 0
+                ? "Impor selesai. Tidak ada data baru yang perlu ditambahkan."
+                : "Impor selesai: " + string.Join(", ", parts) + ".";
+
+            if (result.CompanyUpdated)
+            {
+                if (!string.IsNullOrWhiteSpace(result.CompanyName))
+                {
+                    ShopName = result.CompanyName;
+                    CompanyNameChanged?.Invoke(result.CompanyName);
+                }
+
+                AroniumMessage += " Profil toko diperbarui.";
+            }
+
+            var details = new List<string>();
+            if (result.ProductsSkipped > 0)
+            {
+                details.Add(result.ProductsSkipped + " produk dilewati karena sudah ada.");
+            }
+
+            if (result.StockProductsSkipped > 0)
+            {
+                details.Add(
+                    result.StockProductsSkipped +
+                    " stok produk dilewati karena produk sudah memiliki pergerakan stok.");
+            }
+
+            details.AddRange(result.Warnings);
+            AroniumResultDetails = details.Count == 0
+                ? string.Empty
+                : "• " + string.Join("\n• ", details);
+
+            RefreshDatabaseSize();
+        }
+        catch (PosException exception)
+        {
+            AroniumMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Aronium import failed");
+            AroniumMessage = "Impor Aronium gagal. Tidak ada data yang diubah; periksa file lalu coba lagi.";
+        }
+        finally
+        {
+            IsAroniumBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private void Close() => CloseRequested?.Invoke();
+
+    private async Task InspectAroniumCoreAsync()
+    {
+        IsAroniumBusy = true;
+        AroniumMessage = "Memeriksa database Aronium...";
+        AroniumResultDetails = string.Empty;
+        try
+        {
+            var preview = await _aroniumImport.InspectAsync(AroniumPath).ConfigureAwait(true);
+            AroniumPreview = preview;
+            AroniumMessage = preview.CanImport
+                ? "Pratinjau siap. Periksa data di bawah, lalu klik Impor."
+                : "Database Aronium tidak berisi produk yang dapat diimpor.";
+        }
+        catch (PosException exception)
+        {
+            AroniumPreview = null;
+            AroniumMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not inspect Aronium database");
+            AroniumPreview = null;
+            AroniumMessage =
+                "Database Aronium tidak dapat dibaca. Tutup Aronium, salin file pos.db ke folder lain, lalu coba lagi.";
+        }
+        finally
+        {
+            IsAroniumBusy = false;
+        }
+    }
 
     private void LoadPrinters()
     {

@@ -34,6 +34,7 @@ public sealed partial class AppShellViewModel : ObservableObject
     private readonly TaxService _taxService;
     private readonly StockAdjustmentService _stockAdjustmentService;
     private readonly CashDrawerService _cashDrawerService;
+    private readonly AroniumImportService _aroniumImport;
 
     private CompanyInfo? _company;
 
@@ -66,7 +67,8 @@ public sealed partial class AppShellViewModel : ObservableObject
         ReportsService reportsService,
         TaxService taxService,
         StockAdjustmentService stockAdjustmentService,
-        CashDrawerService cashDrawerService)
+        CashDrawerService cashDrawerService,
+        AroniumImportService aroniumImport)
     {
         _auth = auth;
         _theme = theme;
@@ -91,6 +93,7 @@ public sealed partial class AppShellViewModel : ObservableObject
         _taxService = taxService;
         _stockAdjustmentService = stockAdjustmentService;
         _cashDrawerService = cashDrawerService;
+        _aroniumImport = aroniumImport;
     }
 
     public async Task InitializeAsync()
@@ -185,9 +188,11 @@ public sealed partial class AppShellViewModel : ObservableObject
             _reportsService,
             _taxService,
             _stockAdjustmentService,
-            _cashDrawerService);
+            _cashDrawerService,
+            _aroniumImport);
 
         shell.SignOutRequested += (_, _) => ShowLogin();
+        shell.CompanyNameChanged += (_, _) => WindowTitle = "POS — " + shell.CompanyName;
         shell.WindowStateRequested += (_, _) => ToggleMaximized();
         shell.ExitRequested += (_, _) => Application.Current.Shutdown();
 

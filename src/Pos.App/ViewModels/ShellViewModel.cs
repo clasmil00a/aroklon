@@ -17,7 +17,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly BackupService _backups;
     private readonly DatabaseOptions _databaseOptions;
     private readonly DatabaseInfo _databaseInfo;
-    private readonly CompanyInfo _company;
+    private CompanyInfo _company;
     private readonly ProductService _products;
     private readonly SaleService _sales;
     private readonly UnitService _units;
@@ -59,6 +59,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly TaxService _taxService;
     private readonly StockAdjustmentService _stockAdjustmentService;
     private readonly CashDrawerService _cashDrawer;
+    private readonly AroniumImportService _aroniumImport;
     private readonly PrinterService _printerService = new();
 
     private ReportsViewModel? _reportsViewModel;
@@ -109,7 +110,8 @@ public sealed partial class ShellViewModel : ObservableObject
         ReportsService reportsService,
         TaxService taxService,
         StockAdjustmentService stockAdjustmentService,
-        CashDrawerService cashDrawer)
+        CashDrawerService cashDrawer,
+        AroniumImportService aroniumImport)
     {
         Session = session;
         _company = company;
@@ -137,6 +139,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _taxService = taxService;
         _stockAdjustmentService = stockAdjustmentService;
         _cashDrawer = cashDrawer;
+        _aroniumImport = aroniumImport;
         _openOrders = new OpenOrdersViewModel(_sales);
         _openOrders.ResumeRequested += resumeData =>
         {
@@ -190,6 +193,8 @@ public sealed partial class ShellViewModel : ObservableObject
     public string DatabaseLabel => "Database lokal · skema v" + _databaseInfo.SchemaVersion;
 
     public event EventHandler? SignOutRequested;
+
+    public event EventHandler? CompanyNameChanged;
 
     public event EventHandler? WindowStateRequested;
 
@@ -251,8 +256,15 @@ public sealed partial class ShellViewModel : ObservableObject
                         _company,
                         _settingsService,
                         _printerService,
+                        _aroniumImport,
                         Session.Can(PermissionKeys.SettingsManage));
                     _settings.CloseRequested += () => Navigate("home");
+                    _settings.CompanyNameChanged += name =>
+                    {
+                        _company = _company with { Name = name };
+                        OnPropertyChanged(nameof(CompanyName));
+                        CompanyNameChanged?.Invoke(this, EventArgs.Empty);
+                    };
                 }
 
                 CurrentPage = _settings;

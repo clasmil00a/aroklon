@@ -123,6 +123,10 @@ public partial class App : Application
                         sp.GetRequiredService<IDbConnectionFactory>(),
                         sp.GetRequiredService<ISessionStore>(),
                         sp.GetRequiredService<IClock>()));
+                    services.AddSingleton<AroniumImportService>(sp => new AroniumImportService(
+                        sp.GetRequiredService<IDbConnectionFactory>(),
+                        sp.GetRequiredService<ISessionStore>(),
+                        sp.GetRequiredService<IClock>()));
                     services.AddSingleton<StockHistoryService>(sp => new StockHistoryService(
                         sp.GetRequiredService<IDbConnectionFactory>(),
                         sp.GetRequiredService<ISessionStore>(),

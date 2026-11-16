@@ -74,6 +74,8 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public DatabaseService Database { get; private set; } = null!;
 
+    public AroniumImportService AroniumImport { get; private set; } = null!;
+
     public static async Task<TestDatabase> CreateAsync()
     {
         var database = new TestDatabase();
@@ -163,6 +165,10 @@ public sealed class TestDatabase : IAsyncDisposable
             database.Sessions,
             database.Clock,
             database.Options);
+        database.AroniumImport = new AroniumImportService(
+            database.Factory,
+            database.Sessions,
+            database.Clock);
 
         return database;
     }
