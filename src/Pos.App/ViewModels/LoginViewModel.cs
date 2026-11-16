@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pos.App.Services;
 using Pos.Data.Services;
 using Pos.Domain;
 using Pos.Domain.Models;
@@ -10,6 +11,8 @@ namespace Pos.App.ViewModels;
 public sealed partial class LoginViewModel : ObservableObject
 {
     private readonly AuthService _auth;
+    private readonly UserPreferencesService _preferences;
+    private bool _isInitializing;
 
     [ObservableProperty]
     private string _username = string.Empty;
@@ -23,14 +26,30 @@ public sealed partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
-    public LoginViewModel(AuthService auth, string shopName, string version)
+    [ObservableProperty]
+    private bool _rememberUsername;
+
+    public LoginViewModel(
+        AuthService auth,
+        UserPreferencesService preferences,
+        string shopName,
+        string version)
     {
         _auth = auth;
+        _preferences = preferences;
         ShopName = shopName;
         Version = version;
+
+        var saved = preferences.Load();
+        _isInitializing = true;
+        RememberUsername = saved.RememberUsername;
+        Username = saved.RememberUsername ? saved.LastUsername ?? string.Empty : string.Empty;
+        _isInitializing = false;
     }
 
     public event Action<UserSession>? SignedIn;
+
+    public event Action? ExitRequested;
 
     public string ShopName { get; }
 
@@ -43,6 +62,26 @@ public sealed partial class LoginViewModel : ObservableObject
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+
+    partial void OnRememberUsernameChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        var current = _preferences.Load();
+        _preferences.Save(current with
+        {
+            RememberUsername = value,
+            LastUsername = value
+                ? (string.IsNullOrWhiteSpace(Username) ? current.LastUsername : Username.Trim())
+                : null
+        });
+    }
+
+    [RelayCommand]
+    private void Exit() => ExitRequested?.Invoke();
 
     [RelayCommand]
     private async Task SignInAsync()
@@ -64,6 +103,14 @@ public sealed partial class LoginViewModel : ObservableObject
         {
             var session = await _auth.LoginAsync(Username, Password);
             Password = string.Empty;
+
+            var current = _preferences.Load();
+            _preferences.Save(current with
+            {
+                RememberUsername = RememberUsername,
+                LastUsername = RememberUsername ? session.Username : null
+            });
+
             SignedIn?.Invoke(session);
         }
         catch (PosException exception)

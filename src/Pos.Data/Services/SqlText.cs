@@ -32,11 +32,25 @@ public static class SqlText
         }
 
         using var document = JsonDocument.Parse(json);
-        return document.RootElement.ValueKind switch
+        return DisplayElement(document.RootElement);
+    }
+
+    private static string? DisplayElement(JsonElement element)
+    {
+        // Older migrations stored scalar settings as {"value": ...}. Accept
+        // both shapes so defaults such as cash drawer and negative stock are
+        // read consistently by every service.
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty("value", out var wrapped))
         {
-            JsonValueKind.String => document.RootElement.GetString(),
+            return DisplayElement(wrapped);
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
             JsonValueKind.Null => null,
-            _ => document.RootElement.GetRawText()
+            _ => element.GetRawText()
         };
     }
 

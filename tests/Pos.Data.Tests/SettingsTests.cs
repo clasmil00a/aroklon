@@ -1,4 +1,5 @@
 using Dapper;
+using Pos.Data.Services;
 using Pos.Domain;
 using Pos.Domain.Models;
 using Pos.Domain.Security;
@@ -8,6 +9,34 @@ namespace Pos.Data.Tests;
 
 public sealed class SettingsTests
 {
+    [Theory]
+    [InlineData("\"block\"", "block")]
+    [InlineData("true", "true")]
+    [InlineData("{\"value\":true}", "true")]
+    [InlineData("{\"value\":\"block\"}", "block")]
+    [InlineData("{\"value\":{\"value\":\"allow\"}}", "allow")]
+    [InlineData("[10000,20000]", "[10000,20000]")]
+    public void DisplaySetting_accepts_plain_and_wrapped_values(string json, string expected)
+    {
+        Assert.Equal(expected, SqlText.DisplaySetting(json));
+    }
+
+    [Fact]
+    public async Task Wrapped_migration_defaults_are_read_as_scalars()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        await db.CreateAdminAsync();
+
+        var values = await db.Settings.GetManyAsync(new[]
+        {
+            "pos.negative_stock",
+            "pos.cash_drawer_enabled"
+        });
+
+        Assert.Equal("block", values["pos.negative_stock"]);
+        Assert.Equal("true", values["pos.cash_drawer_enabled"]);
+    }
+
     [Fact]
     public async Task Reading_settings_requires_a_session()
     {

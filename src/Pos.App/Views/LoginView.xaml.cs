@@ -13,13 +13,14 @@ public partial class LoginView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(UsernameBox.Text))
+        if (DataContext is LoginViewModel viewModel &&
+            !string.IsNullOrWhiteSpace(viewModel.Username))
         {
-            UsernameBox.Focus();
+            PasswordBox.Focus();
         }
         else
         {
-            PasswordBox.Focus();
+            UsernameBox.Focus();
         }
     }
 

@@ -41,6 +41,8 @@ public sealed partial class OnboardingViewModel : ObservableObject
 
     public event Action<UserSession>? Completed;
 
+    public event Action? ExitRequested;
+
     public string Version { get; }
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
@@ -50,6 +52,9 @@ public sealed partial class OnboardingViewModel : ObservableObject
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+
+    [RelayCommand]
+    private void Exit() => ExitRequested?.Invoke();
 
     [RelayCommand]
     private async Task SubmitAsync()

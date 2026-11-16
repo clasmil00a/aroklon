@@ -4,6 +4,7 @@ using Pos.App.Services;
 using Pos.Data.Database;
 using Pos.Data.Services;
 using Pos.Domain.Models;
+using Pos.Domain.Security;
 using Serilog;
 
 namespace Pos.App.ViewModels;
@@ -200,9 +201,11 @@ public sealed partial class ShellViewModel : ObservableObject
                     _databaseOptions,
                     _databaseInfo,
                     _company,
-                    _settingsService);
+                    _settingsService,
+                    Session.Can(PermissionKeys.SettingsManage));
                 CurrentPage = _settings;
                 ActiveRoute = "settings";
+                _ = _settings.InitializeAsync();
                 break;
 
             case "S02":

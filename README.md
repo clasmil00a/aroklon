@@ -51,6 +51,10 @@ Argon2id 64 MB, 3 iterasi, paralelisme 2.
 - Menu utama S13 dengan status setiap tujuan.
 - Kerangka Manajemen S14 dan Pengaturan S27.
 - Tema gelap (bawaan) dan terang, tersimpan per pengguna Windows.
+- Aplikasi terbuka layar penuh secara bawaan; F11 atau tombol Layar penuh
+  mengganti antara layar penuh dan jendela normal.
+- Layar masuk dapat mengingat nama pengguna terakhir (kata sandi tidak pernah
+  disimpan).
 - Cadangan harian `VACUUM INTO` saat start, retensi 30 file, tombol cadangan
   manual di Pengaturan.
 - Audit append-only, pemeriksaan integritas SQLite saat start, single-instance
@@ -68,8 +72,8 @@ Semua data pengguna berada di profil Windows, bukan di folder instalasi:
   ui.json
 ```
 
-`ui.json` hanya menyimpan pilihan tema sebelum login. Pengaturan toko ada di
-tabel `settings` di SQLite.
+`ui.json` menyimpan pilihan tema, nama pengguna terakhir (opsional), dan
+preferensi layar penuh. Pengaturan toko ada di tabel `settings` di SQLite.
 
 ## Arsitektur
 

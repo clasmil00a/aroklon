@@ -13,6 +13,19 @@ namespace Pos.App.ViewModels;
 
 public sealed partial class SettingsViewModel : ObservableObject
 {
+    private static readonly string[] StoreSettingKeys =
+    [
+        "pos.negative_stock",
+        "pos.cash_drawer_enabled",
+        "pos.discount_enabled",
+        "pos.allow_price_override",
+        "pos.require_void_reason",
+        "pos.credit_payments_enabled",
+        "receipt.show_units",
+        "receipt.header",
+        "receipt.footer"
+    ];
+
     private readonly ThemeService _theme;
     private readonly UserPreferencesService _preferences;
     private readonly BackupService _backups;
@@ -22,6 +35,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private bool _isDarkTheme;
     private bool _isLightTheme;
+    private bool _suppressSave;
+    private bool _initialized;
 
     [ObservableProperty]
     private string _backupMessage = string.Empty;
@@ -32,36 +47,44 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _databaseSize = string.Empty;
 
+    [ObservableProperty]
+    private string _settingsMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isLoading = true;
+
+    [ObservableProperty]
     private bool _negativeStockBlock = true;
+
+    [ObservableProperty]
     private bool _cashDrawerEnabled = true;
 
-    public bool NegativeStockBlock
-    {
-        get => _negativeStockBlock;
-        set
-        {
-            if (_negativeStockBlock != value)
-            {
-                _negativeStockBlock = value;
-                OnPropertyChanged(nameof(NegativeStockBlock));
-                _ = _settings.SetAsync("pos.negative_stock", value ? "block" : "allow");
-            }
-        }
-    }
+    [ObservableProperty]
+    private bool _discountEnabled = true;
 
-    public bool CashDrawerEnabled
-    {
-        get => _cashDrawerEnabled;
-        set
-        {
-            if (_cashDrawerEnabled != value)
-            {
-                _cashDrawerEnabled = value;
-                OnPropertyChanged(nameof(CashDrawerEnabled));
-                _ = _settings.SetAsync("pos.cash_drawer_enabled", value ? "true" : "false");
-            }
-        }
-    }
+    [ObservableProperty]
+    private bool _allowPriceOverride;
+
+    [ObservableProperty]
+    private bool _requireVoidReason = true;
+
+    [ObservableProperty]
+    private bool _creditPaymentsEnabled;
+
+    [ObservableProperty]
+    private bool _showReceiptUnits = true;
+
+    [ObservableProperty]
+    private string _receiptHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _receiptFooter = string.Empty;
+
+    [ObservableProperty]
+    private bool _rememberUsername;
+
+    [ObservableProperty]
+    private bool _startFullScreen = true;
 
     public SettingsViewModel(
         ThemeService theme,
@@ -70,7 +93,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         DatabaseOptions databaseOptions,
         DatabaseInfo databaseInfo,
         CompanyInfo company,
-        SettingsService settings)
+        SettingsService settings,
+        bool canManageSettings)
     {
         _theme = theme;
         _preferences = preferences;
@@ -78,6 +102,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _databaseOptions = databaseOptions;
         _databaseInfo = databaseInfo;
         _settings = settings;
+        CanManageSettings = canManageSettings;
 
         ShopName = company.Name;
         CurrencyLabel = company.Currency == "IDR"
@@ -92,22 +117,27 @@ public sealed partial class SettingsViewModel : ObservableObject
         AppVersion = AppInfo.Version;
         RefreshDatabaseSize();
 
-        var negativeStockJson = _settings.GetAsync("pos.negative_stock").Result;
-        _negativeStockBlock = string.IsNullOrWhiteSpace(negativeStockJson) || negativeStockJson != "allow";
-
-        var cashDrawerJson = _settings.GetAsync("pos.cash_drawer_enabled").Result;
-        _cashDrawerEnabled = string.IsNullOrWhiteSpace(cashDrawerJson) || cashDrawerJson != "false";
-
         var preferencesValue = preferences.Load();
+        _suppressSave = true;
+        RememberUsername = preferencesValue.RememberUsername;
+        StartFullScreen = preferencesValue.StartFullScreen;
+        _suppressSave = false;
+
         if (preferencesValue.Theme == "light")
         {
-            IsLightTheme = true;
+            _isLightTheme = true;
         }
         else
         {
-            IsDarkTheme = true;
+            _isDarkTheme = true;
         }
     }
+
+    public bool CanManageSettings { get; }
+
+    public bool CanEditSettings => CanManageSettings && !IsLoading;
+
+    public bool CannotManageSettings => !CanManageSettings;
 
     public string ShopName { get; }
 
@@ -155,9 +185,154 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool IsNotBackingUp => !IsBackingUp;
 
+    public bool HasSettingsMessage => !string.IsNullOrWhiteSpace(SettingsMessage);
+
     partial void OnBackupMessageChanged(string value) => OnPropertyChanged(nameof(HasBackupMessage));
 
     partial void OnIsBackingUpChanged(bool value) => OnPropertyChanged(nameof(IsNotBackingUp));
+
+    partial void OnSettingsMessageChanged(string value) => OnPropertyChanged(nameof(HasSettingsMessage));
+
+    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(CanEditSettings));
+
+    partial void OnNegativeStockBlockChanged(bool value) =>
+        SaveSetting("pos.negative_stock", value ? "block" : "allow");
+
+    partial void OnCashDrawerEnabledChanged(bool value) =>
+        SaveSetting("pos.cash_drawer_enabled", value);
+
+    partial void OnDiscountEnabledChanged(bool value) =>
+        SaveSetting("pos.discount_enabled", value);
+
+    partial void OnAllowPriceOverrideChanged(bool value) =>
+        SaveSetting("pos.allow_price_override", value);
+
+    partial void OnRequireVoidReasonChanged(bool value) =>
+        SaveSetting("pos.require_void_reason", value);
+
+    partial void OnCreditPaymentsEnabledChanged(bool value) =>
+        SaveSetting("pos.credit_payments_enabled", value);
+
+    partial void OnShowReceiptUnitsChanged(bool value) =>
+        SaveSetting("receipt.show_units", value);
+
+    partial void OnRememberUsernameChanged(bool value)
+    {
+        if (_suppressSave)
+        {
+            return;
+        }
+
+        try
+        {
+            var current = _preferences.Load();
+            _preferences.Save(current with
+            {
+                RememberUsername = value,
+                LastUsername = value ? current.LastUsername : null
+            });
+            SettingsMessage = "Preferensi disimpan.";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not save username preference");
+            SettingsMessage = "Preferensi gagal disimpan.";
+        }
+    }
+
+    partial void OnStartFullScreenChanged(bool value)
+    {
+        if (_suppressSave)
+        {
+            return;
+        }
+
+        try
+        {
+            _preferences.Save(_preferences.Load() with { StartFullScreen = value });
+            SettingsMessage = "Preferensi disimpan.";
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not save full screen preference");
+            SettingsMessage = "Preferensi gagal disimpan.";
+        }
+    }
+
+    /// <summary>
+    /// Loads shop settings once. It is deliberately asynchronous: blocking the
+    /// UI thread on SQLite was one reason the settings page felt unresponsive.
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
+        try
+        {
+            var values = await _settings.GetManyAsync(StoreSettingKeys).ConfigureAwait(true);
+            _suppressSave = true;
+
+            NegativeStockBlock = !string.Equals(
+                Read(values, "pos.negative_stock"),
+                "allow",
+                StringComparison.OrdinalIgnoreCase);
+            CashDrawerEnabled = ReadBoolean(values, "pos.cash_drawer_enabled", defaultValue: true);
+            DiscountEnabled = ReadBoolean(values, "pos.discount_enabled", defaultValue: true);
+            AllowPriceOverride = ReadBoolean(values, "pos.allow_price_override", defaultValue: false);
+            RequireVoidReason = ReadBoolean(values, "pos.require_void_reason", defaultValue: true);
+            CreditPaymentsEnabled = ReadBoolean(values, "pos.credit_payments_enabled", defaultValue: false);
+            ShowReceiptUnits = ReadBoolean(values, "receipt.show_units", defaultValue: true);
+            ReceiptHeader = Read(values, "receipt.header") ?? string.Empty;
+            ReceiptFooter = Read(values, "receipt.footer") ?? string.Empty;
+        }
+        catch (PosException exception)
+        {
+            SettingsMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not load shop settings");
+            SettingsMessage = "Pengaturan toko tidak dapat dimuat. Coba buka kembali halaman ini.";
+        }
+        finally
+        {
+            _suppressSave = false;
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveReceiptSettingsAsync()
+    {
+        if (!CanManageSettings)
+        {
+            SettingsMessage = "Anda tidak memiliki izin untuk mengubah pengaturan.";
+            return;
+        }
+
+        try
+        {
+            await _settings.UpdateManyAsync(new Dictionary<string, object?>
+            {
+                ["receipt.header"] = ReceiptHeader.Trim(),
+                ["receipt.footer"] = ReceiptFooter.Trim()
+            });
+            SettingsMessage = "Pengaturan struk disimpan.";
+        }
+        catch (PosException exception)
+        {
+            SettingsMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not save receipt settings");
+            SettingsMessage = "Pengaturan struk gagal disimpan. Coba lagi.";
+        }
+    }
 
     [RelayCommand]
     private async Task BackupNowAsync()
@@ -208,10 +383,57 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    private static string? Read(IReadOnlyDictionary<string, string> values, string key) =>
+        values.TryGetValue(key, out var value) ? value : null;
+
+    private static bool ReadBoolean(
+        IReadOnlyDictionary<string, string> values,
+        string key,
+        bool defaultValue)
+    {
+        var value = Read(values, key);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SaveSetting(string key, object value)
+    {
+        if (_suppressSave || !CanManageSettings)
+        {
+            return;
+        }
+
+        _ = SaveSettingAsync(key, value);
+    }
+
+    private async Task SaveSettingAsync(string key, object value)
+    {
+        try
+        {
+            await _settings.SetAsync(key, value);
+            SettingsMessage = "Pengaturan disimpan.";
+        }
+        catch (PosException exception)
+        {
+            SettingsMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "Could not save setting {Key}", key);
+            SettingsMessage = "Pengaturan gagal disimpan. Coba lagi.";
+        }
+    }
+
     private void ApplyTheme(bool light)
     {
         _theme.Apply(light ? AppTheme.Light : AppTheme.Dark);
-        _preferences.Save(new UserPreferences(light ? "light" : "dark"));
+
+        var preferences = _preferences.Load();
+        _preferences.Save(preferences with { Theme = light ? "light" : "dark" });
 
         if (light)
         {

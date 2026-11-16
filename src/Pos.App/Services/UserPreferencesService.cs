@@ -3,15 +3,23 @@ using System.Text.Json;
 
 namespace Pos.App.Services;
 
-public sealed record UserPreferences(string Theme)
+/// <summary>
+/// Preferences that must be known before a user signs in. Shop settings live
+/// in SQLite; this file only stores per-Windows-user UI choices.
+/// </summary>
+public sealed record UserPreferences
 {
-    public static UserPreferences Default { get; } = new("dark");
+    public string Theme { get; init; } = "dark";
+
+    public bool RememberUsername { get; init; }
+
+    public string? LastUsername { get; init; }
+
+    public bool StartFullScreen { get; init; } = true;
+
+    public static UserPreferences Default { get; } = new();
 }
 
-/// <summary>
-/// Small per-Windows-user preferences file. Shop settings live in SQLite;
-/// this file only holds choices that must be known before login.
-/// </summary>
 public sealed class UserPreferencesService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -37,13 +45,23 @@ public sealed class UserPreferencesService
 
             var json = File.ReadAllText(_path);
             var preferences = JsonSerializer.Deserialize<UserPreferences>(json, SerializerOptions);
-            if (preferences is null ||
-                (preferences.Theme != "dark" && preferences.Theme != "light"))
+            if (preferences is null)
             {
                 return UserPreferences.Default;
             }
 
-            return preferences;
+            var theme = preferences.Theme is "dark" or "light"
+                ? preferences.Theme
+                : UserPreferences.Default.Theme;
+            var lastUsername = string.IsNullOrWhiteSpace(preferences.LastUsername)
+                ? null
+                : preferences.LastUsername.Trim();
+
+            return preferences with
+            {
+                Theme = theme,
+                LastUsername = lastUsername
+            };
         }
         catch (IOException)
         {

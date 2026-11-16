@@ -188,6 +188,13 @@
                         Style="{StaticResource Text.Caption}"
                         Text="Minimal 8 karakter. Gunakan kata sandi yang tidak dipakai di layanan lain."
                         TextWrapping="Wrap" />
+
+                    <Button
+                        Margin="0,12,0,0"
+                        HorizontalAlignment="Center"
+                        Command="{Binding ExitCommand}"
+                        Content="Keluar aplikasi"
+                        Style="{StaticResource Button.Ghost}" />
                 </StackPanel>
             </Border>
         </Grid>

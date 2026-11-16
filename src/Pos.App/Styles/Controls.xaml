@@ -210,6 +210,42 @@
 
     <Style TargetType="TextBox" BasedOn="{StaticResource Input}" />
 
+    <Style x:Key="Input.Multiline" TargetType="TextBox" BasedOn="{StaticResource Input}">
+        <Setter Property="Height" Value="76" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border
+                        x:Name="Root"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{StaticResource Radius.Sm}"
+                        SnapsToDevicePixels="True">
+                        <ScrollViewer
+                            x:Name="PART_ContentHost"
+                            Margin="{TemplateBinding Padding}"
+                            Focusable="False"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Focus}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="Input.Password" TargetType="PasswordBox">
         <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
         <Setter Property="FontSize" Value="{StaticResource Font.Size.Base}" />
@@ -383,6 +419,65 @@
         </Setter>
     </Style>
 
+    <Style TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+        <Setter Property="FontSize" Value="{StaticResource Font.Size.Base}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal">
+                            <Border
+                                x:Name="Box"
+                                Width="18"
+                                Height="18"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource Brush.Surface}"
+                                BorderBrush="{DynamicResource Brush.BorderInput}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource Radius.Sm}">
+                                <Path
+                                    x:Name="Check"
+                                    Width="12"
+                                    Height="12"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Data="M 2,6 L 5,9 L 10,3"
+                                    Stroke="{DynamicResource Brush.OnAccent}"
+                                    StrokeEndLineCap="Round"
+                                    StrokeStartLineCap="Round"
+                                    StrokeThickness="2"
+                                    Visibility="Collapsed" />
+                            </Border>
+                            <ContentPresenter
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                ContentSource="Content"
+                                RecognizesAccessKey="True" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.55" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ============================ Tabs ============================ -->
 
     <Style x:Key="TabItem.Settings" TargetType="TabItem">
@@ -426,6 +521,8 @@
     <Style x:Key="TabControl.Settings" TargetType="TabControl">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
@@ -440,6 +537,9 @@
                         <ContentPresenter
                             Grid.Row="1"
                             Margin="0,20,0,0"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            ClipToBounds="True"
                             ContentSource="SelectedContent" />
                     </Grid>
                 </ControlTemplate>

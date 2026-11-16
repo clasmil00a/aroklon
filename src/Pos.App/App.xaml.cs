@@ -158,8 +158,9 @@ public partial class App : Application
             await backups.TryCreateDailyAsync();
 
             var preferences = _host.Services.GetRequiredService<UserPreferencesService>();
+            var userPreferences = preferences.Load();
             var theme = _host.Services.GetRequiredService<ThemeService>();
-            theme.Apply(ThemeService.Parse(preferences.Load().Theme));
+            theme.Apply(ThemeService.Parse(userPreferences.Theme));
 
             var shell = ActivatorUtilities.CreateInstance<AppShellViewModel>(
                 _host.Services,
@@ -167,6 +168,7 @@ public partial class App : Application
             await shell.InitializeAsync();
 
             var window = new MainWindow { DataContext = shell };
+            window.ApplyStartupMode(userPreferences.StartFullScreen);
             MainWindow = window;
             window.Show();
 

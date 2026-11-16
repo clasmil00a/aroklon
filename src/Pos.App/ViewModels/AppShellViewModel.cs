@@ -135,6 +135,7 @@ public sealed partial class AppShellViewModel : ObservableObject
 
             ShowShell(session);
         };
+        onboarding.ExitRequested += () => Application.Current.Shutdown();
 
         WindowTitle = "POS — Siapkan toko";
         Current = onboarding;
@@ -144,10 +145,12 @@ public sealed partial class AppShellViewModel : ObservableObject
     {
         var login = new LoginViewModel(
             _auth,
+            _preferences,
             _company?.Name ?? "Toko Saya",
             AppInfo.Version);
 
         login.SignedIn += ShowShell;
+        login.ExitRequested += () => Application.Current.Shutdown();
 
         WindowTitle = "POS — Masuk";
         Current = login;
@@ -194,14 +197,9 @@ public sealed partial class AppShellViewModel : ObservableObject
 
     private static void ToggleFullScreen()
     {
-        var window = Application.Current.MainWindow;
-        if (window is null)
+        if (Application.Current.MainWindow is MainWindow window)
         {
-            return;
+            window.ToggleFullScreen();
         }
-
-        window.WindowState = window.WindowState == WindowState.Maximized
-            ? WindowState.Normal
-            : WindowState.Maximized;
     }
 }
