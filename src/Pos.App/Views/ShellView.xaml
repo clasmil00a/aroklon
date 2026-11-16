@@ -27,22 +27,22 @@
 
             <Border
                 Grid.Column="1"
-                Background="{DynamicResource Brush.SurfaceRaised}"
+                Background="{DynamicResource Brush.MenuPanel}"
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="1,0,0,0"
                 Effect="{DynamicResource Effect.Pop}">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="64" />
+                        <RowDefinition Height="50" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="44" />
-                        <RowDefinition Height="62" />
+                        <RowDefinition Height="73" />
                     </Grid.RowDefinitions>
 
                     <!-- Menu header -->
                     <Border
                         Grid.Row="0"
-                        Padding="20,0,10,0"
+                        Padding="20,0,12,0"
                         BorderBrush="{DynamicResource Brush.Border}"
                         BorderThickness="0,0,0,1">
                         <Grid>
@@ -54,14 +54,18 @@
                                 VerticalAlignment="Center"
                                 FontSize="{StaticResource Font.Size.Lg}"
                                 FontWeight="{StaticResource Font.Weight.Regular}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="{Binding MenuHeader}"
                                 TextTrimming="CharacterEllipsis" />
                             <Button
                                 Grid.Column="1"
-                                Command="{Binding CloseMenuCommand}"
+                                Command="{Binding SignOutCommand}"
                                 Content="&#xE72A;"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="18"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Style="{StaticResource Button.Icon}"
-                                ToolTip="Tutup menu" />
+                                ToolTip="Ganti pengguna" />
                         </Grid>
                     </Border>
 
@@ -78,37 +82,39 @@
                                     <StackPanel>
                                         <Border
                                             Height="1"
-                                            Margin="0,4"
+                                            Margin="0"
                                             Background="{DynamicResource Brush.Border}"
                                             Visibility="{Binding SeparatorBefore, Converter={StaticResource BoolToVisibility}}" />
                                         <TextBlock
-                                            Margin="16,12,16,4"
-                                            Style="{StaticResource Text.Caption}"
+                                            Margin="8,14,8,2"
+                                            FontSize="{StaticResource Font.Size.Sm}"
+                                            Foreground="{DynamicResource Brush.TextMuted}"
                                             Text="{Binding Section}"
                                             Visibility="{Binding Section, Converter={StaticResource StringToVisibility}}" />
                                         <Button
-                                            Height="46"
-                                            Padding="16,0"
+                                            Height="55"
+                                            Padding="18,0,12,0"
                                             Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding Route}"
                                             HorizontalContentAlignment="Stretch"
                                             Style="{StaticResource Button.Menu}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="30" />
+                                                    <ColumnDefinition Width="34" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock
                                                     VerticalAlignment="Center"
                                                     FontFamily="Segoe MDL2 Assets"
-                                                    FontSize="17"
-                                                    Foreground="{DynamicResource Brush.TextMuted}"
+                                                    FontSize="18"
+                                                    Foreground="{DynamicResource Brush.Text}"
                                                     Text="{Binding Icon}" />
                                                 <TextBlock
                                                     Grid.Column="1"
                                                     VerticalAlignment="Center"
                                                     FontSize="{StaticResource Font.Size.Base}"
+                                                    Foreground="{DynamicResource Brush.Text}"
                                                     Text="{Binding Label}" />
                                                 <TextBlock
                                                     Grid.Column="2"
@@ -124,19 +130,21 @@
                     </ScrollViewer>
 
                     <!-- Date -->
-                    <Border
-                        Grid.Row="2"
-                        BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="0,1,0,0">
+                    <Border Grid.Row="2">
                         <TextBlock
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Style="{StaticResource Text.Secondary}"
+                            FontSize="{StaticResource Font.Size.Lg}"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.TextMuted}"
                             Text="{Binding MenuDate}" />
                     </Border>
 
                     <!-- Settings / fullscreen / power -->
-                    <Border Grid.Row="3">
+                    <Border
+                        Grid.Row="3"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,1,0,0">
                         <StackPanel
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -144,19 +152,28 @@
                             <Button
                                 Command="{Binding NavigateCommand}"
                                 CommandParameter="settings"
-                                Content="&#xE713;"
+                                Content="&#xE9E9;"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="18"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Style="{StaticResource Button.Icon}"
                                 ToolTip="Pengaturan" />
                             <Button
-                                Margin="18,0,0,0"
+                                Margin="22,0,0,0"
                                 Command="{Binding ToggleWindowCommand}"
                                 Content="&#xE740;"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="18"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Style="{StaticResource Button.Icon}"
                                 ToolTip="Perbesar / kecilkan jendela" />
                             <Button
-                                Margin="18,0,0,0"
+                                Margin="22,0,0,0"
                                 Command="{Binding ExitCommand}"
                                 Content="&#xE7E8;"
+                                FontFamily="Segoe MDL2 Assets"
+                                FontSize="18"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Style="{StaticResource Button.Icon}"
                                 ToolTip="Keluar aplikasi" />
                         </StackPanel>

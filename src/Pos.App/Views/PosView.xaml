@@ -21,12 +21,13 @@
         <!-- Aronium-style action tile: icon on top, label below. -->
         <Style x:Key="PosTile" TargetType="Button" BasedOn="{StaticResource Button.Base}">
             <Setter Property="Height" Value="Auto" />
-            <Setter Property="MinHeight" Value="96" />
-            <Setter Property="MinWidth" Value="88" />
-            <Setter Property="Margin" Value="2" />
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="Margin" Value="3" />
             <Setter Property="Padding" Value="6" />
-            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceRaised}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
             <Setter Property="FontWeight" Value="{StaticResource Font.Weight.Regular}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -44,7 +45,7 @@
 
         <Style x:Key="PosTile.Danger" TargetType="Button" BasedOn="{StaticResource PosTile}">
             <Setter Property="Background" Value="{DynamicResource Brush.DangerSolid}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.DangerSolidHover}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.OnDanger}" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -56,24 +57,12 @@
 
         <Style x:Key="PosTile.Success" TargetType="Button" BasedOn="{StaticResource PosTile}">
             <Setter Property="Background" Value="{DynamicResource Brush.SuccessSolid}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.SuccessSolidHover}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.OnSuccess}" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource Brush.SuccessSolidHover}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource Brush.OnSuccess}" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="PosTile.Dark" TargetType="Button" BasedOn="{StaticResource PosTile}">
-            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Bg}" />
-            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -100,114 +89,135 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="52" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- ===================== Aronium standard top toolbar ===================== -->
+        <!-- ===================== Aronium standard top toolbar (52px) ===================== -->
         <Border
             Grid.Row="0"
-            Background="{DynamicResource Brush.SurfaceRaised}"
+            Background="{DynamicResource Brush.Bg}"
             BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="44" />
-                    <ColumnDefinition Width="44" />
-                    <ColumnDefinition Width="44" />
-                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <Button
                     Grid.Column="0"
+                    Width="34"
+                    Height="34"
+                    Margin="6,0,0,0"
                     Command="{Binding OpenMenuCommand}"
-                    Content="&#xE700;"
+                    Content="&#xEA38;"
+                    FontFamily="Segoe MDL2 Assets"
+                    FontSize="15"
                     Style="{StaticResource Button.Icon}"
                     ToolTip="Menu utama" />
 
                 <Button
                     Grid.Column="1"
+                    Width="34"
+                    Height="34"
                     Command="{Binding ShowBarcodeCommand}"
-                    Content="&#xE8B3;"
+                    Content="&#xEC5A;"
+                    FontFamily="Segoe MDL2 Assets"
+                    FontSize="15"
                     Style="{StaticResource Button.Icon}"
                     ToolTip="Pindai barcode" />
 
                 <Button
                     Grid.Column="2"
+                    Width="34"
+                    Height="34"
                     Command="{Binding ToggleSearchModeCommand}"
                     Content="#"
                     FontFamily="{StaticResource Font.Sans}"
-                    FontSize="18"
+                    FontSize="17"
                     Style="{StaticResource Button.Icon}"
                     ToolTip="Cari berdasarkan kode / SKU" />
 
                 <Button
                     Grid.Column="3"
-                    Command="{Binding LockScreenCommand}"
-                    Content="&#xE72E;"
-                    Style="{StaticResource Button.Icon}"
-                    ToolTip="Kunci layar" />
-
-                <Border
-                    Grid.Column="4"
+                    Width="34"
                     Height="34"
-                    Margin="8,7,8,7"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource Brush.Surface}"
-                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource Radius.Sm}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="32" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock
-                            Grid.Column="0"
-                            HorizontalAlignment="Center"
+                    Command="{Binding ShowCustomerCommand}"
+                    Content="&#xE8EC;"
+                    FontFamily="Segoe MDL2 Assets"
+                    FontSize="15"
+                    Foreground="{DynamicResource Brush.Accent}"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Pilih pelanggan" />
+
+                <!-- Borderless search field, exactly like Aronium -->
+                <Grid Grid.Column="4" Margin="10,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="0"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="15"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        Text="&#xE721;" />
+                    <Grid Grid.Column="1">
+                        <TextBox
+                            x:Name="ProductSearchBox"
                             VerticalAlignment="Center"
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="14"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            CaretBrush="{DynamicResource Brush.Accent}"
+                            FontSize="{StaticResource Font.Size.Base}"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Padding="0"
+                            SelectionBrush="{DynamicResource Brush.Accent}"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding SubmitSearchCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <TextBlock
+                            VerticalAlignment="Center"
                             Foreground="{DynamicResource Brush.TextMuted}"
-                            Text="&#xE721;" />
-                        <Grid Grid.Column="1">
-                            <TextBox
-                                x:Name="ProductSearchBox"
-                                Style="{StaticResource PosSearchInput}"
-                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
-                                <TextBox.InputBindings>
-                                    <KeyBinding Key="Enter" Command="{Binding SubmitSearchCommand}" />
-                                </TextBox.InputBindings>
-                            </TextBox>
-                            <TextBlock
-                                Margin="2,0,0,0"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource Brush.TextMuted}"
-                                IsHitTestVisible="False"
-                                Text="{Binding SearchHint}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SearchText}" Value="">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
+                            IsHitTestVisible="False"
+                            Text="{Binding SearchHint}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SearchText}" Value="">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
-                </Border>
+                </Grid>
 
                 <StackPanel
                     Grid.Column="5"
-                    Margin="0,0,8,0"
+                    Margin="0,0,10,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
+                    <Button
+                        Command="{Binding LockScreenCommand}"
+                        Content="&#xE72E;"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="15"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        Style="{StaticResource Button.Icon}"
+                        ToolTip="Kunci layar" />
                     <Button
                         Command="{Binding ShowCustomerCommand}"
                         Style="{StaticResource Button.Ghost}"
@@ -216,10 +226,12 @@
                             <TextBlock
                                 FontFamily="Segoe MDL2 Assets"
                                 FontSize="14"
+                                Foreground="{DynamicResource Brush.TextMuted}"
                                 Text="&#xE77B;" />
                             <TextBlock
                                 Margin="6,0,0,0"
                                 MaxWidth="170"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="{Binding CustomerLabel}"
                                 TextTrimming="CharacterEllipsis" />
                         </StackPanel>
@@ -227,6 +239,7 @@
                     <Button
                         Command="{Binding ClearCustomerCommand}"
                         Content="&#xE711;"
+                        FontFamily="Segoe MDL2 Assets"
                         Style="{StaticResource Button.Icon}"
                         ToolTip="Hapus pelanggan" />
                 </StackPanel>
@@ -237,18 +250,19 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="412" />
             </Grid.ColumnDefinitions>
 
             <!-- Cart, left -->
             <Border
                 Grid.Column="0"
-                Background="{DynamicResource Brush.SurfaceRaised}"
+                Margin="6,0,0,0"
+                Background="{DynamicResource Brush.Bg}"
                 BorderBrush="{DynamicResource Brush.Border}"
                 BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="34" />
+                        <RowDefinition Height="40" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
@@ -256,16 +270,16 @@
                     <!-- Column headers -->
                     <Border
                         Grid.Row="0"
-                        Background="{DynamicResource Brush.SurfaceRaised}"
-                        BorderBrush="{DynamicResource Brush.Border}"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Accent}"
                         BorderThickness="0,0,0,1">
-                        <Grid Margin="10,0,6,0">
+                        <Grid Margin="8,0,8,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="20" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="110" />
-                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="125" />
+                                <ColumnDefinition Width="154" />
                             </Grid.ColumnDefinitions>
                             <TextBlock
                                 Grid.Column="1"
@@ -315,19 +329,28 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border
-                                                x:Name="Row"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource Brush.Surface}"
-                                                BorderThickness="0,0,0,1">
-                                                <ContentPresenter />
-                                            </Border>
+                                            <Grid>
+                                                <Border
+                                                    x:Name="Row"
+                                                    Background="Transparent">
+                                                    <ContentPresenter />
+                                                </Border>
+                                                <Rectangle
+                                                    x:Name="Separator"
+                                                    Height="1"
+                                                    Margin="14,0,14,0"
+                                                    VerticalAlignment="Bottom"
+                                                    Stroke="{DynamicResource Brush.Border}"
+                                                    StrokeDashArray="4,4"
+                                                    StrokeThickness="1" />
+                                            </Grid>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
                                                 </Trigger>
                                                 <Trigger Property="IsSelected" Value="True">
                                                     <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SelectedRow}" />
+                                                    <Setter TargetName="Separator" Property="Visibility" Value="Collapsed" />
                                                     <Setter Property="Foreground" Value="{DynamicResource Brush.OnSelectedRow}" />
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
@@ -338,13 +361,13 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid MinHeight="48" Margin="10,2,6,2">
+                                <Grid MinHeight="47" Margin="8,0,8,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="20" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="80" />
-                                        <ColumnDefinition Width="110" />
-                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="125" />
+                                        <ColumnDefinition Width="154" />
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock
@@ -352,12 +375,13 @@
                                         VerticalAlignment="Center"
                                         FontFamily="Segoe MDL2 Assets"
                                         FontSize="15"
-                                        Foreground="{DynamicResource Brush.TextMuted}"
-                                        Text="&#xE7BF;" />
+                                        Foreground="{DynamicResource Brush.SuccessIcon}"
+                                        Text="&#xE72E;" />
 
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock
                                             FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                            Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                             Text="{Binding Name}"
                                             TextTrimming="CharacterEllipsis" />
                                         <StackPanel Orientation="Horizontal">
@@ -422,8 +446,16 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
                             <Grid Grid.Column="0" HorizontalAlignment="Right">
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -438,20 +470,22 @@
                                     Grid.Row="1"
                                     HorizontalAlignment="Right"
                                     Style="{StaticResource Text.Body}"
-                                    Text="Diskon" />
+                                    Text="Diskon"
+                                    Visibility="{Binding HasCartDiscount, Converter={StaticResource BoolToVisibility}}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     HorizontalAlignment="Right"
                                     Style="{StaticResource Text.Body}"
                                     Text="Pajak" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     HorizontalAlignment="Right"
                                     FontWeight="{StaticResource Font.Weight.SemiBold}"
                                     Text="Total" />
                             </Grid>
                             <Grid Grid.Column="1" MinWidth="180">
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -467,48 +501,61 @@
                                     HorizontalAlignment="Right"
                                     Foreground="{DynamicResource Brush.Danger}"
                                     Text="{Binding Totals.DiscountMinor, Converter={StaticResource Currency}}"
-                                    Typography.NumeralAlignment="Tabular" />
+                                    Typography.NumeralAlignment="Tabular"
+                                    Visibility="{Binding HasCartDiscount, Converter={StaticResource BoolToVisibility}}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     HorizontalAlignment="Right"
-                                    Foreground="{DynamicResource Brush.TextMuted}"
                                     Text="{Binding Totals.TaxMinor, Converter={StaticResource Currency}}"
                                     Typography.NumeralAlignment="Tabular" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     HorizontalAlignment="Right"
                                     Style="{StaticResource Text.Total}"
                                     Text="{Binding Totals.TotalMinor, Converter={StaticResource Currency}}" />
                             </Grid>
+                            <Rectangle
+                                Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Height="1"
+                                Margin="0,4,0,6"
+                                Stroke="{DynamicResource Brush.Border}"
+                                StrokeDashArray="4,4"
+                                StrokeThickness="1" />
                         </Grid>
                     </Border>
                 </Grid>
             </Border>
 
             <!-- Actions, right -->
-            <Grid Grid.Column="1" Background="{DynamicResource Brush.Surface}">
+            <Grid Grid.Column="1" Background="{DynamicResource Brush.Bg}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Delete, search, quantity, new sale + payment types -->
-                <Grid Grid.Row="0">
+                <!-- Top action row + payment types (Aronium geometry: 4 x 96px columns, 5px gaps) -->
+                <Grid Grid.Row="0" Margin="7,0,5,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="104" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="110" />
+                        <RowDefinition Height="60" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="97" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="96" />
                     </Grid.ColumnDefinitions>
 
+                    <!-- Delete -->
                     <Button
                         Grid.Row="0"
                         Grid.Column="0"
+                        Margin="0,5,0,5"
                         Command="{Binding RemoveLineCommand}"
                         CommandParameter="{Binding SelectedLine}"
                         Style="{StaticResource PosTile.Danger}">
@@ -521,26 +568,24 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="30"
-                                Text="&#xE74D;" />
+                                FontSize="34"
+                                Foreground="{DynamicResource Brush.OnDanger}"
+                                Text="&#xE711;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,8,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.OnDanger}"
                                 Text="Hapus" />
-                            <TextBlock
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
-                                Text="Del" />
                         </Grid>
                     </Button>
 
+                    <!-- Search -->
                     <Button
                         Grid.Row="0"
-                        Grid.Column="1"
+                        Grid.Column="2"
+                        Margin="0,5,0,5"
                         Command="{Binding OpenSearchModalCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -552,26 +597,32 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="30"
+                                FontSize="34"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE721;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,8,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Cari" />
                             <TextBlock
-                                HorizontalAlignment="Right"
+                                Margin="8,6,0,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.ShortcutGold}"
                                 Text="F3" />
                         </Grid>
                     </Button>
 
+                    <!-- Quantity -->
                     <Button
                         Grid.Row="0"
-                        Grid.Column="2"
+                        Grid.Column="4"
+                        Margin="0,5,0,5"
                         Command="{Binding ShowQuantityCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -579,30 +630,58 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <TextBlock
+                            <Grid
                                 Grid.Row="0"
-                                HorizontalAlignment="Center"
-                                FontFamily="Segoe MDL2 Assets"
-                                FontSize="30"
-                                Text="&#xE710;" />
+                                Width="36"
+                                Height="34"
+                                HorizontalAlignment="Center">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="30"
+                                    Foreground="{DynamicResource Brush.Text}"
+                                    Text="&#xE7BF;" />
+                                <Border
+                                    Width="14"
+                                    Height="14"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Background="{DynamicResource Brush.Text}"
+                                    CornerRadius="7">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontFamily="{StaticResource Font.Sans}"
+                                        FontSize="11"
+                                        FontWeight="{StaticResource Font.Weight.Bold}"
+                                        Foreground="{DynamicResource Brush.Bg}"
+                                        Text="+" />
+                                </Border>
+                            </Grid>
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,8,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Jumlah" />
                             <TextBlock
-                                HorizontalAlignment="Right"
+                                Margin="8,6,0,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.ShortcutBlue}"
                                 Text="F4" />
                         </Grid>
                     </Button>
 
+                    <!-- New sale -->
                     <Button
                         Grid.Row="0"
-                        Grid.Column="3"
+                        Grid.Column="6"
+                        Margin="0,5,0,5"
                         Command="{Binding NewSaleCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -614,83 +693,102 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="30"
+                                FontSize="34"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE710;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,8,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Baru" />
                             <TextBlock
-                                HorizontalAlignment="Right"
+                                Margin="8,6,0,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.ShortcutBlue}"
                                 Text="F8" />
                         </Grid>
                     </Button>
 
+                    <!-- Payment types: 1px frame + 3px status bar (green = paid, blue = credit) -->
                     <ItemsControl
                         Grid.Row="1"
-                        Grid.ColumnSpan="4"
+                        Grid.ColumnSpan="7"
                         ItemsSource="{Binding PaymentTypes}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel />
+                                <UniformGrid Columns="4" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button
-                                    MinWidth="96"
-                                    MinHeight="72"
-                                    Margin="2"
-                                    Padding="6"
-                                    Command="{Binding DataContext.ChoosePaymentTypeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Style="{StaticResource PosTile}">
-                                    <TextBlock
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="{StaticResource Font.Size.Sm}"
-                                        Text="{Binding Name}"
-                                        TextTrimming="CharacterEllipsis"
-                                        TextWrapping="Wrap" />
-                                </Button>
+                                <Border Margin="0,0,4,0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,1,1,0">
+                                    <Border BorderThickness="0,0,0,3">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MarkAsPaid}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.SuccessSolid}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Button
+                                            Height="56"
+                                            Background="{DynamicResource Brush.Surface}"
+                                            BorderThickness="0"
+                                            Command="{Binding DataContext.ChoosePaymentTypeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource Button.Ghost}">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontSize="{StaticResource Font.Size.Base}"
+                                                Foreground="{DynamicResource Brush.Text}"
+                                                Text="{Binding Name}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </Button>
+                                    </Border>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </Grid>
 
-                <!-- Empty middle: Aronium-style watermark -->
+                <!-- Empty middle: Aronium-style hexagon watermark -->
                 <Grid Grid.Row="1">
                     <StackPanel
+                        Margin="0,33,0,0"
                         HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        IsHitTestVisible="False"
-                        Opacity="0.28">
-                        <Border
-                            Width="128"
-                            Height="128"
-                            HorizontalAlignment="Center"
-                            BorderBrush="{DynamicResource Brush.TextMuted}"
-                            BorderThickness="5"
-                            CornerRadius="64">
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False">
+                        <Grid
+                            Width="116"
+                            Height="97"
+                            HorizontalAlignment="Center">
+                            <Path
+                                Data="M 33,4 L 82,4 L 111,48 L 82,92 L 33,92 L 4,48 Z"
+                                Stroke="{DynamicResource Brush.Watermark}"
+                                StrokeThickness="7" />
                             <TextBlock
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                FontSize="86"
-                                FontWeight="{StaticResource Font.Weight.Bold}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="88"
+                                FontWeight="{StaticResource Font.Weight.Regular}"
+                                Foreground="{DynamicResource Brush.Watermark}"
                                 Text="a" />
-                        </Border>
+                        </Grid>
                         <TextBlock
-                            Margin="0,6,0,0"
+                            Margin="0,18,0,0"
                             HorizontalAlignment="Center"
-                            FontSize="42"
-                            FontWeight="{StaticResource Font.Weight.SemiBold}"
-                            Foreground="{DynamicResource Brush.TextMuted}"
+                            FontSize="52"
+                            FontWeight="{StaticResource Font.Weight.Regular}"
+                            Foreground="{DynamicResource Brush.Watermark}"
                             Text="aroklon" />
                     </StackPanel>
 
@@ -716,23 +814,28 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Bottom action grid -->
-                <Grid Grid.Row="2">
+                <!-- Bottom action grid: Aronium layout (3 rows, Payment green spans 2 columns) -->
+                <Grid Grid.Row="2" Margin="7,0,5,6">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="96" />
-                        <RowDefinition Height="96" />
-                        <RowDefinition Height="96" />
+                        <RowDefinition Height="85" />
+                        <RowDefinition Height="85" />
+                        <RowDefinition Height="79" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="97" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="96" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="96" />
                     </Grid.ColumnDefinitions>
 
+                    <!-- Row 1: Discount, Comment, Cash drawer -->
                     <Button
                         Grid.Row="0"
                         Grid.Column="0"
+                        Margin="0,0,0,6"
                         Command="{Binding ShowDiscountCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -743,27 +846,32 @@
                             <TextBlock
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
-                                FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
-                                Text="&#xE8EF;" />
+                                FontSize="34"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.Text}"
+                                Text="%" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Diskon" />
                             <TextBlock
-                                HorizontalAlignment="Right"
+                                Margin="8,6,0,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.ShortcutGold}"
                                 Text="F2" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="0"
-                        Grid.Column="1"
+                        Grid.Column="2"
+                        Margin="0,0,0,6"
                         Command="{Binding ShowCommentCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -775,20 +883,24 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE90A;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Komentar" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="0"
-                        Grid.Column="2"
+                        Grid.Column="4"
+                        Grid.ColumnSpan="3"
+                        Margin="0,0,0,6"
                         Command="{Binding KickCashDrawerCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -800,22 +912,26 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
-                                Text="&#xE8C7;" />
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.Text}"
+                                Text="&#xEC59;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Laci kas" />
                         </Grid>
                     </Button>
 
+                    <!-- Row 2: Save sale, Refund, Payment (green, spans 2 columns) -->
                     <Button
-                        Grid.Row="0"
-                        Grid.Column="3"
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Margin="0,0,0,6"
                         Command="{Binding SaveSaleCommand}"
-                        Style="{StaticResource PosTile.Dark}">
+                        Style="{StaticResource PosTile}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -824,31 +940,31 @@
                             <TextBlock
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
-                                FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
-                                Text="&#xE74E;" />
+                                FontSize="38"
+                                FontWeight="{StaticResource Font.Weight.Bold}"
+                                Foreground="{DynamicResource Brush.Text}"
+                                Text="F9" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,6,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Simpan" />
-                            <TextBlock
+                            <Border
+                                Margin="0,4,10,0"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
-                                Text="F9" />
-                            <Border
-                                CornerRadius="{StaticResource Radius.Pill}"
-                                Background="{DynamicResource Brush.Accent}"
-                                Padding="5,0"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Top"
+                                Background="{DynamicResource Brush.DangerSolid}"
+                                CornerRadius="12"
+                                MinWidth="24"
+                                Padding="6,1"
                                 Visibility="{Binding HasParkedOrders, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock
-                                    FontSize="{StaticResource Font.Size.Xs}"
-                                    Foreground="{DynamicResource Brush.OnAccent}"
+                                    HorizontalAlignment="Center"
+                                    FontSize="{StaticResource Font.Size.Sm}"
+                                    FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                    Foreground="{DynamicResource Brush.OnDanger}"
                                     Text="{Binding ParkedOrderCount}" />
                             </Border>
                         </Grid>
@@ -856,7 +972,8 @@
 
                     <Button
                         Grid.Row="1"
-                        Grid.Column="0"
+                        Grid.Column="2"
+                        Margin="0,0,0,6"
                         Command="{Binding OpenRefundCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -868,21 +985,24 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE7A7;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Refund" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="1"
-                        Grid.Column="1"
-                        Grid.ColumnSpan="2"
+                        Grid.Column="4"
+                        Grid.ColumnSpan="3"
+                        Margin="0,0,0,6"
                         Command="{Binding ShowPaymentCommand}"
                         Style="{StaticResource PosTile.Success}">
                         <Grid>
@@ -893,31 +1013,21 @@
                             <TextBlock
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
-                                FontSize="{StaticResource Font.Size.Xs}"
+                                FontSize="38"
                                 FontWeight="{StaticResource Font.Weight.Bold}"
                                 Foreground="{DynamicResource Brush.OnSuccess}"
                                 Text="F10" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                FontSize="{StaticResource Font.Size.Lg}"
-                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Margin="0,6,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
                                 Foreground="{DynamicResource Brush.OnSuccess}"
                                 Text="Pembayaran" />
                         </Grid>
                     </Button>
 
-                    <Button
-                        Grid.Row="1"
-                        Grid.Column="3"
-                        Command="{Binding OpenMenuCommand}"
-                        Content="&#xE712;"
-                        FontFamily="Segoe MDL2 Assets"
-                        FontSize="26"
-                        Style="{StaticResource PosTile}"
-                        ToolTip="Menu utama" />
-
+                    <!-- Row 3: Lock, Transfer, Void order, more -->
                     <Button
                         Grid.Row="2"
                         Grid.Column="0"
@@ -932,20 +1042,22 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE72E;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Kunci" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="2"
-                        Grid.Column="1"
+                        Grid.Column="2"
                         Command="{Binding OpenOrdersCommand}"
                         Style="{StaticResource PosTile}">
                         <Grid>
@@ -957,26 +1069,30 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="&#xE8AB;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.Text}"
                                 Text="Transfer" />
                             <TextBlock
-                                HorizontalAlignment="Right"
+                                Margin="8,6,0,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Top"
-                                FontSize="{StaticResource Font.Size.Xs}"
-                                Foreground="{DynamicResource Brush.TextMuted}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                Foreground="{DynamicResource Brush.ShortcutBlue}"
                                 Text="F7" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="2"
-                        Grid.Column="2"
+                        Grid.Column="4"
                         Command="{Binding ShowVoidConfirmCommand}"
                         Style="{StaticResource PosTile.Danger}">
                         <Grid>
@@ -988,21 +1104,29 @@
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
                                 FontFamily="Segoe MDL2 Assets"
-                                FontSize="26"
-                                Text="&#xE711;" />
+                                FontSize="30"
+                                Foreground="{DynamicResource Brush.OnDanger}"
+                                Text="&#xE74D;" />
                             <TextBlock
                                 Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Margin="0,4,0,0"
-                                FontSize="{StaticResource Font.Size.Sm}"
+                                Margin="0,10,0,0"
+                                FontSize="{StaticResource Font.Size.Base}"
+                                Foreground="{DynamicResource Brush.OnDanger}"
                                 Text="Void" />
                         </Grid>
                     </Button>
 
                     <Button
                         Grid.Row="2"
-                        Grid.Column="3"
-                        Visibility="Collapsed" />
+                        Grid.Column="6"
+                        Command="{Binding OpenMenuCommand}"
+                        Content="&#xE712;"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="26"
+                        Foreground="{DynamicResource Brush.Text}"
+                        Style="{StaticResource PosTile}"
+                        ToolTip="Menu utama" />
                 </Grid>
             </Grid>
         </Grid>

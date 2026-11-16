@@ -152,22 +152,22 @@ public sealed partial class ShellViewModel : ObservableObject
             new(
                 "Riwayat penjualan",
                 "S32",
-                "\uE81C",
+                "\uE73E",
                 SeparatorBefore: true),
             new("Pesanan terbuka", "S12", "\uE81E"),
-            new("Kas masuk / keluar", "S31", "\uE8C7"),
-            new("Pembayaran kredit", "credit", "\uE8A5"),
-            new("Tutup hari", "S35", "\uE787"),
+            new("Kas masuk / keluar", "S31", "\uEC59"),
+            new("Pembayaran kredit", "credit", "\uE8C7"),
+            new("Tutup hari", "S35", "\uE9D2"),
             new(
                 "Info pengguna",
                 "S25",
                 "\uE77B",
                 Section: "Pengguna"),
-            new("Keluar", "signout", "\uE7E8"),
+            new("Keluar", "signout", "\uE72A"),
             new(
                 "Masukan",
                 "feedback",
-                "\uE939",
+                "\uE789",
                 SeparatorBefore: true)
         };
 

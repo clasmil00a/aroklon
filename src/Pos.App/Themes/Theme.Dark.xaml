@@ -6,35 +6,42 @@
 
     <Color x:Key="Color.Bg">#FF333333</Color>
     <Color x:Key="Color.Surface">#FF252525</Color>
-    <Color x:Key="Color.SurfaceRaised">#FF3D3D3D</Color>
-    <Color x:Key="Color.SurfaceHover">#FF3A3A3A</Color>
+    <Color x:Key="Color.SurfaceRaised">#FF333333</Color>
+    <Color x:Key="Color.SurfaceHover">#FF474747</Color>
     <Color x:Key="Color.Border">#FF595E57</Color>
     <Color x:Key="Color.BorderInput">#FF8A938C</Color>
     <Color x:Key="Color.Text">#FFFFFFFF</Color>
-    <Color x:Key="Color.TextMuted">#FFC9C9C9</Color>
-    <Color x:Key="Color.TextDisabled">#FF8F8F8F</Color>
-    <Color x:Key="Color.Accent">#FF67C9F2</Color>
-    <Color x:Key="Color.AccentHover">#FF8ED8F7</Color>
-    <Color x:Key="Color.AccentActive">#FFB5E7FB</Color>
-    <Color x:Key="Color.OnAccent">#FF08222E</Color>
+    <Color x:Key="Color.TextMuted">#FF999999</Color>
+    <Color x:Key="Color.TextDisabled">#FF737373</Color>
+    <Color x:Key="Color.Accent">#FF1BA1E2</Color>
+    <Color x:Key="Color.AccentHover">#FF43B4EE</Color>
+    <Color x:Key="Color.AccentActive">#FF6BC7F4</Color>
+    <Color x:Key="Color.OnAccent">#FFFFFFFF</Color>
     <Color x:Key="Color.OnAccentMuted">#FF123C4F</Color>
     <Color x:Key="Color.Danger">#FFFF9A92</Color>
-    <Color x:Key="Color.DangerSolid">#FFB3261E</Color>
-    <Color x:Key="Color.DangerSolidHover">#FF971F18</Color>
+    <Color x:Key="Color.DangerSolid">#FFC62828</Color>
+    <Color x:Key="Color.DangerSolidHover">#FFB52929</Color>
     <Color x:Key="Color.OnDanger">#FFFFFFFF</Color>
     <Color x:Key="Color.Success">#FF7FDCA0</Color>
-    <Color x:Key="Color.SuccessSolid">#FF2F7D4F</Color>
-    <Color x:Key="Color.SuccessSolidHover">#FF276941</Color>
+    <Color x:Key="Color.SuccessIcon">#FF43A047</Color>
+    <Color x:Key="Color.SuccessSolid">#FF428A47</Color>
+    <Color x:Key="Color.SuccessSolidHover">#FF429247</Color>
     <Color x:Key="Color.OnSuccess">#FFFFFFFF</Color>
     <Color x:Key="Color.Warning">#FFFFD166</Color>
     <Color x:Key="Color.WarningSolid">#FF7A4F00</Color>
     <Color x:Key="Color.WarningSolidHover">#FF5F3D00</Color>
     <Color x:Key="Color.OnWarning">#FFFFFFFF</Color>
-    <Color x:Key="Color.Focus">#FF67C9F2</Color>
-    <Color x:Key="Color.SelectedRow">#FF1D6F9C</Color>
+    <Color x:Key="Color.Focus">#FF1BA1E2</Color>
+    <Color x:Key="Color.SelectedRow">#FF1BA1E2</Color>
     <Color x:Key="Color.OnSelectedRow">#FFFFFFFF</Color>
 
     <Color x:Key="Color.Scrim">#FF000000</Color>
+
+    <!-- Aronium shortcut labels + background watermark -->
+    <Color x:Key="Color.ShortcutGold">#FFD9AC27</Color>
+    <Color x:Key="Color.ShortcutBlue">#FF55AEE2</Color>
+    <Color x:Key="Color.Watermark">#FF474747</Color>
+    <Color x:Key="Color.MenuPanel">#FF363636</Color>
 
     <SolidColorBrush x:Key="Brush.Bg" Color="{StaticResource Color.Bg}" />
     <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}" />
@@ -55,6 +62,7 @@
     <SolidColorBrush x:Key="Brush.DangerSolidHover" Color="{StaticResource Color.DangerSolidHover}" />
     <SolidColorBrush x:Key="Brush.OnDanger" Color="{StaticResource Color.OnDanger}" />
     <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />
+    <SolidColorBrush x:Key="Brush.SuccessIcon" Color="{StaticResource Color.SuccessIcon}" />
     <SolidColorBrush x:Key="Brush.SuccessSolid" Color="{StaticResource Color.SuccessSolid}" />
     <SolidColorBrush x:Key="Brush.SuccessSolidHover" Color="{StaticResource Color.SuccessSolidHover}" />
     <SolidColorBrush x:Key="Brush.OnSuccess" Color="{StaticResource Color.OnSuccess}" />
@@ -66,6 +74,10 @@
     <SolidColorBrush x:Key="Brush.SelectedRow" Color="{StaticResource Color.SelectedRow}" />
     <SolidColorBrush x:Key="Brush.OnSelectedRow" Color="{StaticResource Color.OnSelectedRow}" />
     <SolidColorBrush x:Key="Brush.Scrim" Color="#8C000000" />
+    <SolidColorBrush x:Key="Brush.ShortcutGold" Color="{StaticResource Color.ShortcutGold}" />
+    <SolidColorBrush x:Key="Brush.ShortcutBlue" Color="{StaticResource Color.ShortcutBlue}" />
+    <SolidColorBrush x:Key="Brush.Watermark" Color="{StaticResource Color.Watermark}" />
+    <SolidColorBrush x:Key="Brush.MenuPanel" Color="{StaticResource Color.MenuPanel}" />
 
     <DropShadowEffect x:Key="Effect.Pop" Color="#FF000000" BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.45" />
     <DropShadowEffect x:Key="Effect.Dialog" Color="#FF000000" BlurRadius="64" ShadowDepth="24" Direction="270" Opacity="0.60" />
