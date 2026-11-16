@@ -26,7 +26,7 @@ public partial class App : Application
 
         _singleInstance = new Mutex(
             initiallyOwned: false,
-            name: @"Local\PosDesktop.SingleInstance",
+            name: @"Local\Aroklon.SingleInstance",
             createdNew: out var isFirstInstance);
 
         if (!isFirstInstance)

@@ -14,9 +14,9 @@
         Colours are DynamicResource so every open window updates without reload.
     -->
 
-    <!-- Type families. Fonts are embedded so a fresh install looks right. -->
-    <FontFamily x:Key="Font.Sans">pack://application:,,,/Assets/Fonts/#Inter</FontFamily>
-    <FontFamily x:Key="Font.Mono">pack://application:,,,/Assets/Fonts/#Cascadia Mono</FontFamily>
+    <!-- Type families. Using system fonts for reliability on Windows. -->
+    <FontFamily x:Key="Font.Sans">Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Mono">Consolas</FontFamily>
 
     <FontWeight x:Key="Font.Weight.Regular">Regular</FontWeight>
     <FontWeight x:Key="Font.Weight.Medium">Medium</FontWeight>
