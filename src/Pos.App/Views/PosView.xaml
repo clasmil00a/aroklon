@@ -282,7 +282,7 @@
                                                             MaxHeight="40" />
                                                         <TextBlock
                                                             Style="{StaticResource Text.Caption}"
-                                                            Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                                            Text="{Binding MarkAsPaid, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
                                                     </StackPanel>
                                                 </Button>
                                             </DataTemplate>
@@ -312,7 +312,7 @@
                                             Command="{Binding DataContext.QuickAddPaymentAmountCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
                                             Style="{StaticResource Button.Secondary}">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Converter={x:Static Binding.DoNothing}, ConverterParameter='Rp {0:N0}'}" />
+                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding ConverterParameter='Rp {0:N0}'}" />
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -339,7 +339,7 @@
                                                     <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding PaymentTypeName}" />
                                                     <TextBlock
                                                         Style="{StaticResource Text.Caption}"
-                                                        Text="{Binding MarkAsPaid, Converter={x:Static Binding.DoNothing}, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
+                                                        Text="{Binding MarkAsPaid, ConverterParameter='Tunai', TargetNullValue='Kredit'}" />
                                                 </StackPanel>
                                                 <TextBox
                                                     Grid.Column="1"
@@ -363,7 +363,7 @@
                             <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Total pembayaran" />
                             <TextBlock
                                 Style="{StaticResource Text.BodyStrong}"
-                                Text="{Binding SelectedPayments, Converter={x:Static Binding.DoNothing}, ConverterParameter='total', TargetNullValue='Rp 0'}" />
+                                Text="{Binding SelectedPayments, ConverterParameter='total', TargetNullValue='Rp 0'}" />
 
                             <Button
                                 Margin="0,16,0,0"
