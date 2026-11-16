@@ -15,6 +15,9 @@
                 <ResourceDictionary Source="Styles/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+            <conv:BoolToTextConverter x:Key="BoolToText" />
+            <conv:StringEqualsConverter x:Key="StringEquals" />
+            <conv:StringMapConverter x:Key="StringMap" />
 
             <DataTemplate DataType="{x:Type vm:OnboardingViewModel}">
                 <views:OnboardingView />

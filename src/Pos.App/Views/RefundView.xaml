@@ -166,12 +166,12 @@
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton
                                         GroupName="RefundPayment"
-                                        IsChecked="{Binding PaymentTypeId, Converter={x:Static Binding.DoNothing}, ConverterParameter='pmt-cash', TargetNullValue='pmt-cash'}"
+                                        IsChecked="{Binding PaymentTypeId, Converter={StaticResource StringEquals}, ConverterParameter='pmt-cash'}"
                                         Content="Tunai"
                                         Style="{StaticResource Segment}" />
                                     <RadioButton
                                         GroupName="RefundPayment"
-                                        IsChecked="{Binding PaymentTypeId, Converter={x:Static Binding.DoNothing}, ConverterParameter='pmt-card', TargetNullValue='pmt-card'}"
+                                        IsChecked="{Binding PaymentTypeId, Converter={StaticResource StringEquals}, ConverterParameter='pmt-card'}"
                                         Content="Kartu"
                                         Style="{StaticResource Segment}" />
                                 </StackPanel>

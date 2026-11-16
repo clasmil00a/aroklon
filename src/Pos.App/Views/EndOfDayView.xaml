@@ -52,7 +52,7 @@
                     <TextBlock
                         Margin="0,4,0,0"
                         Style="{StaticResource Text.Secondary}"
-                        Text="{Binding DayOpen, Converter={x:Static Binding.DoNothing}, ConverterParameter='Terbuka', TargetNullValue='Tertutup'}" />
+                        Text="{Binding DayOpen, Converter={StaticResource BoolToText}, ConverterParameter='Terbuka|Tertutup'}" />
 
                     <Border Margin="0,16,0,0" Padding="10" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderInput}" BorderThickness="{StaticResource Border.Width}" CornerRadius="{StaticResource Radius.Sm}">
                         <StackPanel>

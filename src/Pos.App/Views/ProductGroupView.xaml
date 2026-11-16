@@ -126,7 +126,7 @@
                                             Grid.Column="1"
                                             IsChecked="{Binding Active, Mode=TwoWay}"
                                             VerticalAlignment="Center"
-                                            Style="{StaticResource Segment}" />
+                                            Style="{StaticResource Segment.CheckBox}" />
                                         <Button
                                             Grid.Column="2"
                                             Margin="8,0,0,0"

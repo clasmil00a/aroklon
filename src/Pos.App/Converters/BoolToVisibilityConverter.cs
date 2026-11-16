@@ -10,7 +10,13 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is bool b && b ? Visibility.Visible : Visibility.Collapsed;
+        return value switch
+        {
+            bool flag => flag ? Visibility.Visible : Visibility.Collapsed,
+            string text => string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible,
+            null => Visibility.Collapsed,
+            _ => Visibility.Visible,
+        };
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>

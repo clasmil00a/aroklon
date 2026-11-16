@@ -63,6 +63,8 @@
     <CornerRadius x:Key="Radius.Pill">999</CornerRadius>
 
     <Thickness x:Key="Padding.Control">12,0,12,0</Thickness>
+    <Thickness x:Key="Padding.Card">16</Thickness>
+    <Thickness x:Key="Padding.Tile">16</Thickness>
     <Thickness x:Key="Padding.Cell">12,0,12,0</Thickness>
     <Thickness x:Key="Padding.Page">24</Thickness>
     <Thickness x:Key="Padding.Dialog">24</Thickness>

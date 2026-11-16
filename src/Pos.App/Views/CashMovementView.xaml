@@ -53,12 +53,12 @@
                         <StackPanel Orientation="Horizontal">
                             <RadioButton
                                 GroupName="CashDirection"
-                                IsChecked="{Binding Direction, Converter={x:Static Binding.DoNothing}, ConverterParameter='in', TargetNullValue='in'}"
+                                IsChecked="{Binding Direction, Converter={StaticResource StringEquals}, ConverterParameter='in'}"
                                 Content="Masuk"
                                 Style="{StaticResource Segment}" />
                             <RadioButton
                                 GroupName="CashDirection"
-                                IsChecked="{Binding Direction, Converter={x:Static Binding.DoNothing}, ConverterParameter='out', TargetNullValue='out'}"
+                                IsChecked="{Binding Direction, Converter={StaticResource StringEquals}, ConverterParameter='out'}"
                                 Content="Keluar"
                                 Style="{StaticResource Segment}" />
                         </StackPanel>
@@ -125,7 +125,7 @@
                                             <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Reason}" />
                                             <TextBlock
                                                 Style="{StaticResource Text.Caption}"
-                                                Text="{Binding Direction, Converter={x:Static Binding.DoNothing}, ConverterParameter='in', TargetNullValue='Masuk'}"
+                                                Text="{Binding Direction, Converter={StaticResource StringMap}, ConverterParameter='in=Masuk;out=Keluar'}"
                                                 Foreground="{DynamicResource Brush.Success}" />
                                         </StackPanel>
                                         <TextBlock

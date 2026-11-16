@@ -144,7 +144,7 @@
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource Text.Caption}"
-                                            Text="{Binding IsDefault, Converter={x:Static Binding.DoNothing}, ConverterParameter='Bawaan', TargetNullValue=''}"
+                                            Text="{Binding IsDefault, Converter={StaticResource BoolToText}, ConverterParameter='Bawaan|'}"
                                             Foreground="{DynamicResource Brush.Success}" />
                                         <Button
                                             Grid.Column="2"

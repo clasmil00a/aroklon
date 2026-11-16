@@ -138,7 +138,7 @@
                                                 IsChecked="{Binding MarkAsPaid, Mode=TwoWay}"
                                                 IsEnabled="False"
                                                 VerticalAlignment="Center"
-                                                Style="{StaticResource Segment}" />
+                                                Style="{StaticResource Segment.CheckBox}" />
                                             <TextBlock
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"
@@ -149,7 +149,7 @@
                                             <CheckBox
                                                 IsChecked="{Binding Active, Mode=TwoWay}"
                                                 VerticalAlignment="Center"
-                                                Style="{StaticResource Segment}" />
+                                                Style="{StaticResource Segment.CheckBox}" />
                                             <TextBlock
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"

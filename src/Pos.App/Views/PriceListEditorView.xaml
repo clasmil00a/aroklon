@@ -128,7 +128,7 @@
                                 Margin="0,8,0,0"
                                 Height="44"
                                 Command="{Binding ToggleListActiveCommand}"
-                                Content="{Binding List.Active, Converter={x:Static Binding.DoNothing}, ConverterParameter='Nonaktifkan Daftar Harga', TargetNullValue='Nonaktifkan Daftar Harga'}"
+                                Content="{Binding List.Active, Converter={StaticResource BoolToText}, ConverterParameter='Nonaktifkan Daftar Harga|Aktifkan Daftar Harga'}"
                                 IsEnabled="{Binding IsNotBusy}"
                                 Style="{StaticResource Button.Ghost}" />
 

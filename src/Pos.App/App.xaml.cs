@@ -19,6 +19,7 @@ public partial class App : Application
 {
     private Mutex? _singleInstance;
     private IHost? _host;
+    private int _dispatcherFailureHandled;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -202,14 +203,34 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Log.Fatal(e.Exception, "Unhandled dispatcher exception");
+        // Mark the event as handled before doing anything else. Showing a
+        // dialog here pumps the dispatcher again; if the same layout failure
+        // repeats, that nested message box would call this handler again and
+        // recurse until the stack overflows ("A new guard page for the stack
+        // cannot be created"). The guard turns that loop into a single report.
         e.Handled = true;
-        MessageBox.Show(
-            "Terjadi kesalahan tak terduga. Aplikasi akan ditutup. Data yang sudah tersimpan tetap aman.",
-            "POS",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
-        Shutdown(1);
+        if (Interlocked.Exchange(ref _dispatcherFailureHandled, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            Log.Fatal(e.Exception, "Unhandled dispatcher exception");
+            MessageBox.Show(
+                "Terjadi kesalahan tak terduga. Aplikasi akan ditutup. Data yang sudah tersimpan tetap aman.",
+                "POS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        catch (Exception reportException)
+        {
+            Log.Error(reportException, "Failed to report the unhandled dispatcher exception");
+        }
+        finally
+        {
+            Shutdown(1);
+        }
     }
 
     private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)

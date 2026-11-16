@@ -6,7 +6,9 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="{StaticResource Layout.TopBar}" />
+            <!-- RowDefinition.Height is GridLength; the Double token Layout.TopBar
+                 cannot be assigned here directly. -->
+            <RowDefinition Height="56" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 

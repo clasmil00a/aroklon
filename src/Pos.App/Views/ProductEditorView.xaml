@@ -121,14 +121,14 @@
                                             HorizontalAlignment="Right"
                                             Style="{StaticResource Text.Caption}"
                                             Text="{Binding StockInSellingUnitMilli, StringFormat='Stok: {} {0:N0}'}" />
-                                        <CheckBox
+                                        <Button
                                             Grid.Column="3"
                                             VerticalAlignment="Center"
-                                            IsChecked="{Binding Active, Mode=TwoWay}"
+                                            Padding="8,4"
                                             Command="{Binding DataContext.ToggleVariantActiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="{Binding Active, Converter={x:Static Binding.DoNothing}, ConverterParameter='Aktif', TargetNullValue='Nonaktif'}"
-                                            Style="{StaticResource Segment}" />
+                                            Content="{Binding Active, Converter={StaticResource BoolToText}, ConverterParameter='Aktif|Nonaktif'}"
+                                            Style="{StaticResource Button.Ghost}" />
                                         <StackPanel Grid.Column="4" Orientation="Horizontal">
                                             <Button
                                                 Width="28"
