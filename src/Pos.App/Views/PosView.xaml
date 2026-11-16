@@ -211,14 +211,6 @@
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
                     <Button
-                        Command="{Binding LockScreenCommand}"
-                        Content="&#xE72E;"
-                        FontFamily="Segoe MDL2 Assets"
-                        FontSize="15"
-                        Foreground="{DynamicResource Brush.TextMuted}"
-                        Style="{StaticResource Button.Icon}"
-                        ToolTip="Kunci layar" />
-                    <Button
                         Command="{Binding ShowCustomerCommand}"
                         Style="{StaticResource Button.Ghost}"
                         ToolTip="Pilih pelanggan">
@@ -257,8 +249,8 @@
             <Border
                 Grid.Column="0"
                 Margin="6,0,0,0"
-                Background="{DynamicResource Brush.Bg}"
-                BorderBrush="{DynamicResource Brush.Border}"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource Brush.Bg}"
                 BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>

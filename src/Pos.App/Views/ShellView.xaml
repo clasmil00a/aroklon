@@ -33,9 +33,9 @@
                 Effect="{DynamicResource Effect.Pop}">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="50" />
-                        <RowDefinition Height="*" />
                         <RowDefinition Height="44" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="40" />
                         <RowDefinition Height="73" />
                     </Grid.RowDefinitions>
 
@@ -86,13 +86,14 @@
                                             Background="{DynamicResource Brush.Border}"
                                             Visibility="{Binding SeparatorBefore, Converter={StaticResource BoolToVisibility}}" />
                                         <TextBlock
-                                            Margin="8,14,8,2"
+                                            Margin="12,14,12,2"
                                             FontSize="{StaticResource Font.Size.Sm}"
+                                            FontWeight="{StaticResource Font.Weight.SemiBold}"
                                             Foreground="{DynamicResource Brush.TextMuted}"
                                             Text="{Binding Section}"
                                             Visibility="{Binding Section, Converter={StaticResource StringToVisibility}}" />
                                         <Button
-                                            Height="55"
+                                            Height="50"
                                             Padding="18,0,12,0"
                                             Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding Route}"
