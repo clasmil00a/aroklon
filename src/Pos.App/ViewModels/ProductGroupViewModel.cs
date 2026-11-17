@@ -45,9 +45,13 @@ public sealed partial class ProductGroupViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsNotBusy => !IsBusy;
+    public bool IsEditing => _editingId is not null;
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+
+    [RelayCommand]
+    private async Task RefreshAsync() => await InitializeAsync();
 
     public async Task InitializeAsync()
     {
@@ -110,6 +114,7 @@ public sealed partial class ProductGroupViewModel : ObservableObject
             SortOrder = 0;
             Active = true;
             _editingId = null;
+            OnPropertyChanged(nameof(IsEditing));
             await InitializeAsync();
         }
         catch (Pos.Domain.ConflictException)
@@ -132,6 +137,7 @@ public sealed partial class ProductGroupViewModel : ObservableObject
     {
         if (group is null) return;
         _editingId = group.Id;
+        OnPropertyChanged(nameof(IsEditing));
         Name = group.Name;
         Description = group.Description;
         SortOrder = group.SortOrder;
@@ -142,6 +148,7 @@ public sealed partial class ProductGroupViewModel : ObservableObject
     private void CancelEdit()
     {
         _editingId = null;
+        OnPropertyChanged(nameof(IsEditing));
         Name = string.Empty;
         Description = null;
         SortOrder = 0;

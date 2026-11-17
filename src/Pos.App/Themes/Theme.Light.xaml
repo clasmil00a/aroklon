@@ -4,12 +4,13 @@
 
     <!-- Light theme: alternate for bright rooms and the discount dialog reference. -->
 
-    <Color x:Key="Color.Bg">#FFFFFFFF</Color>
-    <Color x:Key="Color.Surface">#FFF4F6F8</Color>
-    <Color x:Key="Color.SurfaceRaised">#FFFFFFFF</Color>
-    <Color x:Key="Color.SurfaceHover">#FFEEF1F4</Color>
-    <Color x:Key="Color.Border">#FFD5D9DE</Color>
-    <Color x:Key="Color.BorderInput">#FF737D87</Color>
+    <Color x:Key="Color.Bg">#FFF0F0F0</Color>
+    <Color x:Key="Color.Surface">#FFFFFFFF</Color>
+    <Color x:Key="Color.SurfaceRaised">#FFF7F7F7</Color>
+    <Color x:Key="Color.SurfaceHover">#FFE5E5E5</Color>
+    <Color x:Key="Color.Control">#FFFFFFFF</Color>
+    <Color x:Key="Color.Border">#FFC9C9C9</Color>
+    <Color x:Key="Color.BorderInput">#FFA6A6A6</Color>
     <Color x:Key="Color.Text">#FF1F2328</Color>
     <Color x:Key="Color.TextMuted">#FF5B6570</Color>
     <Color x:Key="Color.TextDisabled">#FF8A8F96</Color>
@@ -40,8 +41,10 @@
     <!-- Aronium shortcut labels + background watermark -->
     <Color x:Key="Color.ShortcutGold">#FFD9AC27</Color>
     <Color x:Key="Color.ShortcutBlue">#FF55AEE2</Color>
-    <Color x:Key="Color.Watermark">#FFD7DBDE</Color>
-    <Color x:Key="Color.MenuPanel">#FF363636</Color>
+    <Color x:Key="Color.Watermark">#FFD0D0D0</Color>
+    <Color x:Key="Color.MenuPanel">#FFF7F7F7</Color>
+    <Color x:Key="Color.CheckAccent">#FF4CAF50</Color>
+    <Color x:Key="Color.LoginLogo">#FF00CEDF</Color>
 
     <SolidColorBrush x:Key="Brush.Bg" Color="{StaticResource Color.Bg}" />
     <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}" />
@@ -49,6 +52,7 @@
     <SolidColorBrush x:Key="Brush.SurfaceHover" Color="{StaticResource Color.SurfaceHover}" />
     <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource Color.Border}" />
     <SolidColorBrush x:Key="Brush.BorderInput" Color="{StaticResource Color.BorderInput}" />
+    <SolidColorBrush x:Key="Brush.Control" Color="{StaticResource Color.Control}" />
     <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource Color.Text}" />
     <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource Color.TextMuted}" />
     <SolidColorBrush x:Key="Brush.TextDisabled" Color="{StaticResource Color.TextDisabled}" />
@@ -78,6 +82,8 @@
     <SolidColorBrush x:Key="Brush.ShortcutBlue" Color="{StaticResource Color.ShortcutBlue}" />
     <SolidColorBrush x:Key="Brush.Watermark" Color="{StaticResource Color.Watermark}" />
     <SolidColorBrush x:Key="Brush.MenuPanel" Color="{StaticResource Color.MenuPanel}" />
+    <SolidColorBrush x:Key="Brush.CheckAccent" Color="{StaticResource Color.CheckAccent}" />
+    <SolidColorBrush x:Key="Brush.LoginLogo" Color="{StaticResource Color.LoginLogo}" />
 
     <DropShadowEffect x:Key="Effect.Pop" Color="#FF17202C" BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.14" />
     <DropShadowEffect x:Key="Effect.Dialog" Color="#FF17202C" BlurRadius="64" ShadowDepth="24" Direction="270" Opacity="0.22" />

@@ -133,6 +133,9 @@ public sealed partial class CashMovementViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RefreshAsync() => await LoadAsync();
+
+    [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
 
     public event Action? BackRequested;

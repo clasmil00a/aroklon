@@ -2,17 +2,67 @@
     x:Class="Pos.App.Views.StubView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}">
+    Background="{DynamicResource Brush.Surface}">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Border
-            MaxWidth="720"
-            Margin="24"
-            Padding="32"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            Style="{StaticResource Card}">
-            <StackPanel>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding BackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali" />
+                <TextBlock
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="{Binding Title}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding BackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke beranda">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Stub content -->
+        <ScrollViewer
+            Grid.Row="2"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto"
+            CanContentScroll="False"
+            PanningMode="VerticalOnly">
+            <StackPanel
+                MaxWidth="760"
+                Margin="24"
+                HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal">
                     <Border Style="{StaticResource Badge}">
                         <TextBlock Style="{StaticResource Text.Mono}" Text="{Binding ScreenId}" />
@@ -36,21 +86,20 @@
                     Margin="0,24"
                     Background="{DynamicResource Brush.Border}" />
 
-                <TextBlock
-                    Margin="0,0,0,8"
-                    Style="{StaticResource Text.SectionTitle}"
-                    Text="Layar ini belum dibangun" />
+                <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.SectionTitle}" Text="Layar ini belum dibangun" />
                 <TextBlock
                     Style="{StaticResource Text.Body}"
                     Text="Rute, judul, dan statusnya sudah terdaftar di kerangka aplikasi. Isi layar akan dibuat pada milestone yang tertera, setelah alur kasir inti selesai."
                     TextWrapping="Wrap" />
 
-                <Border Margin="0,20,0,0" Style="{StaticResource Card}" Background="{DynamicResource Brush.Bg}">
+                <Border
+                    Margin="0,20,0,0"
+                    Padding="12"
+                    Background="{DynamicResource Brush.Bg}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="1">
                     <StackPanel>
-                        <TextBlock
-                            Margin="0,0,0,8"
-                            Style="{StaticResource Text.BodyStrong}"
-                            Text="Sudah siap untuk layar ini" />
+                        <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.BodyStrong}" Text="Sudah siap untuk layar ini" />
                         <TextBlock Style="{StaticResource Text.Secondary}" Text="• Autentikasi dan sesi pengguna" />
                         <TextBlock Style="{StaticResource Text.Secondary}" Text="• Database lokal dengan skema lengkap" />
                         <TextBlock Style="{StaticResource Text.Secondary}" Text="• Tema, token, dan komponen dasar" />
@@ -65,6 +114,6 @@
                     Content="Kembali ke beranda"
                     Style="{StaticResource Button.Primary}" />
             </StackPanel>
-        </Border>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

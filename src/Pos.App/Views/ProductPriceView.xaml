@@ -2,120 +2,188 @@
     x:Class="Pos.App.Views.ProductPriceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Harga Produk" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali ke editor produk" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Lihat harga tiap daftar harga untuk semua satuan jual produk. Tanda '!' berarti warisan." />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Harga produk" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S41 · M2" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke editor produk">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Two-pane content -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Style="{StaticResource Text.BodyStrong}"
-                        Text="{Binding Detail.Name, TargetNullValue='Produk'}" />
-                    <TextBlock
-                        Style="{StaticResource Text.Caption}"
-                        Text="{Binding Detail.Code, TargetNullValue='—'}" />
-                    <TextBlock
-                        Margin="0,6,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding Detail.BaseUnitName, StringFormat='Dasar: {} {0}'}" />
+            <!-- Product info -->
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Produk" />
+                    </Border>
 
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding GoBackCommand}"
-                        Content="← Kembali ke editor produk"
-                        Style="{StaticResource Button.Ghost}" />
+                    <StackPanel Grid.Row="1" Margin="16">
+                        <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Detail.Name, TargetNullValue='—'}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource Text.Caption}"
+                            Text="{Binding Detail.Code, TargetNullValue='—'}" />
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            Style="{StaticResource Text.Secondary}"
+                            Text="{Binding Detail.BaseUnitName, StringFormat='Dasar: {} {0}'}" />
 
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                        <TextBlock
+                            Margin="0,16,0,0"
+                            Style="{StaticResource Text.Error}"
+                            Text="{Binding ErrorMessage}"
+                            TextWrapping="Wrap"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Harga per daftar &amp; satuan" />
-                    <ItemsControl ItemsSource="{Binding Lines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding PriceListName}" />
+            <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
+
+            <!-- Price table -->
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Bg}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <Grid Margin="12,0">
+                            <TextBlock Style="{StaticResource Aronium.PanelHeaderText}" Text="Harga per daftar &amp; satuan" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.StatusText}"
+                                Text="{Binding Lines.Count, StringFormat='{}{0} baris'}" />
+                        </Grid>
+                    </Border>
+
+                    <Border
+                        Grid.Row="1"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,0,0,1">
+                        <Grid Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="140" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="Daftar harga" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Satuan" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Harga" />
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer
+                        Grid.Row="2"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        CanContentScroll="False"
+                        PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Lines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Aronium.TableRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="140" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Aronium.TableCell}" Text="{Binding PriceListName}" />
                                             <TextBlock
-                                                Style="{StaticResource Text.Caption}"
+                                                Grid.Column="1"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
                                                 Text="{Binding UnitName, TargetNullValue='—'}" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Text.BodyStrong}"
-                                            Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit (!)'}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding DataContext.GoBackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Content="← Kembali"
-                        Style="{StaticResource Button.Ghost}" />
-                </StackPanel>
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Right"
+                                                Style="{StaticResource Aronium.TableCell}"
+                                                Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit (!)'}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+
+        <!-- Status strip -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Lines.Count, StringFormat='{}{0} harga'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

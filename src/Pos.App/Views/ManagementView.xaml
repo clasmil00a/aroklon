@@ -2,28 +2,39 @@
     x:Class="Pos.App.Views.ManagementView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}">
+    Background="{DynamicResource Brush.Surface}">
 
     <UserControl.Resources>
-        <Style x:Key="ModuleTile" TargetType="Button" BasedOn="{StaticResource Button.Tile}">
-            <Setter Property="Width" Value="250" />
-            <Setter Property="MinHeight" Value="104" />
-            <Setter Property="Margin" Value="0,0,10,10" />
-            <Setter Property="Padding" Value="14" />
+        <Style x:Key="RailButton" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+            <Setter Property="Width" Value="49" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="ModuleButton" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+            <Setter Property="Height" Value="72" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="52" />
+            <RowDefinition Height="41" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- Aronium path strip -->
         <Border
             Grid.Row="0"
-            Background="{DynamicResource Brush.SurfaceRaised}"
+            Background="{DynamicResource Brush.Surface}"
             BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="0,0,0,1">
             <StackPanel
@@ -36,86 +47,154 @@
                     Style="{StaticResource Button.Icon}"
                     ToolTip="Kembali ke kasir" />
                 <TextBlock
-                    Margin="10,0,0,0"
+                    Margin="6,0,0,0"
                     VerticalAlignment="Center"
-                    FontWeight="{StaticResource Font.Weight.SemiBold}"
-                    Style="{StaticResource Text.Body}"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.TextMuted}"
                     Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="•" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.Text}"
+                    Text="Modul" />
             </StackPanel>
         </Border>
 
-        <ScrollViewer
-            Grid.Row="1"
-            HorizontalScrollBarVisibility="Disabled"
-            VerticalScrollBarVisibility="Auto"
-            CanContentScroll="False"
-            PanningMode="VerticalOnly">
-            <StackPanel Margin="24">
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Manajemen" />
-                <TextBlock
-                    Margin="0,4,0,20"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Pilih modul untuk mengelola toko. Semua data tersimpan di database lokal." />
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="49" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                <ItemsControl ItemsSource="{Binding Modules}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button
-                                Command="{Binding DataContext.OpenModuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}"
-                                Style="{StaticResource ModuleTile}">
-                                <StackPanel>
-                                    <TextBlock
-                                        FontFamily="Segoe MDL2 Assets"
-                                        FontSize="26"
-                                        Foreground="{DynamicResource Brush.Accent}"
-                                        Text="{Binding Icon}" />
-                                    <TextBlock
-                                        Margin="0,8,0,0"
-                                        FontSize="{StaticResource Font.Size.Lg}"
-                                        FontWeight="{StaticResource Font.Weight.SemiBold}"
-                                        Text="{Binding Title}" />
-                                    <TextBlock
-                                        Margin="0,3,0,0"
-                                        Style="{StaticResource Text.Secondary}"
-                                        Text="{Binding Description}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+            <!-- Management icon rail -->
+            <Border
+                Grid.Column="0"
+                Background="{DynamicResource Brush.Surface}"
+                BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,0,1,0">
+                <StackPanel>
+                    <Button
+                        Command="{Binding OpenReportsCommand}"
+                        Content="&#xE9D2;"
+                        Style="{StaticResource RailButton}"
+                        ToolTip="Laporan" />
+                    <Button
+                        Command="{Binding OpenHistoryCommand}"
+                        Content="&#xE81C;"
+                        Style="{StaticResource RailButton}"
+                        ToolTip="Riwayat penjualan" />
+                    <Button
+                        Command="{Binding OpenProductsCommand}"
+                        Content="&#xE7BF;"
+                        Style="{StaticResource RailButton}"
+                        ToolTip="Produk" />
+                    <Button
+                        Command="{Binding OpenSettingsCommand}"
+                        Content="&#xE713;"
+                        Style="{StaticResource RailButton}"
+                        ToolTip="Pengaturan" />
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="74" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
                 <Border
-                    Margin="0,12,0,0"
-                    Style="{StaticResource Card}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pengaturan aplikasi" />
-                            <TextBlock
-                                Margin="0,3,0,0"
-                                Style="{StaticResource Text.Secondary}"
-                                Text="Printer struk, tema, cadangan, dan data perusahaan."
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                        <Button
-                            Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Command="{Binding OpenSettingsCommand}"
-                            Content="Buka pengaturan"
-                            Style="{StaticResource Button.Secondary}" />
-                    </Grid>
+                    Grid.Row="0"
+                    Background="{DynamicResource Brush.Bg}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="0,0,0,1">
+                    <StackPanel
+                        Margin="22,0,0,0"
+                        VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="22"
+                            FontWeight="{StaticResource Font.Weight.Light}"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="Manajemen" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="Pilih modul untuk mengelola toko. Semua data tersimpan di database lokal." />
+                    </StackPanel>
                 </Border>
-            </StackPanel>
-        </ScrollViewer>
+
+                <ScrollViewer
+                    Grid.Row="1"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
+                    CanContentScroll="False"
+                    PanningMode="VerticalOnly">
+                    <ItemsControl ItemsSource="{Binding Modules}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button
+                                    Command="{Binding DataContext.OpenModuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource ModuleButton}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="52" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border
+                                            Width="38"
+                                            Height="38"
+                                            Background="{DynamicResource Brush.SurfaceRaised}">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontFamily="Segoe MDL2 Assets"
+                                                FontSize="19"
+                                                Foreground="{DynamicResource Brush.Accent}"
+                                                Text="{Binding Icon}" />
+                                        </Border>
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="12,0,10,0"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                FontSize="14"
+                                                FontWeight="{StaticResource Font.Weight.SemiBold}"
+                                                Foreground="{DynamicResource Brush.Text}"
+                                                Text="{Binding Title}" />
+                                            <TextBlock
+                                                Margin="0,2,0,0"
+                                                FontSize="12"
+                                                Foreground="{DynamicResource Brush.TextMuted}"
+                                                Text="{Binding Description}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            FontFamily="Segoe MDL2 Assets"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource Brush.TextMuted}"
+                                            Text="&#xE76C;" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

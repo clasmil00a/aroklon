@@ -2,96 +2,184 @@
     x:Class="Pos.App.Views.UserManagementView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <UserControl.Resources>
+        <Style x:Key="RoleRow" TargetType="ListBoxItem">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="Row"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource Brush.SurfaceRaised}"
+                            BorderThickness="0,0,0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SelectedRow}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Pengguna &amp; Akses" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Kelola pengguna dan izin akses (S25)." />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Pengguna &amp; akses" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S25 · M6" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Muat ulang daftar pengguna">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72C;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Muat ulang" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Simpan pengguna">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon.Accent}" Text="&#xE710;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption.Accent}" Text="Simpan" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding CancelEditCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Bersihkan form">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE74D;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Batal" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke manajemen">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Two-pane content -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Form -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Pengguna baru" />
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}">
+                <StackPanel Margin="20,16,20,16">
+                    <TextBlock Style="{StaticResource Aronium.SectionHeading}" Text="Pengguna baru" />
 
-                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama pengguna" />
+                    <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="NAMA PENGGUNA" />
                     <TextBox
+                        Height="32"
                         Style="{StaticResource Input}"
                         Text="{Binding NewUsername, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Nama lengkap" />
+                    <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="NAMA LENGKAP" />
                     <TextBox
+                        Height="32"
                         Style="{StaticResource Input}"
                         Text="{Binding NewFullName, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Kata sandi" />
+                    <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="KATA SANDI" />
                     <TextBox
+                        Height="32"
                         Style="{StaticResource Input}"
                         Text="{Binding NewPassword, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Role" />
-                    <ItemsControl ItemsSource="{Binding Roles}">
-                        <ItemsControl.ItemTemplate>
+                    <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="ROLE" />
+                    <ListBox
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ItemContainerStyle="{StaticResource RoleRow}"
+                        ItemsSource="{Binding Roles}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectedValue="{Binding NewRoleId, Mode=TwoWay}"
+                        SelectedValuePath="Id"
+                        Style="{StaticResource ListBox.Plain}">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton
-                                    GroupName="UserRole"
-                                    IsChecked="{Binding DataContext.NewRoleId, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    Content="{Binding Name}"
-                                    Style="{StaticResource Segment}"
-                                    Margin="0,2" />
+                                <TextBlock
+                                    FontSize="13"
+                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                    Text="{Binding Name}" />
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
                     <CheckBox
-                        Margin="0,10,0,0"
-                        IsChecked="{Binding NewActive, Mode=TwoWay}"
-                        Content="Aktif" />
+                        Margin="0,14,0,0"
+                        Content="Aktif"
+                        IsChecked="{Binding NewActive, Mode=TwoWay}" />
 
                     <Button
-                        Margin="0,16,0,0"
-                        Height="44"
+                        Height="32"
+                        Margin="0,18,0,0"
                         Command="{Binding SaveCommand}"
-                        Content="Simpan Pengguna"
+                        Content="Simpan pengguna"
                         IsDefault="True"
                         IsEnabled="{Binding IsNotBusy}"
                         Style="{StaticResource Button.Primary}" />
-
                     <Button
+                        Height="32"
                         Margin="0,8,0,0"
                         Command="{Binding CancelEditCommand}"
                         Content="Batal"
@@ -103,95 +191,129 @@
                         Text="{Binding ErrorMessage}"
                         TextWrapping="Wrap"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
                     <TextBlock
                         Margin="0,12,0,0"
                         Style="{StaticResource Text.Secondary}"
                         Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                        Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
                 </StackPanel>
             </Border>
 
-            <!-- List -->
-            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Daftar pengguna" />
-                    <ItemsControl ItemsSource="{Binding Users}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Username}" />
+            <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
+
+            <!-- User list -->
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Bg}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <Grid Margin="12,0">
+                            <TextBlock Style="{StaticResource Aronium.PanelHeaderText}" Text="Daftar pengguna" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.StatusText}"
+                                Text="{Binding Users.Count, StringFormat='{}{0} pengguna'}" />
+                        </Grid>
+                    </Border>
+
+                    <Border
+                        Grid.Row="1"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,0,0,1">
+                        <Grid Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="90" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="Nama pengguna" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Nama lengkap" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource Aronium.TableHeaderText}" Text="Role" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource Aronium.TableHeaderText}" Text="Aktif" />
+                            <TextBlock
+                                Grid.Column="4"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Aksi" />
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer
+                        Grid.Row="2"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        CanContentScroll="False"
+                        PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Users}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Aronium.TableRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="90" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Aronium.TableCell}" Text="{Binding Username}" />
                                             <TextBlock
-                                                Style="{StaticResource Text.Caption}"
+                                                Grid.Column="1"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
                                                 Text="{Binding FullName}" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Text.Caption}"
-                                            Text="{Binding RoleName}" />
-                                        <CheckBox
-                                            Grid.Column="2"
-                                            IsChecked="{Binding Active, Mode=TwoWay}"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Segment.CheckBox}" />
-                                        <Button
-                                            Grid.Column="3"
-                                            Margin="8,0,0,0"
-                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="Ubah"
-                                            Style="{StaticResource Button.Ghost}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{StaticResource Text.Caption}"
-                        Text="{Binding Users.Count, StringFormat='{}{0} pengguna'}" />
-
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding GoBackCommand}"
-                        Content="← Kembali ke beranda"
-                        Style="{StaticResource Button.Ghost}" />
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
+                                                Text="{Binding RoleName}" />
+                                            <TextBlock Grid.Column="3">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Aronium.TableCell}">
+                                                        <Setter Property="Text" Value="Tidak" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Active}" Value="True">
+                                                                <Setter Property="Text" Value="Aktif" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Success}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <Button
+                                                Grid.Column="4"
+                                                HorizontalAlignment="Right"
+                                                Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="Ubah"
+                                                Style="{StaticResource Aronium.LinkButton}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+
+        <!-- Status strip -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Users.Count, StringFormat='{}{0} pengguna'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

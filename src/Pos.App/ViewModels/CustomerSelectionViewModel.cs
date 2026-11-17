@@ -11,6 +11,7 @@ namespace Pos.App.ViewModels;
 public sealed partial class CustomerSelectionViewModel : ObservableObject
 {
     private readonly CustomerService _customers;
+    private IReadOnlyList<CustomerSummary> _allCustomers = [];
 
     [ObservableProperty]
     private ObservableCollection<CustomerSummary> _customerList = new();
@@ -36,6 +37,19 @@ public sealed partial class CustomerSelectionViewModel : ObservableObject
 
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        var term = SearchText.Trim();
+        var filtered = string.IsNullOrEmpty(term)
+            ? _allCustomers
+            : _allCustomers.Where(customer =>
+                customer.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                (customer.Code?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (customer.PriceListName?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+        CustomerList = new ObservableCollection<CustomerSummary>(filtered);
+    }
 
     public async Task InitializeAsync()
     {
@@ -48,8 +62,8 @@ public sealed partial class CustomerSelectionViewModel : ObservableObject
         ErrorMessage = string.Empty;
         try
         {
-            var list = await _customers.ListActiveAsync();
-            CustomerList = new ObservableCollection<CustomerSummary>(list);
+            _allCustomers = await _customers.ListActiveAsync();
+            ApplyFilter();
         }
         catch (Exception exception)
         {
@@ -74,8 +88,17 @@ public sealed partial class CustomerSelectionViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchAsync()
     {
-        await InitializeAsync();
+        if (_allCustomers.Count == 0)
+        {
+            await InitializeAsync();
+            return;
+        }
+
+        ApplyFilter();
     }
+
+    [RelayCommand]
+    private async Task RefreshAsync() => await InitializeAsync();
 
     [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();

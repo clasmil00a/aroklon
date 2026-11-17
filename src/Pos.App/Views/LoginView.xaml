@@ -5,108 +5,420 @@
     Background="{DynamicResource Brush.Bg}"
     Loaded="OnLoaded">
 
-    <Grid>
-        <Border
-            Width="420"
-            Padding="32"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Style="{StaticResource Card}">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                    <Border
-                        Width="48"
-                        Height="48"
-                        Background="{DynamicResource Brush.Accent}"
-                        CornerRadius="{StaticResource Radius.Md}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
+    <UserControl.Resources>
+        <Style x:Key="LoginKey" TargetType="Button">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Bg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceRaised}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LoginFieldBorder" TargetType="Border">
+            <Setter Property="Width" Value="228" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style x:Key="LoginFieldInput" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer
+                            x:Name="PART_ContentHost"
+                            Margin="{TemplateBinding Padding}"
                             VerticalAlignment="Center"
-                            FontSize="24"
-                            FontWeight="{StaticResource Font.Weight.Bold}"
-                            Foreground="{DynamicResource Brush.OnAccent}"
-                            Text="A" />
-                    </Border>
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock
-                            FontSize="{StaticResource Font.Size.Xl}"
-                            FontWeight="{StaticResource Font.Weight.SemiBold}"
-                            Text="Aroklon" />
-                        <TextBlock
-                            Style="{StaticResource Text.Secondary}"
-                            Text="{Binding ShopName}" />
-                    </StackPanel>
+                            Focusable="False"
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Hidden" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LoginPasswordInput" TargetType="PasswordBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <ScrollViewer
+                            x:Name="PART_ContentHost"
+                            Margin="{TemplateBinding Padding}"
+                            VerticalAlignment="Center"
+                            Focusable="False"
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Hidden" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LoginArrow" TargetType="Button" BasedOn="{StaticResource LoginKey}">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        </Style>
+
+        <Style x:Key="LoginLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Button
+            Margin="0,10,12,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Command="{Binding ExitCommand}"
+            Content="&#xE7E8;"
+            FontFamily="Segoe MDL2 Assets"
+            FontSize="20"
+            Foreground="{DynamicResource Brush.Text}"
+            Style="{StaticResource Button.Icon}"
+            ToolTip="Keluar aplikasi" />
+
+        <StackPanel
+            Width="760"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <!-- Logo -->
+            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                <Grid Width="70" Height="62">
+                    <Path
+                        Data="M 21,3 L 49,3 L 66,31 L 49,59 L 21,59 L 4,31 Z"
+                        Stroke="{DynamicResource Brush.LoginLogo}"
+                        StrokeThickness="4" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,-2,0,0"
+                        FontFamily="{StaticResource Font.Sans}"
+                        FontSize="42"
+                        FontWeight="{StaticResource Font.Weight.Light}"
+                        Foreground="{DynamicResource Brush.LoginLogo}"
+                        Text="a" />
+                </Grid>
+            </StackPanel>
+            <TextBlock
+                Margin="0,10,0,0"
+                HorizontalAlignment="Center"
+                FontFamily="{StaticResource Font.Sans}"
+                FontSize="34"
+                FontWeight="{StaticResource Font.Weight.Light}"
+                Foreground="{DynamicResource Brush.Text}"
+                Text="aroklon" />
+
+            <!-- Login fields -->
+            <TextBlock
+                Margin="0,26,0,0"
+                HorizontalAlignment="Center"
+                FontFamily="{StaticResource Font.Sans}"
+                FontSize="13"
+                Foreground="{DynamicResource Brush.Text}"
+                Text="Login" />
+
+            <TextBlock Style="{StaticResource LoginLabel}" Margin="0,12,0,4" Text="Nama pengguna" />
+            <Border Style="{StaticResource LoginFieldBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="30" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        x:Name="UsernameBox"
+                        Grid.Column="0"
+                        GotFocus="OnFieldGotFocus"
+                        IsVisibleChanged="OnLoginFieldVisibleChanged"
+                        Style="{StaticResource LoginFieldInput}"
+                        Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SignInCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <TextBlock
+                        Grid.Column="0"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="13"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        IsHitTestVisible="False"
+                        Text="Nama pengguna">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Username}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Button
+                        Grid.Column="1"
+                        Click="OnUsernameArrowClick"
+                        Content="&#x2192;"
+                        Style="{StaticResource LoginArrow}"
+                        ToolTip="Lanjut ke kata sandi" />
+                </Grid>
+            </Border>
+
+            <TextBlock Style="{StaticResource LoginLabel}" Margin="0,10,0,4" Text="Kata sandi" />
+            <Border Style="{StaticResource LoginFieldBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="30" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox
+                        x:Name="PasswordBox"
+                        Grid.Column="0"
+                        GotFocus="OnFieldGotFocus"
+                        IsVisibleChanged="OnLoginFieldVisibleChanged"
+                        PasswordChanged="OnPasswordChanged"
+                        Style="{StaticResource LoginPasswordInput}">
+                        <PasswordBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SignInCommand}" />
+                        </PasswordBox.InputBindings>
+                    </PasswordBox>
+                    <TextBlock
+                        x:Name="PasswordHint"
+                        Grid.Column="0"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="13"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        IsHitTestVisible="False"
+                        Text="Kata sandi" />
+                    <Button
+                        Grid.Column="1"
+                        Click="OnLoginArrowClick"
+                        Content="&#x2192;"
+                        Style="{StaticResource LoginArrow}"
+                        ToolTip="Masuk" />
+                </Grid>
+            </Border>
+
+            <TextBlock
+                Margin="0,8,0,0"
+                HorizontalAlignment="Center"
+                MaxWidth="360"
+                FontSize="12"
+                Foreground="{DynamicResource Brush.Danger}"
+                Text="{Binding ErrorMessage}"
+                TextAlignment="Center"
+                TextWrapping="Wrap"
+                Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+            <CheckBox
+                Margin="0,10,0,0"
+                HorizontalAlignment="Center"
+                Content="Ingat nama pengguna terakhir"
+                FontSize="11"
+                Foreground="{DynamicResource Brush.TextMuted}"
+                IsChecked="{Binding RememberUsername, Mode=TwoWay}" />
+
+            <!-- On-screen keyboard -->
+            <Grid x:Name="KeyboardPanel" Margin="0,18,0,0">
+                <StackPanel x:Name="SymbolKeyboard">
+                    <UniformGrid Columns="11">
+                        <Button Click="OnKeypadKeyClick" Content="1" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="2" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="3" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="4" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="5" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="6" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="7" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="8" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="9" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="0" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="&#x232B;" Style="{StaticResource LoginKey}" Tag="back" />
+                    </UniformGrid>
+                    <UniformGrid Columns="11">
+                        <Button Click="OnKeypadKeyClick" Content="!" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="@" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="#" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="/" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="^" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="&amp;" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="*" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="(" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content=")" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="'" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="enter" FontSize="11" Style="{StaticResource LoginKey}" Tag="enter" />
+                    </UniformGrid>
+                    <UniformGrid Columns="12">
+                        <Button Click="OnKeypadKeyClick" Content="&#x2191;" Style="{StaticResource LoginKey}" Tag="shift" />
+                        <Button Click="OnKeypadKeyClick" Content="-" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="_" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="|" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="\" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="&lt;" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="&gt;" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="+" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="=" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="~" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="&#x2191;" Style="{StaticResource LoginKey}" Tag="shift" />
+                        <Button Click="OnKeypadKeyClick" Content="&#x2191;" Style="{StaticResource LoginKey}" Tag="shift" />
+                    </UniformGrid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1.4*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="7*" />
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Click="OnKeypadKeyClick" Content="&#x25BC;" Style="{StaticResource LoginKey}" Tag="hide" />
+                        <Button Grid.Column="1" Click="OnToggleLetterKeyboard" Content="ABC" FontSize="11" Style="{StaticResource LoginKey}" />
+                        <Button Grid.Column="2" Click="OnKeypadKeyClick" Content="," Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="3" Click="OnKeypadKeyClick" Content="" Style="{StaticResource LoginKey}" Tag="space" />
+                        <Button Grid.Column="4" Click="OnKeypadKeyClick" Content="next" FontSize="11" Style="{StaticResource LoginKey}" Tag="next" />
+                        <Button Grid.Column="5" Click="OnKeypadKeyClick" Content="." Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="6" Click="OnKeypadKeyClick" Content="&#x2190;" Style="{StaticResource LoginKey}" Tag="left" />
+                        <Button Grid.Column="7" Click="OnKeypadKeyClick" Content="&#x2192;" Style="{StaticResource LoginKey}" Tag="right" />
+                    </Grid>
                 </StackPanel>
 
-                <TextBlock
-                    Margin="0,0,0,4"
-                    Style="{StaticResource Text.DialogTitle}"
-                    Text="Masuk ke kasir" />
-                <TextBlock
-                    Margin="0,0,0,24"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Gunakan akun yang diberikan administrator toko."
-                    TextWrapping="Wrap" />
+                <StackPanel x:Name="LetterKeyboard" Visibility="Collapsed">
+                    <UniformGrid Columns="10">
+                        <Button Click="OnKeypadKeyClick" Content="q" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="w" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="e" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="r" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="t" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="y" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="u" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="i" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="o" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="p" Style="{StaticResource LoginKey}" Tag="letter" />
+                    </UniformGrid>
+                    <UniformGrid Columns="10">
+                        <Button Click="OnKeypadKeyClick" Content="a" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="s" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="d" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="f" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="g" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="h" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="j" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="k" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="l" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="&#x232B;" Style="{StaticResource LoginKey}" Tag="back" />
+                    </UniformGrid>
+                    <UniformGrid Columns="10">
+                        <Button Click="OnKeypadKeyClick" Content="&#x21E7;" Style="{StaticResource LoginKey}" Tag="shift" />
+                        <Button Click="OnKeypadKeyClick" Content="z" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="x" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="c" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="v" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="b" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="n" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="m" Style="{StaticResource LoginKey}" Tag="letter" />
+                        <Button Click="OnKeypadKeyClick" Content="-" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Click="OnKeypadKeyClick" Content="enter" FontSize="11" Style="{StaticResource LoginKey}" Tag="enter" />
+                    </UniformGrid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="5*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Click="OnToggleSymbolKeyboard" Content="123" FontSize="11" Style="{StaticResource LoginKey}" />
+                        <Button Grid.Column="1" Click="OnKeypadKeyClick" Content="_" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="2" Click="OnKeypadKeyClick" Content="@" Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="3" Click="OnKeypadKeyClick" Content="" Style="{StaticResource LoginKey}" Tag="space" />
+                        <Button Grid.Column="4" Click="OnKeypadKeyClick" Content="." Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="5" Click="OnKeypadKeyClick" Content="," Style="{StaticResource LoginKey}" Tag="char" />
+                        <Button Grid.Column="6" Click="OnKeypadKeyClick" Content="&#x2190;" Style="{StaticResource LoginKey}" Tag="left" />
+                        <Button Grid.Column="7" Click="OnKeypadKeyClick" Content="&#x2192;" Style="{StaticResource LoginKey}" Tag="right" />
+                    </Grid>
+                </StackPanel>
+            </Grid>
 
-                <TextBlock
-                    Margin="0,0,0,6"
-                    Style="{StaticResource Text.Caption}"
-                    Text="Nama pengguna" />
-                <TextBox
-                    x:Name="UsernameBox"
-                    Margin="0,0,0,14"
-                    Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock
+                Margin="0,12,0,0"
+                HorizontalAlignment="Center"
+                FontSize="10"
+                Foreground="{DynamicResource Brush.TextDisabled}"
+                Text="{Binding Version, StringFormat=Versi {0}}" />
+        </StackPanel>
 
-                <TextBlock
-                    Margin="0,0,0,6"
-                    Style="{StaticResource Text.Caption}"
-                    Text="Kata sandi" />
-                <PasswordBox
-                    x:Name="PasswordBox"
-                    Margin="0,0,0,4"
-                    PasswordChanged="OnPasswordChanged" />
-
-                <CheckBox
-                    Margin="0,10,0,0"
-                    Content="Ingat nama pengguna terakhir"
-                    IsChecked="{Binding RememberUsername, Mode=TwoWay}" />
-
-                <TextBlock
-                    Margin="0,8,0,0"
-                    Style="{StaticResource Text.Error}"
-                    Text="{Binding ErrorMessage}"
-                    TextWrapping="Wrap"
-                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
-                <Button
-                    Height="44"
-                    Margin="0,16,0,0"
-                    Command="{Binding SignInCommand}"
-                    Content="Masuk"
-                    IsDefault="True"
-                    IsEnabled="{Binding IsNotBusy}"
-                    Style="{StaticResource Button.Primary}" />
-
-                <TextBlock
-                    Margin="0,12,0,0"
-                    HorizontalAlignment="Center"
-                    Style="{StaticResource Text.Caption}"
-                    Text="Memeriksa akun..."
-                    Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
-
-                <TextBlock
-                    Margin="0,20,0,0"
-                    HorizontalAlignment="Center"
-                    Style="{StaticResource Text.Caption}"
-                    Text="{Binding Version, StringFormat=Versi {0} · Data tersimpan lokal}" />
-
-                <Button
-                    Margin="0,10,0,0"
-                    HorizontalAlignment="Center"
-                    Command="{Binding ExitCommand}"
-                    Content="Keluar aplikasi"
-                    Style="{StaticResource Button.Ghost}" />
-            </StackPanel>
-        </Border>
+        <TextBlock
+            Margin="14,0,0,8"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            FontSize="10"
+            Foreground="{DynamicResource Brush.TextDisabled}"
+            Text="{Binding ShopName}" />
     </Grid>
 </UserControl>

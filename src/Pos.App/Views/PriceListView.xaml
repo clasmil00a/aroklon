@@ -2,98 +2,168 @@
     x:Class="Pos.App.Views.PriceListView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
+            <RowDefinition Height="34" />
+            <RowDefinition Height="30" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Daftar Harga" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Kelola daftar harga retail, grosir, dan per satuan. Ketik '!' untuk harga warisan." />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Daftar harga" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S39 · M2" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Muat ulang daftar harga">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72C;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Muat ulang" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding CreateCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Buat daftar harga baru">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon.Accent}" Text="&#xE710;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption.Accent}" Text="Daftar baru" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke manajemen">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
 
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Daftar harga" />
-                    <ItemsControl ItemsSource="{Binding Lists}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
-                                            <TextBlock
-                                                Style="{StaticResource Text.Caption}"
-                                                Text="Promo: Tidak" />
-                                        </StackPanel>
-                                        <Button
-                                            Grid.Column="1"
-                                            Margin="8,0,0,0"
-                                            Command="{Binding DataContext.SelectListCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="Pilih"
-                                            Style="{StaticResource Button.Ghost}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+        <!-- Table header -->
+        <Border Grid.Row="2" Style="{StaticResource Aronium.TableHeader}">
+            <Grid Margin="12,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="110" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="Nama daftar harga" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Promo" />
+                <TextBlock Grid.Column="2" Style="{StaticResource Aronium.TableHeaderText}" Text="Status" />
+                <TextBlock
+                    Grid.Column="3"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.TableHeaderText}"
+                    Text="Aksi" />
+            </Grid>
+        </Border>
 
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{StaticResource Text.Caption}"
-                        Text="{Binding Lists.Count, StringFormat='{}{0} daftar harga'}" />
+        <!-- Price list table -->
+        <Border Grid.Row="3" Grid.RowSpan="2" Background="{DynamicResource Brush.Surface}">
+            <ScrollViewer
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                CanContentScroll="False"
+                PanningMode="VerticalOnly">
+                <ItemsControl ItemsSource="{Binding Lists}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Aronium.TableRow}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="110" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource Aronium.TableCell}" Text="{Binding Name}" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Style="{StaticResource Aronium.TableCell.Muted}"
+                                        Text="{Binding ApplyPromotions, Converter={StaticResource BoolToText}, ConverterParameter='Promo aktif|Tanpa promo'}" />
+                                    <TextBlock Grid.Column="2">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Aronium.TableCell}">
+                                                <Setter Property="Text" Value="Nonaktif" />
+                                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Active}" Value="True">
+                                                        <Setter Property="Text" Value="Aktif" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Success}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Button
+                                        Grid.Column="3"
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding DataContext.SelectListCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Content="Buka"
+                                        Style="{StaticResource Aronium.LinkButton}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
 
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding DataContext.GoBackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Content="← Kembali ke beranda"
-                        Style="{StaticResource Button.Ghost}" />
-                </StackPanel>
-            </Border>
-        </Grid>
-        </Grid>
-    </ScrollViewer>
+        <!-- Status strip -->
+        <Border Grid.Row="5" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Lists.Count, StringFormat='{}{0} daftar harga'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding InfoMessage}"
+                    Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

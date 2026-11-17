@@ -192,6 +192,9 @@ public sealed partial class PaymentTypeViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RefreshAsync() => await InitializeAsync();
+
+    [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
 
     public event Action? BackRequested;

@@ -11,13 +11,13 @@
     <Grid>
         <ContentControl Content="{Binding CurrentPage}" />
 
-        <!-- Aronium-style main menu: 294px flyout from the right edge. -->
+        <!-- Aronium-style main menu: 282px flyout from the right edge. -->
         <Grid
             Panel.ZIndex="50"
             Visibility="{Binding IsMenuOpen, Converter={StaticResource BoolToVisibility}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="294" />
+                <ColumnDefinition Width="282" />
             </Grid.ColumnDefinitions>
 
             <Border
@@ -28,23 +28,17 @@
             <Border
                 Grid.Column="1"
                 Background="{DynamicResource Brush.MenuPanel}"
-                BorderBrush="{DynamicResource Brush.Border}"
-                BorderThickness="1,0,0,0"
                 Effect="{DynamicResource Effect.Pop}">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="44" />
+                        <RowDefinition Height="56" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="40" />
                         <RowDefinition Height="73" />
                     </Grid.RowDefinitions>
 
                     <!-- Menu header -->
-                    <Border
-                        Grid.Row="0"
-                        Padding="20,0,12,0"
-                        BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="0,0,0,1">
+                    <Border Grid.Row="0" Padding="20,0,8,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -52,20 +46,20 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock
                                 VerticalAlignment="Center"
-                                FontSize="{StaticResource Font.Size.Lg}"
-                                FontWeight="{StaticResource Font.Weight.Regular}"
+                                FontSize="20"
+                                FontWeight="{StaticResource Font.Weight.Light}"
                                 Foreground="{DynamicResource Brush.Text}"
                                 Text="{Binding MenuHeader}"
                                 TextTrimming="CharacterEllipsis" />
                             <Button
                                 Grid.Column="1"
-                                Command="{Binding SignOutCommand}"
+                                Command="{Binding CloseMenuCommand}"
                                 Content="&#xE72A;"
                                 FontFamily="Segoe MDL2 Assets"
                                 FontSize="18"
                                 Foreground="{DynamicResource Brush.Text}"
                                 Style="{StaticResource Button.Icon}"
-                                ToolTip="Ganti pengguna" />
+                                ToolTip="Tutup menu" />
                         </Grid>
                     </Border>
 

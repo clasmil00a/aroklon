@@ -48,5 +48,14 @@ public sealed partial class ManagementViewModel : ObservableObject
     private void OpenSettings() => _navigate("settings");
 
     [RelayCommand]
+    private void OpenReports() => _navigate("S44");
+
+    [RelayCommand]
+    private void OpenHistory() => _navigate("S32");
+
+    [RelayCommand]
+    private void OpenProducts() => _navigate("S15");
+
+    [RelayCommand]
     private void GoBack() => _navigate("S02");
 }

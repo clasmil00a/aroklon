@@ -13,6 +13,7 @@
                 <ResourceDictionary Source="Themes/Theme.Dark.xaml" />
                 <ResourceDictionary Source="Themes/Tokens.xaml" />
                 <ResourceDictionary Source="Styles/Controls.xaml" />
+                <ResourceDictionary Source="Styles/BackOffice.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:BoolToTextConverter x:Key="BoolToText" />

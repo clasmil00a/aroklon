@@ -358,6 +358,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
             case "S39":
                 _priceList ??= new PriceListViewModel(_priceLists);
+                _priceList.BackRequested += () => Navigate("home");
                 _priceList.ListSelected += id =>
                 {
                     _priceListEditor ??= new PriceListEditorViewModel(_priceLists);

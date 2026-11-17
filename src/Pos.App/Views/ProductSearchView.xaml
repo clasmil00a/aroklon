@@ -2,117 +2,279 @@
     x:Class="Pos.App.Views.ProductSearchView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded"
     KeyDown="OnKeyDown">
 
-    <Grid Margin="24">
+    <UserControl.Resources>
+        <Style x:Key="SearchRow" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="Row"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource Brush.SurfaceRaised}"
+                            BorderThickness="0,0,0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource Brush.SelectedRow}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
+            <RowDefinition Height="33" />
+            <RowDefinition Height="34" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource Card}">
-            <StackPanel Margin="16">
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Cari Produk (F3)" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding CloseCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Tutup (Esc)" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Cari by nama atau kode produk. Panah atas/bawah untuk navigasi, Enter untuk pilih." TextWrapping="Wrap" />
-
-                <TextBlock Margin="0,12,0,6" Style="{StaticResource Text.Caption}" Text="Cari produk" />
-                <TextBox
-                    Style="{StaticResource Input}"
-                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                    VerticalContentAlignment="Center" />
-
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Kasir" />
                 <TextBlock
-                    Margin="0,8,0,0"
-                    Style="{StaticResource Text.Caption}"
-                    Text="{Binding Results.Count, StringFormat='{}{0} hasil'}" />
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Cari produk" />
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource Card.Raised}">
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding SelectCurrentCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Pilih produk terpilih (Enter)">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon.Accent}" Text="&#xE710;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption.Accent}" Text="Pilih" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding CloseCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Tutup (Esc)">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Tutup" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Search strip -->
+        <Border
+            Grid.Row="2"
+            Background="{DynamicResource Brush.Surface}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <Grid Margin="19,0,10,0">
+                <Border
+                    Width="520"
+                    HorizontalAlignment="Left"
+                    Style="{StaticResource Aronium.SearchBox}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Aronium.SearchIcon}" Text="&#xE721;" />
+                        <Grid Grid.Column="1">
+                            <TextBox
+                                x:Name="SearchBox"
+                                Height="28"
+                                Padding="2,0,8,0"
+                                VerticalContentAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                FontSize="13"
+                                Style="{StaticResource Input}"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding SelectCurrentCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <TextBlock
+                                Margin="3,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{DynamicResource Brush.TextMuted}"
+                                IsHitTestVisible="False"
+                                Text="Nama atau kode produk">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Table header -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.TableHeader}">
+            <Grid Margin="12,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="110" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="Produk" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Kode" />
+                <TextBlock
+                    Grid.Column="2"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.TableHeaderText}"
+                    Text="Harga" />
+                <TextBlock
+                    Grid.Column="3"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.TableHeaderText}"
+                    Text="Satuan" />
+            </Grid>
+        </Border>
+
+        <!-- Results table -->
+        <Grid Grid.Row="4">
             <ListBox
+                Background="Transparent"
+                BorderThickness="0"
+                ItemContainerStyle="{StaticResource SearchRow}"
                 ItemsSource="{Binding Results}"
+                KeyboardNavigation.DirectionalNavigation="Continue"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                 SelectedItem="{Binding SelectedResult, Mode=OneWay}"
-                Style="{StaticResource ListBox.Plain}"
-                ScrollViewer.VerticalScrollBarVisibility="Auto"
-                MaxHeight="400">
+                Style="{StaticResource ListBox.Plain}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border
-                            Padding="10"
-                            Background="{DynamicResource Brush.Surface}"
-                            BorderBrush="{DynamicResource Brush.BorderInput}"
-                            BorderThickness="{StaticResource Border.Width}"
-                            CornerRadius="{StaticResource Radius.Sm}"
-                            Margin="0,0,0,4">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" TextWrapping="Wrap" MaxHeight="40" />
-                                    <TextBlock Style="{StaticResource Text.Caption}" Text="{Binding Code, TargetNullValue='—'}" />
-                                </StackPanel>
+                        <Grid MinHeight="44" Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
                                 <TextBlock
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource Text.BodyStrong}"
-                                    Text="{Binding PriceMinor, StringFormat='Rp {0:N0}'}" />
+                                    FontSize="13"
+                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                    Text="{Binding Name}"
+                                    TextTrimming="CharacterEllipsis" />
                                 <TextBlock
-                                    Grid.Column="2"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource Text.Caption}"
-                                    Text="{Binding UnitName}" />
-                            </Grid>
-                        </Border>
+                                    FontSize="11"
+                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                    Opacity="0.7"
+                                    Text="{Binding GroupName, TargetNullValue='—'}" />
+                            </StackPanel>
+                            <TextBlock
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                Opacity="0.7"
+                                Text="{Binding Code, TargetNullValue='—'}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                Text="{Binding PriceMinor, Converter={StaticResource Currency}}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                Opacity="0.7"
+                                Text="{Binding UnitName}" />
+                        </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <TextBlock
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Foreground="{DynamicResource Brush.TextMuted}"
+                Text="Ketik nama atau kode produk untuk mencari.">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Results.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <!-- Status strip -->
+        <Border Grid.Row="5" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Results.Count, StringFormat='{}{0} hasil'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding InfoMessage}"
+                    Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
         </Border>
-
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button
-                Width="100"
-                Height="44"
-                Margin="0,0,12,0"
-                Command="{Binding SelectCurrentCommand}"
-                Content="Pilih (Enter)"
-                IsDefault="True"
-                IsEnabled="{Binding IsNotBusy}"
-                Style="{StaticResource Button.Primary}" />
-            <Button
-                Width="100"
-                Height="44"
-                Command="{Binding CloseCommand}"
-                Content="Tutup (Esc)"
-                IsCancel="True"
-                IsEnabled="{Binding IsNotBusy}"
-                Style="{StaticResource Button.Ghost}" />
-        </StackPanel>
-
-        <TextBlock
-            Grid.Row="2"
-            Margin="0,12,0,0"
-            HorizontalAlignment="Left"
-            Style="{StaticResource Text.Error}"
-            Text="{Binding ErrorMessage}"
-            TextWrapping="Wrap"
-            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
-        <TextBlock
-            Grid.Row="2"
-            Margin="0,12,0,0"
-            HorizontalAlignment="Center"
-            Style="{StaticResource Text.Secondary}"
-            Text="{Binding InfoMessage}"
-            Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

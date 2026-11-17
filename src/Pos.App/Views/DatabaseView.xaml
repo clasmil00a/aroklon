@@ -2,129 +2,300 @@
     x:Class="Pos.App.Views.DatabaseView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Database &amp; Cadangan" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Kesehatan database, cadangan, dan pemulihan (S38)." />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Database &amp; cadangan" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S38 · M6" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Periksa ulang kesehatan database">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72C;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Segarkan" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding RestoreCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Pulihkan database dari cadangan">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon.Accent}" Text="&#xE8A3;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption.Accent}" Text="Pulihkan" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke manajemen">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Two-pane content -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Health -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Kesehatan database" />
-                    <TextBlock
-                        Style="{StaticResource Text.BodyStrong}"
-                        Text="{Binding Health.Connected, StringFormat='{}{0}'}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource Text.Caption}"
-                        Text="Skema: {Binding Health.SchemaVersion}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="Integritas: {Binding Health.IntegrityOk}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="Foreign keys: {Binding Health.ForeignKeysOk}" />
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Kesehatan database" />
+                    </Border>
 
-                    <Button
-                        Margin="0,16,0,0"
-                        Command="{Binding RefreshCommand}"
-                        Content="Segarkan"
-                        IsEnabled="{Binding IsNotBusy}"
-                        Style="{StaticResource Button.Primary}" />
+                    <StackPanel Grid.Row="1" Margin="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Terhubung" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding Health.Connected, Converter={StaticResource BoolToText}, ConverterParameter='Ya|Tidak'}" />
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Versi skema" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Text.BodyStrong}" Text="{Binding Health.SchemaVersion}" />
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Integritas" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding Health.IntegrityOk, Converter={StaticResource BoolToText}, ConverterParameter='Ya|Tidak'}" />
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Text.Body}" Text="Foreign keys" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Style="{StaticResource Text.BodyStrong}"
+                                Text="{Binding Health.ForeignKeysOk, Converter={StaticResource BoolToText}, ConverterParameter='Ya|Tidak'}" />
+                        </Grid>
 
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding Health.Error}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding Health.Error, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                        <TextBlock
+                            Margin="0,12,0,0"
+                            Style="{StaticResource Text.Error}"
+                            Text="{Binding Health.Error}"
+                            TextWrapping="Wrap"
+                            Visibility="{Binding Health.Error, Converter={StaticResource StringToVisibility}}" />
+
+                        <TextBlock
+                            Margin="0,16,0,0"
+                            Style="{StaticResource Aronium.FieldLabel}"
+                            Text="JADWAL CADANGAN" />
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
+                                    <Setter Property="Text" Value="Nonaktif" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Schedule.Enabled}" Value="True">
+                                            <Setter Property="Text" Value="Aktif" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
             </Border>
+
+            <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
 
             <!-- Backups -->
-            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Cadangan" />
-                    <ItemsControl ItemsSource="{Binding Backups}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="8"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Path}" />
-                                            <TextBlock
-                                                Style="{StaticResource Text.Caption}"
-                                                Text="{Binding Status}" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Text.BodyStrong}"
-                                            Text="{Binding SizeBytes}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Bg}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <Grid Margin="12,0">
+                            <TextBlock Style="{StaticResource Aronium.PanelHeaderText}" Text="Cadangan" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.StatusText}"
+                                Text="{Binding Backups.Count, StringFormat='{}{0} file'}" />
+                        </Grid>
+                    </Border>
 
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{StaticResource Text.Caption}"
-                        Text="{Binding Backups.Count, StringFormat='{}{0} cadangan'}" />
-                </StackPanel>
+                    <Border
+                        Grid.Row="1"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,0,0,1">
+                        <Grid Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="150" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="File" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Status" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Ukuran" />
+                            <TextBlock
+                                Grid.Column="3"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Dibuat" />
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer
+                        Grid.Row="2"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        CanContentScroll="False"
+                        PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Backups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Aronium.TableRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="110" />
+                                                <ColumnDefinition Width="150" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource Aronium.TableCell}" Text="{Binding Path}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
+                                                Text="{Binding Status}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Right"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
+                                                Text="{Binding SizeBytes}" />
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                HorizontalAlignment="Right"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
+                                                Text="{Binding CreatedAt}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Restore -->
+                    <Border
+                        Grid.Row="3"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,1,0,0">
+                        <Grid Margin="12,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Height="30"
+                                Style="{StaticResource Input}"
+                                Text="{Binding RestorePath, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                Grid.Column="1"
+                                Height="30"
+                                Margin="8,0,0,0"
+                                Command="{Binding RestoreCommand}"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Content="Pulihkan"
+                                Style="{StaticResource Button.Secondary}" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+
+        <!-- Status strip -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Backups.Count, StringFormat='{}{0} cadangan'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding InfoMessage}"
+                    Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

@@ -222,6 +222,9 @@ public sealed partial class RefundViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void RefundFull(RefundSaleLine? line) => SetRefundQty(line, line?.RefundableQtyMilli ?? 0);
+
+    [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
 
     public event Action? BackRequested;

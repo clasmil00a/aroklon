@@ -17,4 +17,12 @@ public partial class ReportsView : UserControl
             _ = vm.InitializeAsync();
         }
     }
+
+    private void OnReportSelected(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (DataContext is ReportsViewModel vm)
+        {
+            vm.GenerateReportCommand.Execute(null);
+        }
+    }
 }

@@ -145,6 +145,19 @@ public sealed partial class PosViewModel : ObservableObject
     private string _discountTargetLabel = "Seluruh transaksi";
 
     [ObservableProperty]
+    private bool _discountUseAmount;
+
+    [ObservableProperty]
+    private string _discountValueText = string.Empty;
+
+    public string DiscountTitle => DiscountIsLine
+        ? "Terapkan diskon item"
+        : "Terapkan diskon transaksi";
+
+    partial void OnDiscountIsLineChanged(bool value) =>
+        OnPropertyChanged(nameof(DiscountTitle));
+
+    [ObservableProperty]
     private string _paymentAmountText = string.Empty;
 
     [ObservableProperty]
@@ -259,9 +272,27 @@ public sealed partial class PosViewModel : ObservableObject
     public bool HasNoLines => !HasLines;
     public bool HasParkedOrders => ParkedOrderCount > 0;
 
+    public string TotalText => MoneyMath.Format(Totals.TotalMinor);
+
+    public string PaymentSummary => Lines.Count == 0
+        ? "Tidak ada item"
+        : Lines.Count + " baris · Total " + TotalText;
+
+    public string PaymentTypeName =>
+        SelectedPayments.FirstOrDefault()?.PaymentTypeName
+        ?? PaymentTypes.FirstOrDefault()?.Name
+        ?? "Tunai";
+
+    public string PaymentChangeLabel => string.IsNullOrWhiteSpace(PaymentChangeText)
+        ? MoneyMath.Format(0)
+        : PaymentChangeText;
+
     partial void OnErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasError));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
     partial void OnPaymentAmountTextChanged(string value) => UpdatePaymentChange();
+
+    partial void OnPaymentChangeTextChanged(string value) =>
+        OnPropertyChanged(nameof(PaymentChangeLabel));
 
     partial void OnSelectedPaymentsChanged(
         ObservableCollection<PaymentSelectionViewModel> value)
@@ -271,11 +302,13 @@ public sealed partial class PosViewModel : ObservableObject
             value.CollectionChanged += (_, _) =>
             {
                 OnPropertyChanged(nameof(TotalTendered));
+                OnPropertyChanged(nameof(PaymentTypeName));
                 UpdateCanCheckout();
             };
         }
 
         OnPropertyChanged(nameof(TotalTendered));
+        OnPropertyChanged(nameof(PaymentTypeName));
         UpdateCanCheckout();
     }
     partial void OnParkedOrderCountChanged(int value) =>
@@ -576,19 +609,19 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private void ShowDiscount()
     {
-        DiscountIsLine = SelectedLine is not null;
-        DiscountTargetLabel = SelectedLine is null
-            ? "Seluruh transaksi"
-            : "Baris: " + SelectedLine.Name;
+        DiscountIsLine = false;
+        DiscountTargetLabel = "Seluruh transaksi";
 
-        var kind = SelectedLine?.DiscountKind ?? CartDiscountKind;
-        var value = SelectedLine?.DiscountValue ?? CartDiscountValue;
-        DiscountPercentText = kind == DiscountKind.Percent
+        var kind = CartDiscountKind;
+        var value = CartDiscountValue;
+        DiscountUseAmount = kind == DiscountKind.Amount;
+        DiscountValueText = kind == DiscountKind.Percent
             ? (value / 100m).ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("id-ID"))
-            : string.Empty;
-        DiscountAmountText = kind == DiscountKind.Amount
-            ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            : string.Empty;
+            : kind == DiscountKind.Amount
+                ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+        DiscountPercentText = kind == DiscountKind.Percent ? DiscountValueText : string.Empty;
+        DiscountAmountText = kind == DiscountKind.Amount ? DiscountValueText : string.Empty;
         DiscountError = string.Empty;
         IsDiscountVisible = true;
     }
@@ -597,8 +630,97 @@ public sealed partial class PosViewModel : ObservableObject
     private void HideDiscount() => IsDiscountVisible = false;
 
     [RelayCommand]
+    private void SetCartDiscountTarget()
+    {
+        DiscountIsLine = false;
+        DiscountTargetLabel = "Seluruh transaksi";
+        DiscountUseAmount = CartDiscountKind == DiscountKind.Amount;
+        DiscountValueText = CartDiscountKind switch
+        {
+            DiscountKind.Percent => (CartDiscountValue / 100m).ToString(
+                "0.##", System.Globalization.CultureInfo.GetCultureInfo("id-ID")),
+            DiscountKind.Amount => CartDiscountValue.ToString(
+                System.Globalization.CultureInfo.InvariantCulture),
+            _ => string.Empty,
+        };
+    }
+
+    [RelayCommand]
+    private void SetLineDiscountTarget()
+    {
+        if (SelectedLine is null)
+        {
+            return;
+        }
+
+        DiscountIsLine = true;
+        DiscountTargetLabel = "Baris: " + SelectedLine.Name;
+        DiscountUseAmount = SelectedLine.DiscountKind == DiscountKind.Amount;
+        DiscountValueText = SelectedLine.DiscountKind switch
+        {
+            DiscountKind.Percent => (SelectedLine.DiscountValue / 100m).ToString(
+                "0.##", System.Globalization.CultureInfo.GetCultureInfo("id-ID")),
+            DiscountKind.Amount => SelectedLine.DiscountValue.ToString(
+                System.Globalization.CultureInfo.InvariantCulture),
+            _ => string.Empty,
+        };
+    }
+
+    [RelayCommand]
+    private void UsePercentDiscount()
+    {
+        DiscountUseAmount = false;
+        DiscountPercentText = DiscountValueText;
+        DiscountAmountText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void UseAmountDiscount()
+    {
+        DiscountUseAmount = true;
+        DiscountAmountText = DiscountValueText;
+        DiscountPercentText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ClearDiscount()
+    {
+        try
+        {
+            if (DiscountIsLine && SelectedLine is not null)
+            {
+                _cart.SetDiscount(SelectedLine.LineId, DiscountKind.None, 0);
+                var lineId = SelectedLine.LineId;
+                RefreshLines();
+                SelectedLine = Lines.FirstOrDefault(line => line.LineId == lineId);
+            }
+            else
+            {
+                CartDiscountKind = DiscountKind.None;
+                CartDiscountValue = 0;
+            }
+
+            DiscountValueText = string.Empty;
+            DiscountPercentText = string.Empty;
+            DiscountAmountText = string.Empty;
+            DiscountError = string.Empty;
+            Recalculate();
+        }
+        catch (Exception exception)
+        {
+            DiscountError = exception.Message;
+        }
+        finally
+        {
+            UpdateCanCheckout();
+        }
+    }
+
+    [RelayCommand]
     private void ApplyDiscount()
     {
+        DiscountPercentText = DiscountUseAmount ? string.Empty : DiscountValueText;
+        DiscountAmountText = DiscountUseAmount ? DiscountValueText : string.Empty;
         var hasPercent = !string.IsNullOrWhiteSpace(DiscountPercentText);
         var hasAmount = !string.IsNullOrWhiteSpace(DiscountAmountText);
         if (hasPercent && hasAmount)
@@ -750,6 +872,19 @@ public sealed partial class PosViewModel : ObservableObject
     [RelayCommand]
     private void SetExactPayment() =>
         SetPaymentAmount(Totals.TotalMinor);
+
+    [RelayCommand]
+    private void RoundPayment()
+    {
+        var total = Totals.TotalMinor;
+        if (total <= 0)
+        {
+            return;
+        }
+
+        var rounded = ((total + 999) / 1000) * 1000;
+        SetPaymentAmount(rounded);
+    }
 
     [RelayCommand]
     private async Task ApplyPaymentAsync()
@@ -1078,6 +1213,9 @@ public sealed partial class PosViewModel : ObservableObject
     private string _priceOverrideError = string.Empty;
 
     [ObservableProperty]
+    private string _priceOverrideText = string.Empty;
+
+    [ObservableProperty]
     private bool _isPriceOverrideVisible;
 
     [RelayCommand]
@@ -1087,6 +1225,8 @@ public sealed partial class PosViewModel : ObservableObject
 
         SelectedLine = line;
         NewLinePrice = line.UnitPriceMinor;
+        PriceOverrideText = line.UnitPriceMinor.ToString(
+            System.Globalization.CultureInfo.InvariantCulture);
         PriceOverrideError = string.Empty;
         IsPriceOverrideVisible = true;
     }
@@ -1097,6 +1237,7 @@ public sealed partial class PosViewModel : ObservableObject
         IsPriceOverrideVisible = false;
         SelectedLine = null;
         NewLinePrice = 0;
+        PriceOverrideText = string.Empty;
         PriceOverrideError = string.Empty;
     }
 
@@ -1105,19 +1246,26 @@ public sealed partial class PosViewModel : ObservableObject
     {
         if (SelectedLine is null || IsBusy) return;
 
-        if (NewLinePrice < 0)
+        if (!TryParseMoney(PriceOverrideText, out var price))
+        {
+            PriceOverrideError = "Harga tidak valid.";
+            return;
+        }
+
+        if (price < 0)
         {
             PriceOverrideError = "Harga tidak boleh negatif.";
             return;
         }
 
+        NewLinePrice = price;
         ErrorMessage = string.Empty;
         try
         {
             var updatedLine = _cart.Lines.First(l => l.LineId == SelectedLine.LineId);
             var newLine = updatedLine with
             {
-                UnitPriceMinor = NewLinePrice,
+                UnitPriceMinor = price,
                 PriceOverridden = true,
             };
             _cart.ReplaceLine(newLine);
@@ -1322,12 +1470,17 @@ public sealed partial class PosViewModel : ObservableObject
         SelectedLine = selectedId is null
             ? null
             : Lines.FirstOrDefault(line => line.LineId == selectedId);
+        OnPropertyChanged(nameof(PaymentSummary));
     }
 
     private void Recalculate()
     {
         Totals = _cart.Totals;
         OnPropertyChanged(nameof(HasCartDiscount));
+        OnPropertyChanged(nameof(TotalText));
+        OnPropertyChanged(nameof(PaymentSummary));
+        UpdatePaymentChange();
+        OnPropertyChanged(nameof(PaymentChangeLabel));
     }
 
     public void AddProductToCart(ProductLookup product, long qtyMilli)

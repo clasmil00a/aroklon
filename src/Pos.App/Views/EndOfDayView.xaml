@@ -2,181 +2,246 @@
     x:Class="Pos.App.Views.EndOfDayView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Tutup Hari" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Tutup register, cetak laporan Z, dan hitung selisih kas." />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Tutup hari" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S35 · M4" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding PrintXReportCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Cetak laporan X (belum tutup)">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE749;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Laporan X" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding CloseDayCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Tutup register dan cetak laporan Z">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon.Accent}" Text="&#xE710;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption.Accent}" Text="Tutup hari" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke manajemen">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Two-pane content -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Day status -->
-            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Status hari bisnis" />
-                    <TextBlock
-                        Style="{StaticResource Text.BodyStrong}"
-                        Text="{Binding BusinessDate, TargetNullValue='—'}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding DayOpen, Converter={StaticResource BoolToText}, ConverterParameter='Terbuka|Tertutup'}" />
-
-                    <Border Margin="0,16,0,0" Padding="10" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderInput}" BorderThickness="{StaticResource Border.Width}" CornerRadius="{StaticResource Radius.Sm}">
-                        <StackPanel>
-                            <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.SectionTitle}" Text="Ringkasan hari" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Jualan" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Refund" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Grand total" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Kas masuk" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="Kas keluar" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="{Binding SalesCount}" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="{Binding RefundCount}" />
-                                    <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding GrandTotal, StringFormat='Rp {0:N0}'}" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="{Binding CashIn, StringFormat='Rp {0:N0}'}" />
-                                    <TextBlock Style="{StaticResource Text.Body}" Text="{Binding CashOut, StringFormat='Rp {0:N0}'}" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Status hari bisnis" />
                     </Border>
 
-                    <Button
-                        Margin="0,16,0,0"
-                        Height="44"
-                        Command="{Binding PrintXReportCommand}"
-                        Content="Cetak Laporan X (Belum Tutup)"
-                        IsEnabled="{Binding IsNotBusy}"
-                        Style="{StaticResource Button.Secondary}" />
+                    <StackPanel Grid.Row="1" Margin="16">
+                        <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding BusinessDate, TargetNullValue='—'}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource Text.Secondary}"
+                            Text="{Binding DayOpen, Converter={StaticResource BoolToText}, ConverterParameter='Terbuka|Tertutup'}" />
 
-                    <Button
-                        Margin="0,8,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding GoBackCommand}"
-                        Content="← Kembali ke beranda"
-                        Style="{StaticResource Button.Ghost}" />
+                        <Border
+                            Margin="0,16,0,0"
+                            Background="{DynamicResource Brush.Bg}"
+                            BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1">
+                            <StackPanel Margin="12">
+                                <TextBlock
+                                    Margin="0,0,0,8"
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="RINGKASAN HARI" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="Jualan" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="Refund" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="Grand total" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="Kas masuk" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="Kas keluar" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="{Binding SalesCount, StringFormat='{}{0:N0}'}" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="{Binding RefundCount, StringFormat='{}{0:N0}'}" />
+                                        <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding GrandTotal, StringFormat='Rp {0:N0}'}" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="{Binding CashIn, StringFormat='Rp {0:N0}'}" />
+                                        <TextBlock Style="{StaticResource Text.Body}" Text="{Binding CashOut, StringFormat='Rp {0:N0}'}" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
 
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                        <Button
+                            Height="32"
+                            Margin="0,16,0,0"
+                            Command="{Binding PrintXReportCommand}"
+                            Content="Cetak Laporan X (Belum Tutup)"
+                            IsEnabled="{Binding IsNotBusy}"
+                            Style="{StaticResource Button.Secondary}" />
+
+                        <TextBlock
+                            Margin="0,12,0,0"
+                            Style="{StaticResource Text.Error}"
+                            Text="{Binding ErrorMessage}"
+                            TextWrapping="Wrap"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- Close day -->
-            <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Tutup register" />
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.Caption}"
-                        Text="Masukkan jumlah kas aktual di laci dan tutup hari bisnis." />
+            <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
 
-                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Kas aktual di laci" />
-                    <TextBox
-                        Style="{StaticResource Input}"
-                        Text="{Binding ClosingCash, UpdateSourceTrigger=PropertyChanged}" />
-
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Diharapkan di laci" />
-                    <TextBlock
-                        Style="{StaticResource Text.BodyStrong}"
-                        Text="{Binding ExpectedCash}" />
-
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Catatan selisih (opsional)" />
-                    <TextBox
-                        Style="{StaticResource Input}"
-                        Text="{Binding VarianceNote, UpdateSourceTrigger=PropertyChanged}" />
-
-                    <Button
-                        Margin="0,16,0,0"
-                        Height="44"
-                        Command="{Binding CloseDayCommand}"
-                        Content="Tutup Hari &amp; Cetak Z"
-                        IsEnabled="{Binding IsNotBusy}"
-                        Style="{StaticResource Button.Primary}" />
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-            </Border>
-
-            <!-- X report preview -->
-            <Border Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource Card.Raised}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Pratinjau Laporan X" />
-                    <Border Padding="12" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderInput}" BorderThickness="{StaticResource Border.Width}" CornerRadius="{StaticResource Radius.Sm}">
-                        <TextBlock FontFamily="{StaticResource Font.Mono}" FontSize="{StaticResource Font.Size.Sm}" TextWrapping="Wrap" Text="{Binding XReportText}" />
+            <!-- Close day + X preview -->
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Bg}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Tutup register" />
                     </Border>
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+
+                    <StackPanel
+                        Grid.Row="1"
+                        MaxWidth="520"
+                        Margin="16,16,16,8"
+                        HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="KAS AKTUAL DI LACI" />
+                        <TextBox
+                            Height="32"
+                            Style="{StaticResource Input}"
+                            Text="{Binding ClosingCash, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="DIHARAPKAN DI LACI" />
+                        <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding ExpectedCash}" />
+
+                        <TextBlock Style="{StaticResource Aronium.FieldLabel}" Text="CATATAN SELISIH (OPSIONAL)" />
+                        <TextBox
+                            Height="32"
+                            Style="{StaticResource Input}"
+                            Text="{Binding VarianceNote, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Button
+                            Height="32"
+                            Margin="0,18,0,0"
+                            Command="{Binding CloseDayCommand}"
+                            Content="Tutup Hari &amp; Cetak Z"
+                            IsEnabled="{Binding IsNotBusy}"
+                            Style="{StaticResource Button.Primary}" />
+
+                        <TextBlock
+                            Margin="0,12,0,0"
+                            Style="{StaticResource Text.Secondary}"
+                            Text="{Binding InfoMessage}"
+                            Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
+                    </StackPanel>
+
+                    <Border
+                        Grid.Row="2"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,1,0,0">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Pratinjau laporan X" />
+                    </Border>
+
+                    <Border
+                        Grid.Row="3"
+                        Margin="16"
+                        Background="{DynamicResource Brush.Surface}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="1">
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Auto">
+                            <TextBlock
+                                Padding="12"
+                                FontFamily="{StaticResource Font.Mono}"
+                                FontSize="{StaticResource Font.Size.Sm}"
+                                Text="{Binding XReportText}"
+                                TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+
+        <!-- Status strip -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding BusinessDate, TargetNullValue='Tutup hari'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

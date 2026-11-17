@@ -87,6 +87,9 @@ public sealed partial class OpenOrdersViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RefreshAsync() => await InitializeAsync();
+
+    [RelayCommand]
     private void GoBack() => BackRequested?.Invoke();
 
     public event Action? BackRequested;

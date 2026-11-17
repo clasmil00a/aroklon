@@ -2,209 +2,318 @@
     x:Class="Pos.App.Views.PriceListEditorView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="70" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Editor Daftar Harga" />
+        <!-- Aronium path strip -->
+        <Border Grid.Row="0" Style="{StaticResource Aronium.PathBar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali ke daftar harga" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="{Binding List.Name, StringFormat='Mengedit {} {0}', TargetNullValue='Daftar Harga'}" />
+                    Margin="6,0,0,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    Style="{StaticResource Aronium.PathText}"
+                    Text="•" />
+                <TextBlock Style="{StaticResource Aronium.PathCurrent}" Text="Editor daftar harga" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S40 · M2" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Tool bar -->
+        <Border Grid.Row="1" Style="{StaticResource Aronium.Toolbar}">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding ShowEditFormCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Ubah nama atau status daftar harga">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE70F;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Ubah nama / status" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding ToggleListActiveCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Aktifkan atau nonaktifkan daftar harga">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE71F;" />
+                        <TextBlock
+                            Style="{StaticResource Aronium.ToolCaption}"
+                            Text="{Binding List.Active, Converter={StaticResource BoolToText}, ConverterParameter='Nonaktifkan|Aktifkan'}" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource Aronium.ToolButton}"
+                    ToolTip="Kembali ke daftar harga">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Aronium.ToolIcon}" Text="&#xE72B;" />
+                        <TextBlock Style="{StaticResource Aronium.ToolCaption}" Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Two-pane content -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="1" />
+                <ColumnDefinition Width="360" />
             </Grid.ColumnDefinitions>
 
-            <Border Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Item dan harga" />
-                    <ItemsControl ItemsSource="{Binding Items}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding ProductName}" />
-                                            <TextBlock
-                                                Style="{StaticResource Text.Caption}"
-                                                Text="{Binding UnitName, TargetNullValue='—'}" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Text.BodyStrong}"
-                                            Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit (!)'}" />
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource Text.Caption}"
-                                            Text="{Binding IsInherited, Converter={x:Null}, TargetNullValue='warisan'}"
-                                            Visibility="{Binding IsInherited, Converter={StaticResource BoolToVisibility}}" />
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                            <TextBox
-                                                Width="120"
-                                                Margin="0,0,6,0"
-                                                Style="{StaticResource Input}"
-                                                Text="{Binding DataContext.NewPriceText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
-                                            <Button
-                                                Width="70"
-                                                Command="{Binding DataContext.SaveItemPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                Content="Simpan"
-                                                Style="{StaticResource Button.Primary}" />
-                                            <Button
-                                                Width="70"
-                                                Margin="6,0,0,0"
-                                                Command="{Binding DataContext.ClearItemPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                Content="Hapus (!)"
-                                                Visibility="{Binding IsNotInherited, Converter={StaticResource BoolToVisibility}}"
-                                                Style="{StaticResource Button.Ghost}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+            <!-- Item price table -->
+            <Border Grid.Column="0" Background="{DynamicResource Brush.Bg}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <Grid Margin="12,0">
+                            <TextBlock Style="{StaticResource Aronium.PanelHeaderText}" Text="Item dan harga" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.StatusText}"
+                                Text="{Binding Items.Count, StringFormat='{}{0} item'}" />
+                        </Grid>
+                    </Border>
 
-                    <!-- Price list settings -->
                     <Border
-                        Margin="0,16,0,0"
-                        Padding="10"
+                        Grid.Row="1"
                         Background="{DynamicResource Brush.Surface}"
-                        BorderBrush="{DynamicResource Brush.BorderInput}"
-                        BorderThickness="{StaticResource Border.Width}"
-                        CornerRadius="{StaticResource Radius.Sm}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Pengaturan daftar harga" />
-                            <TextBlock Margin="0,0,0,8" Style="{StaticResource Text.Secondary}" Text="{Binding List.Name, StringFormat='{} {0}', TargetNullValue='Daftar Harga'}" />
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="0,0,0,1">
+                        <Grid Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="230" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Aronium.TableHeaderText}" Text="Produk" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Aronium.TableHeaderText}" Text="Satuan" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Harga" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource Aronium.TableHeaderText}" Text="Status" />
+                            <TextBlock
+                                Grid.Column="4"
+                                HorizontalAlignment="Right"
+                                Style="{StaticResource Aronium.TableHeaderText}"
+                                Text="Harga baru" />
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer
+                        Grid.Row="2"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        CanContentScroll="False"
+                        PanningMode="VerticalOnly">
+                        <ItemsControl ItemsSource="{Binding Items}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Aronium.TableRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="130" />
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="230" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Foreground="{DynamicResource Brush.Text}"
+                                                    Text="{Binding ProductName}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Style="{StaticResource Aronium.TableCell.Muted}"
+                                                Text="{Binding UnitName, TargetNullValue='—'}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Right"
+                                                Style="{StaticResource Aronium.TableCell}"
+                                                Text="{Binding PriceMinor, StringFormat='Rp {} {0:N0}', TargetNullValue='inherit (!)'}" />
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                Foreground="{DynamicResource Brush.Accent}"
+                                                Text="warisan"
+                                                Visibility="{Binding IsInherited, Converter={StaticResource BoolToVisibility}}" />
+                                            <StackPanel
+                                                Grid.Column="4"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal">
+                                                <TextBox
+                                                    Width="110"
+                                                    Height="28"
+                                                    Style="{StaticResource Input}"
+                                                    Text="{Binding DataContext.NewPriceText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button
+                                                    Width="64"
+                                                    Height="28"
+                                                    Margin="6,0,0,0"
+                                                    Command="{Binding DataContext.SaveItemPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Simpan"
+                                                    Style="{StaticResource Button.Primary}" />
+                                                <Button
+                                                    Width="64"
+                                                    Height="28"
+                                                    Margin="6,0,0,0"
+                                                    Command="{Binding DataContext.ClearItemPriceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="Hapus (!)"
+                                                    Style="{StaticResource Button.Ghost}"
+                                                    Visibility="{Binding IsNotInherited, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="{DynamicResource Brush.Border}" />
+
+            <!-- List settings -->
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Surface}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="34" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Style="{StaticResource Aronium.PanelHeader}">
+                        <TextBlock Margin="12,0" Style="{StaticResource Aronium.PanelHeaderText}" Text="Pengaturan daftar harga" />
+                    </Border>
+
+                    <ScrollViewer
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        CanContentScroll="False"
+                        PanningMode="VerticalOnly">
+                        <StackPanel Margin="16">
+                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding List.Name, TargetNullValue='Daftar harga'}" />
                             <CheckBox
-                                Margin="0,4,0,0"
-                                IsChecked="{Binding List.ApplyPromotions, Mode=TwoWay}"
-                                Content="Terapkan promosi" />
+                                Margin="0,14,0,0"
+                                Content="Terapkan promosi"
+                                IsChecked="{Binding List.ApplyPromotions, Mode=TwoWay}" />
 
-                            <Button
-                                Margin="0,12,0,0"
-                                Height="44"
-                                Command="{Binding ShowEditFormCommand}"
-                                Content="Ubah nama / status"
-                                IsEnabled="{Binding IsNotBusy}"
-                                Style="{StaticResource Button.Secondary}" />
-
-                            <Button
-                                Margin="0,8,0,0"
-                                Height="44"
-                                Command="{Binding ToggleListActiveCommand}"
-                                Content="{Binding List.Active, Converter={StaticResource BoolToText}, ConverterParameter='Nonaktifkan Daftar Harga|Aktifkan Daftar Harga'}"
-                                IsEnabled="{Binding IsNotBusy}"
-                                Style="{StaticResource Button.Ghost}" />
-
-                            <!-- Edit form -->
                             <Border
-                                Margin="0,12,0,0"
-                                Padding="10"
-                                Background="{DynamicResource Brush.Surface}"
-                                BorderBrush="{DynamicResource Brush.BorderInput}"
-                                BorderThickness="{StaticResource Border.Width}"
-                                CornerRadius="{StaticResource Radius.Sm}"
-                                Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}">
+                                Margin="0,16,0,0"
+                                Padding="12"
+                                Background="{DynamicResource Brush.Bg}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama daftar harga" />
+                                    <TextBlock
+                                        Margin="0,0,0,6"
+                                        Style="{StaticResource Text.Caption}"
+                                        Text="Nama daftar harga"
+                                        Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}" />
                                     <TextBox
+                                        Height="32"
                                         Style="{StaticResource Input}"
-                                        Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}" />
+                                        Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
+                                        Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}" />
                                     <CheckBox
                                         Margin="0,10,0,0"
+                                        Content="Terapkan promosi"
                                         IsChecked="{Binding EditApplyPromotions, Mode=TwoWay}"
-                                        Content="Terapkan promosi" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                        Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel
+                                        Margin="0,14,0,0"
+                                        Orientation="Horizontal"
+                                        Visibility="{Binding IsEditFormVisible, Converter={StaticResource BoolToVisibility}}">
                                         <Button
-                                            Width="100"
-                                            Height="44"
-                                            Margin="0,0,12,0"
+                                            Width="90"
+                                            Height="32"
                                             Command="{Binding UpdateListCommand}"
                                             Content="Simpan"
                                             IsDefault="True"
                                             IsEnabled="{Binding IsNotBusy}"
                                             Style="{StaticResource Button.Primary}" />
                                         <Button
-                                            Width="100"
-                                            Height="44"
+                                            Width="90"
+                                            Height="32"
+                                            Margin="8,0,0,0"
                                             Command="{Binding HideEditFormCommand}"
                                             Content="Batal"
                                             Style="{StaticResource Button.Ghost}" />
                                     </StackPanel>
-                                    <TextBlock
-                                        Margin="0,12,0,0"
-                                        Style="{StaticResource Text.Error}"
-                                        Text="{Binding ErrorMessage}"
-                                        TextWrapping="Wrap"
-                                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
                                 </StackPanel>
                             </Border>
+
+                            <TextBlock
+                                Margin="0,12,0,0"
+                                Style="{StaticResource Text.Error}"
+                                Text="{Binding ErrorMessage}"
+                                TextWrapping="Wrap"
+                                Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock
+                                Margin="0,12,0,0"
+                                Style="{StaticResource Text.Secondary}"
+                                Text="{Binding InfoMessage}"
+                                Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
                         </StackPanel>
-                    </Border>
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Style="{StaticResource Text.Secondary}"
-                        Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
-
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding GoBackCommand}"
-                        Content="← Kembali ke daftar harga"
-                        Style="{StaticResource Button.Ghost}" />
-                </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
-        </Grid>
-    </ScrollViewer>
+
+        <!-- Status strip -->
+        <Border Grid.Row="3" Style="{StaticResource Aronium.Footer}">
+            <Grid Margin="12,0">
+                <TextBlock
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding Items.Count, StringFormat='{}{0} item'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Text="{Binding InfoMessage}"
+                    Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource Aronium.FooterText}"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

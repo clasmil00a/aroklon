@@ -77,4 +77,12 @@ public sealed partial class PriceListViewModel : ObservableObject
         // Placeholder: M2 UI for creating price lists is minimal; full editor at S40.
         InfoMessage = "Gunakan editor daftar harga (S40) untuk membuat daftar harga baru.";
     }
+
+    [RelayCommand]
+    private async Task RefreshAsync() => await InitializeAsync();
+
+    [RelayCommand]
+    private void GoBack() => BackRequested?.Invoke();
+
+    public event Action? BackRequested;
 }

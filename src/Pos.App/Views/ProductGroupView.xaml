@@ -2,86 +2,218 @@
     x:Class="Pos.App.Views.ProductGroupView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{DynamicResource Brush.Bg}"
+    Background="{DynamicResource Brush.Surface}"
     Loaded="OnLoaded">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto"
-        CanContentScroll="False"
-        PanningMode="VerticalOnly">
-        <Grid Margin="24">
+    <UserControl.Resources>
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+            <Setter Property="Width" Value="88" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource Text.Caption}">
+            <Setter Property="Margin" Value="0,12,0,5" />
+            <Setter Property="FontWeight" Value="{StaticResource Font.Weight.SemiBold}" />
+        </Style>
+
+        <Style x:Key="GroupRow" TargetType="Border">
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.SurfaceRaised}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Brush.SurfaceHover}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="41" />
+            <RowDefinition Height="64" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource Text.PageTitle}" Text="Grup Produk" />
+        <!-- Aronium path strip -->
+        <Border
+            Grid.Row="0"
+            Background="{DynamicResource Brush.Surface}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Content="&#xE72B;"
+                    Style="{StaticResource Button.Icon}"
+                    ToolTip="Kembali ke manajemen" />
                 <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource Text.Secondary}"
-                    Text="Kelola grup produk untuk organisasi katalog (S43 · M8)." />
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="Manajemen" />
+                <TextBlock
+                    Margin="7,0"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="•" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource Brush.Text}"
+                    Text="Grup produk" />
             </StackPanel>
-            <Border Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource Badge}">
-                <TextBlock Style="{StaticResource Text.Caption}" Text="S43 · M8" />
-            </Border>
-        </Grid>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Toolbar -->
+        <Border
+            Grid.Row="1"
+            Background="{DynamicResource Brush.Bg}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,0,0,1">
+            <StackPanel
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <Button
+                    Command="{Binding CancelEditCommand}"
+                    Style="{StaticResource ToolButton}"
+                    ToolTip="Mulai grup produk baru">
+                    <StackPanel>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="24"
+                            Foreground="{DynamicResource Brush.Accent}"
+                            Text="&#xE710;" />
+                        <TextBlock
+                            Margin="0,5,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{DynamicResource Brush.Accent}"
+                            Text="Grup baru" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource ToolButton}"
+                    ToolTip="Muat ulang daftar grup">
+                    <StackPanel>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="22"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="&#xE72C;" />
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="Muat ulang" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource ToolButton}"
+                    ToolTip="Kembali ke manajemen">
+                    <StackPanel>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="22"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="&#xE72B;" />
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="Kembali" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
-                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="1" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Form -->
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <StackPanel>
+            <!-- Flat editor panel -->
+            <ScrollViewer
+                Grid.Column="0"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                CanContentScroll="False"
+                PanningMode="VerticalOnly">
+                <StackPanel Margin="20,16,20,20">
                     <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Grup produk baru" />
+                        FontSize="16"
+                        FontWeight="{StaticResource Font.Weight.Light}"
+                        Foreground="{DynamicResource Brush.Text}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Grup produk baru" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Text" Value="Ubah grup produk" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
 
-                    <TextBlock Margin="0,0,0,6" Style="{StaticResource Text.Caption}" Text="Nama grup" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="NAMA GRUP *" />
                     <TextBox
                         Style="{StaticResource Input}"
                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Deskripsi (opsional)" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="DESKRIPSI" />
                     <TextBox
                         Style="{StaticResource Input}"
                         Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Margin="0,10,0,6" Style="{StaticResource Text.Caption}" Text="Urutan" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="URUTAN" />
                     <TextBox
                         Style="{StaticResource Input}"
                         Text="{Binding SortOrder, UpdateSourceTrigger=PropertyChanged}" />
 
                     <CheckBox
-                        Margin="0,10,0,0"
-                        IsChecked="{Binding Active, Mode=TwoWay}"
-                        Content="Aktif" />
+                        Margin="0,14,0,0"
+                        Content="Aktif"
+                        IsChecked="{Binding Active, Mode=TwoWay}" />
 
                     <Button
-                        Margin="0,16,0,0"
-                        Height="44"
+                        Height="34"
+                        Margin="0,18,0,0"
                         Command="{Binding SaveCommand}"
-                        Content="Simpan Grup"
+                        Content="Simpan grup"
                         IsDefault="True"
                         IsEnabled="{Binding IsNotBusy}"
                         Style="{StaticResource Button.Primary}" />
 
                     <Button
+                        Height="32"
                         Margin="0,8,0,0"
                         Command="{Binding CancelEditCommand}"
                         Content="Batal"
-                        Style="{StaticResource Button.Ghost}" />
+                        Style="{StaticResource Button.Secondary}"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}" />
 
                     <TextBlock
                         Margin="0,12,0,0"
@@ -94,71 +226,217 @@
                         Margin="0,12,0,0"
                         Style="{StaticResource Text.Secondary}"
                         Text="{Binding InfoMessage}"
-                        Visibility="{Binding InfoMessage, Converter={StaticResource BoolToVisibility}}" />
+                        TextWrapping="Wrap"
+                        Visibility="{Binding InfoMessage, Converter={StaticResource StringToVisibility}}" />
                 </StackPanel>
-            </Border>
+            </ScrollViewer>
 
-            <!-- List -->
-            <Border Grid.Column="2" Style="{StaticResource Card.Raised}">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        Style="{StaticResource Text.SectionTitle}"
-                        Text="Daftar grup produk" />
+            <Border
+                Grid.Column="1"
+                Background="{DynamicResource Brush.Border}" />
+
+            <!-- Groups list -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="44" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border
+                    Grid.Row="0"
+                    Background="{DynamicResource Brush.Bg}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="0,0,0,1">
+                    <Grid Margin="12,0">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.Text}"
+                            Text="Daftar grup produk" />
+                        <TextBlock
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="{Binding Groups.Count, StringFormat='{}{0} grup'}" />
+                    </Grid>
+                </Border>
+
+                <Border
+                    Grid.Row="1"
+                    Background="{DynamicResource Brush.Surface}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="0,0,0,1">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="70" />
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="190" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="Nama" />
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="Urutan" />
+                        <TextBlock
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="Status" />
+                        <TextBlock
+                            Grid.Column="3"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="{StaticResource Font.Weight.SemiBold}"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="Aksi" />
+                    </Grid>
+                </Border>
+
+                <ScrollViewer
+                    Grid.Row="2"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
+                    CanContentScroll="False"
+                    PanningMode="VerticalOnly">
                     <ItemsControl ItemsSource="{Binding Groups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border
-                                    Margin="0,0,0,6"
-                                    Padding="10"
-                                    Background="{DynamicResource Brush.Surface}"
-                                    BorderBrush="{DynamicResource Brush.BorderInput}"
-                                    BorderThickness="{StaticResource Border.Width}"
-                                    CornerRadius="{StaticResource Radius.Sm}">
+                                <Border Style="{StaticResource GroupRow}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="70" />
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="190" />
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding Name}" />
+                                        <StackPanel VerticalAlignment="Center">
                                             <TextBlock
-                                                Style="{StaticResource Text.Caption}"
-                                                Text="{Binding Description, TargetNullValue='—'}" />
+                                                FontSize="13"
+                                                Foreground="{DynamicResource Brush.Text}"
+                                                Text="{Binding Name}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{DynamicResource Brush.TextMuted}"
+                                                Text="{Binding Description, TargetNullValue='—'}"
+                                                TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <TextBlock
                                             Grid.Column="1"
-                                            IsChecked="{Binding Active, Mode=TwoWay}"
                                             VerticalAlignment="Center"
-                                            Style="{StaticResource Segment.CheckBox}" />
-                                        <Button
+                                            FontSize="13"
+                                            Foreground="{DynamicResource Brush.TextMuted}"
+                                            Text="{Binding SortOrder}" />
+                                        <TextBlock
                                             Grid.Column="2"
-                                            Margin="8,0,0,0"
-                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="Ubah"
-                                            Style="{StaticResource Button.Ghost}" />
+                                            VerticalAlignment="Center"
+                                            FontSize="13">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="Nonaktif" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Active}" Value="True">
+                                                            <Setter Property="Text" Value="Aktif" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Success}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <StackPanel
+                                            Grid.Column="3"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal">
+                                            <Button
+                                                Height="28"
+                                                Padding="10,0"
+                                                Command="{Binding DataContext.ToggleActiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                                                        <Setter Property="Content" Value="Aktifkan" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Active}" Value="True">
+                                                                <Setter Property="Content" Value="Nonaktifkan" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <Button
+                                                Height="28"
+                                                Margin="4,0,0,0"
+                                                Padding="10,0"
+                                                Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="Ubah"
+                                                Foreground="{DynamicResource Brush.Accent}"
+                                                Style="{StaticResource Button.Ghost}" />
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </ScrollViewer>
 
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{StaticResource Text.Caption}"
-                        Text="{Binding Groups.Count, StringFormat='{}{0} grup produk'}" />
+                <TextBlock
+                    Grid.Row="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="Belum ada grup produk.">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Groups.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Grid>
 
-                    <Button
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding GoBackCommand}"
-                        Content="← Kembali ke beranda"
-                        Style="{StaticResource Button.Ghost}" />
-                </StackPanel>
-            </Border>
-        </Grid>
-        </Grid>
-    </ScrollViewer>
+        <Border
+            Grid.Row="3"
+            Background="{DynamicResource Brush.Surface}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,1,0,0">
+            <Grid Margin="12,0">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{DynamicResource Brush.TextMuted}"
+                    Text="{Binding Groups.Count, StringFormat='{}{0} grup produk'}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{DynamicResource Brush.Danger}"
+                    Text="{Binding ErrorMessage}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>
