@@ -892,25 +892,11 @@
                         VerticalAlignment="Center"
                         IsHitTestVisible="False"
                         Opacity="0.9">
-                        <Grid
-                            Width="118"
+                        <Image
+                            Width="100"
                             Height="100"
-                            HorizontalAlignment="Center">
-                            <Path
-                                Data="M 33,4 L 85,4 L 114,50 L 85,96 L 33,96 L 4,50 Z"
-                                Stroke="{DynamicResource Brush.Watermark}"
-                                StrokeThickness="7" />
-                            <Path
-                                Fill="{x:Null}"
-                                Stroke="{DynamicResource Brush.Watermark}"
-                                StrokeThickness="7"
-                                StrokeEndLineCap="Round"
-                                StrokeStartLineCap="Round">
-                                <Path.Data>
-                                    <PathGeometry Figures="M 75,34.9 A 22 22 0 1 0 75,65.1 M 75,34.9 L 75,74" />
-                                </Path.Data>
-                            </Path>
-                        </Grid>
+                            HorizontalAlignment="Center"
+                            Source="/Pos.App;component/Resources/logo-ak-mono.png" />
                         <TextBlock
                             Margin="0,8,0,0"
                             HorizontalAlignment="Center"

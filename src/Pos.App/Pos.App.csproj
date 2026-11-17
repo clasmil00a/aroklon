@@ -9,6 +9,7 @@
     <AssemblyTitle>Aroklon</AssemblyTitle>
     <Company>Aroklon</Company>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\aroklon.ico</ApplicationIcon>
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
@@ -23,5 +24,8 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\Fonts\*.ttf" />
+    <Resource Include="Resources\aroklon.ico" />
+    <Resource Include="Resources\logo-ak.png" />
+    <Resource Include="Resources\logo-ak-mono.png" />
   </ItemGroup>
 </Project>
