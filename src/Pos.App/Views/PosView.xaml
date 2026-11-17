@@ -896,7 +896,7 @@
                             Width="100"
                             Height="100"
                             HorizontalAlignment="Center"
-                            Source="/Pos.App;component/Resources/logo-ak-mono.png" />
+                            Source="/Aroklon;component/Resources/logo-ak-mono.png" />
                         <TextBlock
                             Margin="0,8,0,0"
                             HorizontalAlignment="Center"
