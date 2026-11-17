@@ -900,17 +900,20 @@
                                 Data="M 33,4 L 85,4 L 114,50 L 85,96 L 33,96 L 4,50 Z"
                                 Stroke="{DynamicResource Brush.Watermark}"
                                 StrokeThickness="7" />
-                            <TextBlock
-                                Height="88"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                FontFamily="{StaticResource Font.Sans}"
-                                FontSize="88"
-                                FontWeight="{StaticResource Font.Weight.Light}"
-                                Foreground="{DynamicResource Brush.Watermark}"
-                                LineHeight="88"
-                                Text="a"
-                                TextAlignment="Center" />
+                            <Path
+                                Fill="{x:Null}"
+                                Stroke="{DynamicResource Brush.Watermark}"
+                                StrokeThickness="7">
+                                <Path.Data>
+                                    <EllipseGeometry Center="59,50" RadiusX="24" RadiusY="24" />
+                                </Path.Data>
+                            </Path>
+                            <Path
+                                Data="M 79,28 L 79,78"
+                                Stroke="{DynamicResource Brush.Watermark}"
+                                StrokeEndLineCap="Round"
+                                StrokeStartLineCap="Round"
+                                StrokeThickness="7" />
                         </Grid>
                         <TextBlock
                             Margin="0,8,0,0"
