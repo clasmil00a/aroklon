@@ -151,14 +151,16 @@
                         Stroke="{DynamicResource Brush.LoginLogo}"
                         StrokeThickness="4" />
                     <TextBlock
+                        Height="52"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Margin="0,-2,0,0"
                         FontFamily="{StaticResource Font.Sans}"
-                        FontSize="42"
+                        FontSize="52"
                         FontWeight="{StaticResource Font.Weight.Light}"
                         Foreground="{DynamicResource Brush.LoginLogo}"
-                        Text="a" />
+                        LineHeight="52"
+                        Text="a"
+                        TextAlignment="Center" />
                 </Grid>
             </StackPanel>
             <TextBlock

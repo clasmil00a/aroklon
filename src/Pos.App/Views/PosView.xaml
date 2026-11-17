@@ -8,6 +8,7 @@
         <KeyBinding Key="D" Modifiers="Ctrl" Command="{Binding KickCashDrawerCommand}" />
         <KeyBinding Key="F2" Command="{Binding ShowDiscountCommand}" />
         <KeyBinding Key="F3" Command="{Binding OpenSearchModalCommand}" />
+        <KeyBinding Key="T" Modifiers="Ctrl" Command="{Binding CycleSearchModeCommand}" />
         <KeyBinding Key="F4" Command="{Binding ShowQuantityCommand}" />
         <KeyBinding Key="F7" Command="{Binding OpenOrdersCommand}" />
         <KeyBinding Key="F8" Command="{Binding NewSaleCommand}" />
@@ -238,62 +239,101 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Menu: Aronium asterisk glyph -->
+                <!-- Aronium search switcher: all fields / barcode / code / name.
+                     The active option turns accent cyan, as in the reference. -->
                 <Button
                     Grid.Column="0"
                     Width="34"
                     Height="34"
                     Margin="6,0,0,0"
-                    Command="{Binding OpenMenuCommand}"
-                    Style="{StaticResource Button.Icon}"
-                    ToolTip="Menu utama">
+                    Command="{Binding SetSearchModeCommand}"
+                    CommandParameter="all"
+                    ToolTip="Cari semua kolom (nama, kode, barcode)">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchMode}" Value="all">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
                     <Viewbox Width="22" Height="22">
                         <Path
                             Data="M 12,2 L 12,22 M 2,12 L 22,12 M 4.9,4.9 L 19.1,19.1 M 19.1,4.9 L 4.9,19.1"
-                            Stroke="{DynamicResource Brush.Text}"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                             StrokeEndLineCap="Round"
                             StrokeStartLineCap="Round"
                             StrokeThickness="1.8" />
                     </Viewbox>
                 </Button>
 
-                <!-- Barcode scanner -->
+                <!-- Search option: barcode -->
                 <Button
                     Grid.Column="1"
                     Width="34"
                     Height="34"
-                    Command="{Binding ShowBarcodeCommand}"
+                    Command="{Binding SetSearchModeCommand}"
+                    CommandParameter="barcode"
                     Content="&#xEC5A;"
                     FontFamily="Segoe MDL2 Assets"
                     FontSize="17"
-                    Style="{StaticResource Button.Icon}"
-                    ToolTip="Pindai barcode" />
+                    ToolTip="Cari barcode">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchMode}" Value="barcode">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
-                <!-- Search mode toggle -->
+                <!-- Search option: code / SKU -->
                 <Button
                     Grid.Column="2"
                     Width="34"
                     Height="34"
-                    Command="{Binding ToggleSearchModeCommand}"
+                    Command="{Binding SetSearchModeCommand}"
+                    CommandParameter="code"
                     Content="#"
                     FontFamily="{StaticResource Font.Sans}"
                     FontSize="20"
                     FontWeight="{StaticResource Font.Weight.SemiBold}"
-                    Style="{StaticResource Button.Icon}"
-                    ToolTip="Cari berdasarkan kode / SKU" />
+                    ToolTip="Cari kode / SKU">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchMode}" Value="code">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
-                <!-- Customer (blue tag, as in the Standard layout) -->
+                <!-- Search option: name (default, accent cyan) -->
                 <Button
                     Grid.Column="3"
                     Width="34"
                     Height="34"
-                    Command="{Binding ShowCustomerCommand}"
+                    Command="{Binding SetSearchModeCommand}"
+                    CommandParameter="name"
                     Content="&#xE8EC;"
                     FontFamily="Segoe MDL2 Assets"
                     FontSize="17"
-                    Foreground="{DynamicResource Brush.Accent}"
-                    Style="{StaticResource Button.Icon}"
-                    ToolTip="Pilih pelanggan" />
+                    ToolTip="Cari nama produk">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchMode}" Value="name">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
                 <!-- Borderless search field -->
                 <Grid Grid.Column="4" Margin="8,0,8,0">
@@ -861,14 +901,16 @@
                                 Stroke="{DynamicResource Brush.Watermark}"
                                 StrokeThickness="7" />
                             <TextBlock
+                                Height="88"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Margin="0,-4,0,0"
                                 FontFamily="{StaticResource Font.Sans}"
-                                FontSize="76"
+                                FontSize="88"
                                 FontWeight="{StaticResource Font.Weight.Light}"
                                 Foreground="{DynamicResource Brush.Watermark}"
-                                Text="a" />
+                                LineHeight="88"
+                                Text="a"
+                                TextAlignment="Center" />
                         </Grid>
                         <TextBlock
                             Margin="0,8,0,0"
@@ -1721,61 +1763,6 @@
                         <Button
                             Command="{Binding ApplyPriceOverrideCommand}"
                             Content="Terapkan"
-                            Style="{StaticResource DialogPrimaryButton}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- ===================== Barcode dialog ===================== -->
-        <Border
-            Grid.RowSpan="2"
-            Panel.ZIndex="47"
-            Background="{DynamicResource Brush.Scrim}"
-            Visibility="{Binding IsBarcodeVisible, Converter={StaticResource BoolToVisibility}}">
-            <Border Width="420" Style="{StaticResource DialogShell}">
-                <StackPanel Margin="20">
-                    <Grid Margin="0,0,0,4">
-                        <TextBlock Style="{StaticResource Text.DialogTitle}" Text="Pindai barcode" />
-                        <Button
-                            HorizontalAlignment="Right"
-                            Command="{Binding HideBarcodeCommand}"
-                            Content="&#xE711;"
-                            Style="{StaticResource DialogClose}" />
-                    </Grid>
-                    <TextBlock
-                        Margin="0,4,0,10"
-                        FontSize="11"
-                        Foreground="{DynamicResource Brush.TextMuted}"
-                        Text="Scan barcode atau ketik kodenya, lalu tekan Enter." />
-                    <TextBox
-                        x:Name="BarcodeBox"
-                        Height="40"
-                        IsVisibleChanged="OnDialogTextBoxVisibleChanged"
-                        Style="{StaticResource DialogField}"
-                        Text="{Binding BarcodeInput, UpdateSourceTrigger=PropertyChanged}">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter" Command="{Binding ScanBarcodeCommand}" />
-                        </TextBox.InputBindings>
-                    </TextBox>
-                    <TextBlock
-                        Margin="0,8,0,0"
-                        Style="{StaticResource Text.Error}"
-                        Text="{Binding ErrorMessage}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
-                    <StackPanel
-                        Margin="0,16,0,0"
-                        HorizontalAlignment="Right"
-                        Orientation="Horizontal">
-                        <Button
-                            Margin="0,0,8,0"
-                            Command="{Binding HideBarcodeCommand}"
-                            Content="Batal"
-                            Style="{StaticResource DialogSecondaryButton}" />
-                        <Button
-                            Command="{Binding ScanBarcodeCommand}"
-                            Content="Scan"
                             Style="{StaticResource DialogPrimaryButton}" />
                     </StackPanel>
                 </StackPanel>

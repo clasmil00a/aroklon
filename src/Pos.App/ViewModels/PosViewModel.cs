@@ -27,9 +27,6 @@ public sealed partial class PosViewModel : ObservableObject
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    private string _barcodeInput = string.Empty;
-
-    [ObservableProperty]
     private ObservableCollection<ProductLookup> _searchResults = new();
 
     [ObservableProperty]
@@ -80,7 +77,7 @@ public sealed partial class PosViewModel : ObservableObject
     private bool _isSearchModalOpen;
 
     [ObservableProperty]
-    private string _searchMode = "all";
+    private string _searchMode = "name";
 
     [ObservableProperty]
     private bool _isQuantityVisible;
@@ -111,9 +108,6 @@ public sealed partial class PosViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isPaymentVisible;
-
-    [ObservableProperty]
-    private bool _isBarcodeVisible;
 
     [ObservableProperty]
     private bool _isCustomerVisible;
@@ -184,9 +178,13 @@ public sealed partial class PosViewModel : ObservableObject
     public event Action? OpenOrdersRequested;
     public event Action? SalesHistoryRequested;
 
-    public string SearchHint => SearchMode == "code"
-        ? "Cari kode / SKU produk"
-        : "Cari produk berdasarkan nama";
+    public string SearchHint => SearchMode switch
+    {
+        "barcode" => "Pindai atau ketik barcode",
+        "code" => "Cari kode / SKU produk",
+        "name" => "Cari produk berdasarkan nama",
+        _ => "Cari nama, kode, atau barcode produk",
+    };
 
     public PosViewModel(
         ProductService products,
@@ -383,7 +381,29 @@ public sealed partial class PosViewModel : ObservableObject
         ErrorMessage = string.Empty;
         try
         {
-            var results = await _products.SearchAsync(SearchText, 20);
+            IReadOnlyList<ProductLookup> results;
+            if (SearchMode == "barcode")
+            {
+                var scanned = await _products.FindByBarcodeAsync(SearchText.Trim());
+                results = scanned is null ? Array.Empty<ProductLookup>() : new[] { scanned };
+            }
+            else
+            {
+                results = await _products.SearchAsync(SearchText, 20);
+                if (SearchMode == "code")
+                {
+                    results = results
+                        .Where(p => p.Code?.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase) == true)
+                        .ToList();
+                }
+                else if (SearchMode == "name")
+                {
+                    results = results
+                        .Where(p => p.Name.StartsWith(SearchText.Trim(), StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+            }
+
             if (version != _searchVersion)
             {
                 return;
@@ -399,50 +419,6 @@ public sealed partial class PosViewModel : ObservableObject
             {
                 ErrorMessage = "Pencarian produk gagal. Coba lagi.";
             }
-        }
-    }
-
-    [RelayCommand]
-    private async Task ScanBarcodeAsync()
-    {
-        if (IsBusy) return;
-        ErrorMessage = string.Empty;
-        IsBusy = true;
-        UpdateCanCheckout();
-        try
-        {
-            var barcode = BarcodeInput?.Trim();
-            if (string.IsNullOrEmpty(barcode))
-            {
-                ErrorMessage = "Barcode kosong. Silakan scan atau ketik barcode.";
-                return;
-            }
-
-            var product = await _products.FindByBarcodeAsync(barcode);
-            if (product is null)
-            {
-                ErrorMessage = $"Barcode '{barcode}' tidak ditemukan.";
-                return;
-            }
-
-            var line = _cart.Add(product, 1000);
-            ReplaceOrAddLine(line);
-            Recalculate();
-            BarcodeInput = string.Empty;
-            IsBarcodeVisible = false;
-            SearchText = string.Empty;
-            SearchResults = new ObservableCollection<ProductLookup>();
-            IsSearchResultsOpen = false;
-        }
-        catch (Exception exception)
-        {
-            Log.Error(exception, "Barcode scan failed");
-            ErrorMessage = "Pindai barcode gagal. Coba lagi.";
-        }
-        finally
-        {
-            IsBusy = false;
-            UpdateCanCheckout();
         }
     }
 
@@ -505,21 +481,27 @@ public sealed partial class PosViewModel : ObservableObject
     private void OpenHistory() => SalesHistoryRequested?.Invoke();
 
     [RelayCommand]
-    private void ToggleSearchMode()
+    private void SetSearchMode(string? mode)
     {
-        SearchMode = SearchMode == "code" ? "all" : "code";
-        OnPropertyChanged(nameof(SearchHint));
+        if (mode is not ("all" or "barcode" or "code" or "name"))
+        {
+            return;
+        }
+
+        SearchMode = mode;
     }
 
     [RelayCommand]
-    private void ShowBarcode()
+    private void CycleSearchMode()
     {
-        BarcodeInput = string.Empty;
-        IsBarcodeVisible = true;
+        SearchMode = SearchMode switch
+        {
+            "all" => "barcode",
+            "barcode" => "code",
+            "code" => "name",
+            _ => "all",
+        };
     }
-
-    [RelayCommand]
-    private void HideBarcode() => IsBarcodeVisible = false;
 
     [RelayCommand]
     private async Task SubmitSearchAsync()
@@ -1030,7 +1012,6 @@ public sealed partial class PosViewModel : ObservableObject
         IsCommentVisible = false;
         IsPaymentVisible = false;
         IsPriceOverrideVisible = false;
-        IsBarcodeVisible = false;
         IsVoidConfirmVisible = false;
         IsSearchModalOpen = false;
         IsCustomerVisible = false;
