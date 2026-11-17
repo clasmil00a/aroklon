@@ -62,7 +62,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     private UnitOption? _newUnitOption;
 
     [ObservableProperty]
-    private long _newFactor = 1000;
+    private decimal? _newFactorIsi = 1m;
 
     [ObservableProperty]
     private bool _newIsDefaultSale;
@@ -84,7 +84,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     private string? _editingVariantId;
 
     [ObservableProperty]
-    private long _editingFactor;
+    private decimal? _editingFactorIsi;
 
     [ObservableProperty]
     private long? _editingPrice;
@@ -326,9 +326,9 @@ public sealed partial class ProductEditorViewModel : ObservableObject
             return;
         }
 
-        if (NewFactor <= 0)
+        if (NewFactorIsi is null or <= 0)
         {
-            ErrorMessage = "Faktor satuan harus lebih dari nol.";
+            ErrorMessage = "Isi satuan harus lebih dari nol.";
             return;
         }
 
@@ -342,11 +342,11 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         try
         {
             await _products.CreateProductUnitAsync(new(
-                _productId, NewUnitOption.Id, NewFactor, NewIsDefaultSale, NewPrice, 0));
+                _productId, NewUnitOption.Id, (long)(NewFactorIsi.Value * 1000m), NewIsDefaultSale, NewPrice, 0));
 
             InfoMessage = "Varian satuan ditambahkan.";
             NewUnitOption = null;
-            NewFactor = 1000;
+            NewFactorIsi = 1m;
             NewIsDefaultSale = false;
             NewPrice = null;
             await InitializeAsync();
@@ -372,7 +372,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         if (variant is null || IsBusy) return;
 
         EditingVariantId = variant.ProductUnitId;
-        EditingFactor = variant.FactorToBaseMilli;
+        EditingFactorIsi = variant.FactorToBaseMilli / 1000m;
         EditingPrice = variant.PriceMinor;
         EditingIsDefaultSale = variant.IsDefaultSale;
         EditingActive = variant.Active;
@@ -383,7 +383,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     private void CancelEditVariant()
     {
         EditingVariantId = null;
-        EditingFactor = 1000;
+        EditingFactorIsi = 1m;
         EditingPrice = null;
         EditingIsDefaultSale = false;
         EditingActive = true;
@@ -395,9 +395,9 @@ public sealed partial class ProductEditorViewModel : ObservableObject
     {
         if (EditingVariantId is null || IsBusy) return;
 
-        if (EditingFactor <= 0)
+        if (EditingFactorIsi is null or <= 0)
         {
-            EditingError = "Faktor satuan harus lebih dari nol.";
+            EditingError = "Isi satuan harus lebih dari nol.";
             return;
         }
 
@@ -414,7 +414,7 @@ public sealed partial class ProductEditorViewModel : ObservableObject
         try
         {
             await _products.UpdateProductUnitAsync(EditingVariantId, new(
-                EditingFactor,
+                (long)(EditingFactorIsi.Value * 1000m),
                 EditingIsDefaultSale,
                 EditingPrice,
                 null, // sortOrder - keep existing

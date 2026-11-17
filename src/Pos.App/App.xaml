@@ -17,6 +17,7 @@
             </ResourceDictionary.MergedDictionaries>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:BoolToTextConverter x:Key="BoolToText" />
+            <conv:MilliToQuantityConverter x:Key="MilliToQty" />
             <conv:StringEqualsConverter x:Key="StringEquals" />
             <conv:StringMapConverter x:Key="StringMap" />
             <conv:StringToVisibilityConverter x:Key="StringToVisibility" />

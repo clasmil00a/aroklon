@@ -140,7 +140,7 @@
                             <TextBlock
                                 Margin="0,8,0,0"
                                 Style="{StaticResource Text.Caption}"
-                                Text="{Binding Products.Count, StringFormat='{}{0} produk'}" />
+                                Text="{Binding ProductList.Count, StringFormat='{}{0} produk'}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

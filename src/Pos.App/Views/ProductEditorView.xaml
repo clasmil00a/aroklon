@@ -322,7 +322,7 @@
                                                     <TextBlock Style="{StaticResource Text.BodyStrong}" Text="{Binding UnitName}" />
                                                     <TextBlock
                                                         Style="{StaticResource Text.Caption}"
-                                                        Text="{Binding FactorToBaseMilli, StringFormat='1 {0:N0} satuan dasar'}" />
+                                                        Text="{Binding FactorToBaseMilli, Converter={StaticResource MilliToQty}, StringFormat='Isi: {0} x satuan dasar'}" />
                                                     <TextBlock
                                                         Style="{StaticResource Text.Secondary}"
                                                         Text="{Binding PriceMinor, Converter={StaticResource Currency}, TargetNullValue='Harga induk'}" />
@@ -380,10 +380,10 @@
                                         Height="40"
                                         ItemsSource="{Binding UnitOptions}"
                                         SelectedItem="{Binding NewUnitOption, Mode=TwoWay}" />
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Faktor (1 satuan = X satuan dasar)" />
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Isi (1 satuan jual = X satuan dasar)" />
                                     <TextBox
                                         Style="{StaticResource Input}"
-                                        Text="{Binding NewFactor, UpdateSourceTrigger=PropertyChanged}" />
+                                        Text="{Binding NewFactorIsi, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Harga jual (kosong = harga induk)" />
                                     <TextBox
                                         Style="{StaticResource Input}"
@@ -416,10 +416,10 @@
                                 Visibility="{Binding EditingVariantId, Converter={StaticResource StringToVisibility}}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource Text.SectionTitle}" Text="Edit varian" />
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Faktor" />
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Isi (1 satuan jual = X satuan dasar)" />
                                     <TextBox
                                         Style="{StaticResource Input}"
-                                        Text="{Binding EditingFactor, UpdateSourceTrigger=PropertyChanged}" />
+                                        Text="{Binding EditingFactorIsi, UpdateSourceTrigger=PropertyChanged}" />
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Harga jual (kosong = harga induk)" />
                                     <TextBox
                                         Style="{StaticResource Input}"
