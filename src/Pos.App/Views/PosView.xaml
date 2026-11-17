@@ -903,17 +903,13 @@
                             <Path
                                 Fill="{x:Null}"
                                 Stroke="{DynamicResource Brush.Watermark}"
-                                StrokeThickness="7">
+                                StrokeThickness="7"
+                                StrokeEndLineCap="Round"
+                                StrokeStartLineCap="Round">
                                 <Path.Data>
-                                    <EllipseGeometry Center="59,50" RadiusX="24" RadiusY="24" />
+                                    <PathGeometry Figures="M 75,34.9 A 22 22 0 1 0 75,65.1 M 75,34.9 L 75,74" />
                                 </Path.Data>
                             </Path>
-                            <Path
-                                Data="M 79,28 L 79,78"
-                                Stroke="{DynamicResource Brush.Watermark}"
-                                StrokeEndLineCap="Round"
-                                StrokeStartLineCap="Round"
-                                StrokeThickness="7" />
                         </Grid>
                         <TextBlock
                             Margin="0,8,0,0"
