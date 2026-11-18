@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output (the Windows ZIP is published as a GitHub Release asset)
+dist/
+
+# Local data / logs
+*.log
+*.db
+*.db-journal
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

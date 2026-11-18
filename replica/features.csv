@@ -1,0 +1,53 @@
+feature,area,priority,original,clone,notes
+Sign in with user + PIN,users,must,yes,yes,Owner/Manager/Cashier
+Ring a sale from barcode,code or name,sales,must,yes,yes,toggleable search modes
+Change quantity on an order line,sales,must,yes,yes,F4 or +/- controls
+Remove / void an order line,sales,must,yes,yes,Del
+Apply cart or item discount (fixed/percent),sales,must,yes,yes,tax after discount
+Apply customer discount,sales,must,yes,yes,overrides manual discount
+Override tax on a sale,sales,must,yes,yes,percent override
+Take cash payment with change,sales,must,yes,yes,numeric keypad + quick cash
+Take card / custom payment types,sales,must,yes,yes,configurable
+Split payment across tenders,sales,must,yes,yes,
+Print / save a receipt,sales,must,yes,yes,custom header footer, Windows printer
+Refund a sale (full or partial),sales,must,yes,yes,restock
+View sales history and reprint,sales,must,yes,yes,documents list
+Product search screen,sales,must,yes,yes,F3
+Keyboard shortcuts for the till,sales,must,yes,yes,F2 F3 F4 F8 F10 F12 Del
+Products CRUD with groups,catalogue,must,yes,yes,
+Barcodes per product,catalogue,must,yes,yes,multiple barcodes
+Stock quantity on hand,stock,must,yes,yes,
+Customers and suppliers,crm,must,yes,yes,
+Users and access levels,users,must,yes,yes,can only manage <= own level
+Payment types management,settings,must,yes,yes,
+Tax rates management,settings,must,yes,yes,multiple taxes per product
+Company details for receipts,settings,must,yes,yes,
+Cash in / cash out,cash,must,yes,yes,with reason
+End of day (Z report),cash,must,yes,yes,blocks on open sales
+X report (status without closing),cash,must,yes,yes,
+Open / close business day,cash,must,yes,yes,starting cash
+Purchase document (stock in),documents,should,yes,yes,
+Inventory count with expected vs counted,documents,should,yes,yes,
+Loss and damage document,documents,should,yes,yes,
+Proforma / quotation,documents,should,yes,yes,
+Document list with filters,documents,should,yes,yes,
+Dashboard with sales KPIs and charts,reporting,should,yes,yes,
+Reporting centre with print/save,reporting,should,yes,yes,
+Low-stock warnings,stock,should,yes,yes,
+CSV import products,catalogue,should,yes,no,not implemented in this slice
+Loyalty cards,crm,should,yes,yes,
+Product images and colors (visual layout),sales,should,yes,yes,
+Promotions and happy hour,sales,could,yes,no,
+Price lists per customer,pricing,could,yes,skip,paid plugin in original
+Print stations / kitchen routing,hardware,could,yes,skip,paid plugin in original
+Age-restricted product warning,sales,could,yes,yes,
+Product comments for kitchen tickets,sales,could,yes,yes,
+Multiple cash registers,hardware,could,yes,skip,Pro/SQL Server in original
+Email daily sales report,reporting,could,yes,skip,paid plugin in original
+Fiscal / e-invoicing integrations,legal,could,yes,skip,country certification
+Loyalty points / gift cards,crm,could,yes,no,
+Multi-currency,catalog,could,yes,no,currency symbol is configurable but no FX
+Touch-screen layout,sales,could,yes,yes,responsive tiles, 1024px+
+Backup and restore database,settings,could,yes,yes,
+Aronium brand,assets,could,yes,skip,trademark and marketing copy
+Aronium Pro licence and account,platform,could,yes,skip,their service

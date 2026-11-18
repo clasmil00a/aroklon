@@ -1,0 +1,720 @@
+'use strict';
+
+/* ==================================================================== */
+/*  Aroklon — shared UI utilities and application core                   */
+/* ==================================================================== */
+
+(function () {
+  const ICONS = {
+    sales: '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2l2.2 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L21 8H6"/>',
+    dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    products: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5"/><path d="M12 12v9"/>',
+    stock: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17.5 9 5 9-5"/>',
+    documents: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+    customers: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M18 20a6.5 6.5 0 0 0-2-4.7"/>',
+    reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    users: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+    settings:
+      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>',
+    cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/>',
+    day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M5 12h14"/>',
+    trash: '<path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+    edit: '<path d="M4 20h4l10-10-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    print: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 17h12v4H6z"/>',
+    check: '<path d="m5 12 5 5 9-10"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    right: '<path d="m9 6 6 6-6 6"/>',
+    barcode: '<path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>',
+    tag: '<path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
+    split: '<path d="M8 3 4 7l4 4"/><path d="M4 7h8a6 6 0 0 1 6 6v1"/><path d="m16 21 4-4-4-4"/><path d="M20 17H11"/>',
+    warning: '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/>',
+    save: '<path d="M5 3h11l4 4v14H5z"/><path d="M8 3v6h7V3"/><path d="M8 21v-7h8v7"/>',
+    upload: '<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v4h16v-4"/>',
+    download: '<path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>',
+    receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    store: '<path d="M4 9h16l-1-5H5L4 9Z"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+    filter: '<path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0 .5 4"/><path d="M20 4v7h-7"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+    card: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 15h4"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v7h-7"/>',
+    trend: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    back: '<path d="m14 6-6 6 6 6"/>',
+    lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+    phone: '<path d="M5 3h4l2 5-2 2a12 12 0 0 0 5 5l2-2 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/>',
+  };
+
+  function icon(name, size = 18, cls = '') {
+    const body = ICONS[name] || ICONS.info;
+    return `<svg class="${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  }
+
+  const esc = (v) =>
+    String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const attr = (v) => esc(v);
+
+  function money(c, opts = {}) {
+    const st = window.App ? window.App.state : null;
+    const symbol = (opts.symbol != null ? opts.symbol : st && st.company && st.company.symbol) || 'Rp';
+    const n = (Number(c) || 0) / 100;
+    const decimals = Math.abs(n % 1) > 0.0001 ? 2 : 0;
+    const s = n.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+    return `${symbol} ${s}`;
+  }
+
+  function moneyShort(c) {
+    const n = (Number(c) || 0) / 100;
+    if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1).replace('.', ',') + 'B';
+    if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + 'M';
+    if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+    return String(n);
+  }
+
+  function num(v, d = 0) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
+  }
+
+  function qty(v) {
+    const n = num(v);
+    return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function fmtDate(iso, withTime = false) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    const date = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (!withTime) return date;
+    return `${date} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function initials(name) {
+    return String(name || '?')
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0])
+      .join('')
+      .toUpperCase();
+  }
+
+  function effectiveRate(rates) {
+    let f = 1;
+    (rates || []).forEach((r) => (f *= 1 + num(r.percent) / 100));
+    return f - 1;
+  }
+
+  /* Client-side mirror of the server sale calculation, for instant totals. */
+  function computeCart(items, discount, taxOverride) {
+    let subtotal = 0;
+    let itemDiscTotal = 0;
+    const lines = (items || []).map((it, i) => {
+      const gross = Math.round(num(it.quantity) * num(it.price));
+      let disc = 0;
+      if (it.discount_type === 'percent') disc = (gross * num(it.discount_value)) / 100;
+      else if (it.discount_type === 'fixed') disc = Math.round(num(it.discount_value) * 100);
+      disc = Math.min(Math.max(disc, 0), gross);
+      subtotal += gross;
+      itemDiscTotal += disc;
+      return {
+        ...it,
+        index: i,
+        gross,
+        item_disc: disc,
+        net_after_item: gross - disc,
+        is_service: !!it.is_service,
+        incl: !!it.price_incl_tax,
+        taxes: it.taxes || [],
+      };
+    });
+
+    const afterItem = lines.reduce((s, l) => s + l.net_after_item, 0);
+    let cartDisc = 0;
+    if (discount && num(discount.value) > 0) {
+      cartDisc = discount.type === 'percent' ? (afterItem * num(discount.value)) / 100 : Math.round(num(discount.value) * 100);
+      cartDisc = Math.min(Math.max(cartDisc, 0), afterItem);
+    }
+
+    let taxTotal = 0;
+    let total = 0;
+    lines.forEach((l) => {
+      const share = afterItem > 0 ? (l.net_after_item / afterItem) * cartDisc : 0;
+      l.discount_total = l.item_disc + share;
+      const base = Math.max(l.net_after_item - share, 0);
+      const rates = taxOverride != null && taxOverride !== '' ? [{ percent: num(taxOverride) }] : l.taxes;
+      const rate = effectiveRate(rates);
+      const tax = l.incl ? base - base / (1 + rate) : base * rate;
+      l.tax_total = Math.round(tax);
+      l.total = l.incl ? Math.round(base) : Math.round(base + l.tax_total);
+      taxTotal += l.tax_total;
+      total += l.total;
+    });
+
+    return {
+      lines,
+      subtotal: Math.round(subtotal),
+      item_discount: Math.round(itemDiscTotal),
+      cart_discount: Math.round(cartDisc),
+      discount_total: Math.round(itemDiscTotal + cartDisc),
+      tax_total: taxTotal,
+      total,
+    };
+  }
+
+  /* ------------------------------------------------------------- toasts */
+
+  function toast(message, type = 'good', ms = 3200) {
+    const root = document.getElementById('toast-root');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const ic = type === 'good' ? 'check' : type === 'bad' ? 'warning' : type === 'warn' ? 'warning' : 'info';
+    el.innerHTML = `<span class="ti">${icon(ic, 16)}</span><span>${esc(message)}</span>`;
+    root.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity .2s, transform .2s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(6px)';
+      setTimeout(() => el.remove(), 220);
+    }, ms);
+  }
+
+  /* ------------------------------------------------------------- modals */
+
+  function modal(html, opts = {}) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `<div class="overlay" data-overlay><div class="modal ${opts.size || ''}" role="dialog" aria-modal="true">${html}</div></div>`;
+    const overlay = root.querySelector('[data-overlay]');
+    overlay.addEventListener('mousedown', (e) => {
+      if (e.target === overlay && opts.dismissible !== false) closeModal();
+    });
+    const first = root.querySelector('input:not([type=hidden]), select, textarea, .modal-foot .btn.primary, .modal-foot .btn.success, .modal-foot .btn.danger');
+    if (first) setTimeout(() => first.focus(), 30);
+    return root;
+  }
+
+  function closeModal() {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = '';
+    if (App._confirmResolve) {
+      const r = App._confirmResolve;
+      App._confirmResolve = null;
+      r(false);
+    }
+    if (App._promptResolve) {
+      const r = App._promptResolve;
+      App._promptResolve = null;
+      r(null);
+    }
+  }
+
+  function confirm(opts) {
+    modal(
+      `<div class="modal-head"><div class="ic" style="width:34px;height:34px;border-radius:9px;background:${
+        opts.danger ? 'var(--bad-bg)' : 'var(--primary-50)'
+      };display:grid;place-items:center;color:${opts.danger ? 'var(--bad)' : 'var(--primary)'}">${icon(
+        opts.danger ? 'warning' : 'info',
+        18
+      )}</div><div><h2>${esc(opts.title || 'Are you sure?')}</h2>${opts.sub ? `<div class="sub">${esc(opts.sub)}</div>` : ''}</div></div>
+      <div class="modal-body">${opts.message || ''}</div>
+      <div class="modal-foot">
+        <button class="btn" data-modal-cancel>${esc(opts.cancelLabel || 'Cancel')}</button>
+        <button class="btn ${opts.danger ? 'danger' : 'primary'}" data-modal-ok>${esc(opts.confirmLabel || 'Confirm')}</button>
+      </div>`,
+      { size: 'sm' }
+    );
+    return new Promise((resolve) => {
+      App._confirmResolve = resolve;
+    });
+  }
+
+  function prompt(opts) {
+    modal(
+      `<div class="modal-head"><h2>${esc(opts.title || 'Enter a value')}</h2></div>
+       <div class="modal-body">
+         ${opts.message ? `<p class="muted small mb12">${esc(opts.message)}</p>` : ''}
+         <div class="field"><label>${esc(opts.label || 'Value')}</label>
+         <input class="input" id="prompt-input" type="${opts.type || 'text'}" value="${attr(opts.value || '')}" ${
+        opts.placeholder ? `placeholder="${attr(opts.placeholder)}"` : ''
+      } /></div>
+       </div>
+       <div class="modal-foot">
+         <button class="btn" data-modal-cancel>${esc(opts.cancelLabel || 'Cancel')}</button>
+         <button class="btn primary" data-modal-ok>${esc(opts.confirmLabel || 'OK')}</button>
+       </div>`,
+      { dismissible: opts.dismissible }
+    );
+    const input = document.getElementById('prompt-input');
+    if (input) {
+      input.focus();
+      input.select();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const v = input.value;
+          closeModal();
+          if (App._promptResolve) {
+            const r = App._promptResolve;
+            App._promptResolve = null;
+            r(v);
+          }
+        }
+      });
+    }
+    return new Promise((resolve) => {
+      App._promptResolve = resolve;
+      App._promptGet = () => (document.getElementById('prompt-input') || {}).value;
+    });
+  }
+
+  /* --------------------------------------------------------------- app */
+
+  const App = (window.App = {
+    state: {
+      user: null,
+      route: 'sales',
+      params: {},
+      company: { symbol: 'Rp', currency: 'IDR', name: 'Aroklon Store' },
+      settings: {},
+      day: { register_open: false, business_date: '' },
+      products: [],
+      groups: [],
+      customers: [],
+      users: [],
+      paymentTypes: [],
+      taxRates: [],
+      registers: [],
+      countries: [],
+      catalogSearch: '',
+      catalogMode: 'name',
+      groupFilter: null,
+      cart: { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' },
+      selectedLine: null,
+      pay: null,
+      report: null,
+    },
+    actions: {},
+    screens: {},
+    loaders: {},
+    _confirmResolve: null,
+    _promptResolve: null,
+    _promptGet: null,
+
+    action(name, fn) {
+      this.actions[name] = fn;
+    },
+
+    loader(name, fn) {
+      this.loaders[name] = fn;
+    },
+
+    async api(action, payload) {
+      try {
+        const res = await window.api.invoke(action, payload);
+        if (!res.ok) throw new Error(res.error || 'Request failed');
+        return res.result;
+      } catch (e) {
+        throw e;
+      }
+    },
+
+    async tryApi(action, payload, failMsg) {
+      try {
+        return await this.api(action, payload);
+      } catch (e) {
+        toast(failMsg ? `${failMsg}: ${e.message}` : e.message, 'bad', 4200);
+        return null;
+      }
+    },
+
+    money,
+    esc,
+    attr,
+    icon,
+    toast,
+    modal,
+    closeModal,
+    confirm,
+    prompt,
+    computeCart,
+
+    go(route, params = {}) {
+      this.state.route = route;
+      this.state.params = params;
+      this.render();
+      const loader = this.loaders[route];
+      if (loader) {
+        Promise.resolve(loader(params)).then(() => {
+          if (this.state.route === route) this.render();
+        });
+      }
+    },
+
+    render() {
+      const root = document.getElementById('app');
+      if (!this.state.user) {
+        root.innerHTML = this._loginHtml();
+        this._bindLogin();
+        return;
+      }
+      const active = document.activeElement;
+      const focusId = active && active.id ? active.id : null;
+      let sel = null;
+      try {
+        sel = active && active.selectionStart != null ? active.selectionStart : null;
+      } catch (e) {
+        sel = null;
+      }
+
+      const screen = this.screens[this.state.route] || this.screens.sales;
+      const meta = screen.meta || { title: 'Aroklon' };
+      root.innerHTML = `
+        <div class="shell">
+          ${this._sidebar()}
+          <div class="main">
+            ${this._topbar(meta)}
+            <div class="view ${screen.flush ? 'flush' : ''}" id="view">${screen.render()}</div>
+          </div>
+        </div>`;
+
+      if (focusId) {
+        const el = document.getElementById(focusId);
+        if (el) {
+          el.focus();
+          if (sel != null) {
+            try {
+              el.setSelectionRange(sel, sel);
+            } catch (e) {
+              /* not a text field */
+            }
+          }
+        }
+      }
+    },
+
+    refresh() {
+      this.render();
+    },
+
+    async reloadCatalog() {
+      const [products, groups, customers] = await Promise.all([
+        this.api('listProducts', {}),
+        this.api('listGroups', {}),
+        this.api('listCustomers', { type: 'customer' }),
+      ]);
+      this.state.products = products;
+      this.state.groups = groups;
+      this.state.customers = customers;
+    },
+
+    async reloadReference() {
+      const [users, paymentTypes, taxRates, registers, countries, day, company, meta] = await Promise.all([
+        this.api('listUsers'),
+        this.api('listPaymentTypes'),
+        this.api('listTaxRates'),
+        this.api('listRegisters'),
+        this.api('listCountries'),
+        this.api('getDayState'),
+        this.api('getCompany'),
+        window.api.meta(),
+      ]);
+      this.state.users = users;
+      this.state.paymentTypes = paymentTypes;
+      this.state.taxRates = taxRates;
+      this.state.registers = registers;
+      this.state.countries = countries;
+      this.state.day = day;
+      this.state.company = company;
+      this.state.meta = meta;
+    },
+
+    async login(userId, pin) {
+      const res = await this.api('login', [userId, pin]);
+      if (!res.ok) throw new Error(res.error);
+      this.state.user = res.user;
+      localStorage.setItem('aroklon.user', String(res.user.id));
+      await this.reloadReference();
+      await this.reloadCatalog();
+      this.state.pay = null;
+      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      this.state.route = 'sales';
+      this.render();
+      setTimeout(() => {
+        const el = document.getElementById('pos-search');
+        if (el) el.focus();
+      }, 40);
+    },
+
+    logout() {
+      this.state.user = null;
+      localStorage.removeItem('aroklon.user');
+      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      this.render();
+    },
+
+    _navGroups() {
+      return [
+        {
+          label: 'Workspace',
+          items: [
+            { route: 'sales', label: 'Sales', icon: 'sales' },
+            { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+          ],
+        },
+        {
+          label: 'Catalogue',
+          items: [
+            { route: 'products', label: 'Products', icon: 'products' },
+            { route: 'stock', label: 'Stock', icon: 'stock' },
+          ],
+        },
+        {
+          label: 'Management',
+          items: [
+            { route: 'documents', label: 'Documents', icon: 'documents' },
+            { route: 'customers', label: 'Customers', icon: 'customers' },
+            { route: 'reports', label: 'Reports', icon: 'reports' },
+          ],
+        },
+        {
+          label: 'System',
+          items: [
+            { route: 'users', label: 'Users', icon: 'users' },
+            { route: 'settings', label: 'Settings', icon: 'settings' },
+          ],
+        },
+      ];
+    },
+
+    _sidebar() {
+      const lowCount = this.state.products.filter(
+        (p) => p.active && !p.is_service && p.low_stock > 0 && Number(p.stock ? p.stock.quantity : p.quantity) <= p.low_stock
+      ).length;
+      const nav = this._navGroups()
+        .map(
+          (g) => `<div class="nav-label">${esc(g.label)}</div>` +
+          g.items
+            .map(
+              (it) => `<button class="nav-item ${this.state.route === it.route ? 'active' : ''}" data-action="nav" data-route="${it.route}">
+                ${icon(it.icon, 18)}<span>${esc(it.label)}</span>
+                ${it.route === 'stock' && lowCount ? `<span class="nav-badge">${lowCount}</span>` : ''}
+              </button>`
+            )
+            .join('')
+        )
+        .join('');
+
+      return `<aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">${icon('store', 21)}</div>
+          <div><div class="brand-name">Aroklon</div><div class="brand-sub">Point of Sale</div></div>
+        </div>
+        <nav class="nav">${nav}</nav>
+        <div class="side-foot">
+          <div class="user-card">
+            <div class="avatar">${esc(initials(this.state.user.name))}</div>
+            <div style="min-width:0;flex:1">
+              <div class="user-name">${esc(this.state.user.name)}</div>
+              <div class="user-role">${esc(this.state.user.access_name || 'Cashier')}</div>
+            </div>
+            <button class="icon-btn" data-action="logout" title="Sign out">${icon('logout', 17)}</button>
+          </div>
+        </div>
+      </aside>`;
+    },
+
+    _topbar(meta) {
+      const c = this.state.company || {};
+      const day = this.state.day || {};
+      const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
+      const d = day.business_date ? new Date(day.business_date + 'T12:00:00') : new Date();
+      const dateStr = isNaN(d.getTime())
+        ? day.business_date
+        : d.toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+      return `<header class="topbar">
+        <div>
+          <h1>${esc(meta.title || 'Aroklon')}</h1>
+          ${meta.sub ? `<div class="sub">${esc(meta.sub)}</div>` : ''}
+        </div>
+        <div class="topbar-right">
+          <span class="chip ${day.register_open ? '' : 'closed'}" data-action="nav" data-route="day" style="cursor:pointer">
+            <span class="dot"></span>${day.register_open ? 'Register open' : 'Register closed'}
+          </span>
+          <span class="chip">${icon('store', 14)} ${esc(reg.name || 'Register')}</span>
+          <span class="chip">${icon('day', 14)} ${esc(dateStr)}</span>
+          <button class="btn sm" data-action="cash">${icon('cash', 15)} Cash in / out</button>
+        </div>
+      </header>`;
+    },
+
+    _loginHtml() {
+      const users = this.state.users || [];
+      const sel = this.state.loginUser || (users[0] && users[0].id);
+      this.state.loginUser = sel;
+      const feats = [
+        ['sales', 'Ring sales in seconds', 'Barcode, SKU or name search'],
+        ['stock', 'Stock that stays honest', 'Every sale and return moves it'],
+        ['reports', 'Close the day cleanly', 'Z reports, cash and tax totals'],
+      ];
+      return `<div class="login">
+        <div class="login-art">
+          <div class="login-brand">
+            <div class="brand-mark">${icon('store', 24)}</div>
+            <div><div class="brand-name">Aroklon</div><div class="brand-sub">Point of Sale</div></div>
+          </div>
+          <div class="login-hero">
+            <h2>Your counter,<br /><span>under control.</span></h2>
+            <p>An offline point of sale for Windows. Sell, track stock and close the day — no internet, no subscription, your data stays on this PC.</p>
+            <div class="login-feats">
+              ${feats
+                .map(
+                  (f) => `<div class="login-feat"><div class="ic">${icon(f[0], 16)}</div><div>${esc(f[1])}<br /><span style="opacity:.65">${esc(
+                    f[2]
+                  )}</span></div></div>`
+                )
+                .join('')}
+            </div>
+          </div>
+          <div class="login-foot">Aroklon 1.0 · Local database · No account required</div>
+        </div>
+        <div class="login-panel">
+          <div class="login-card">
+            <h1>Sign in to your till</h1>
+            <p class="muted">Choose your user and enter your PIN.</p>
+            <div class="user-select" id="user-select">
+              ${users
+                .map(
+                  (u) => `<button class="user-pill ${String(u.id) === String(sel) ? 'active' : ''}" data-action="pick-user" data-id="${u.id}">
+                    <span class="avatar">${esc(initials(u.name))}</span>
+                    <span>${esc(u.name)}</span>
+                  </button>`
+                )
+                .join('')}
+            </div>
+            <div class="pin-dots" id="pin-dots">${[0, 1, 2, 3]
+              .map((i) => '<span class="pin-dot"></span>')
+              .join('')}</div>
+            <div class="pin-pad" id="pin-pad">
+              ${[1, 2, 3, 4, 5, 6, 7, 8, 9]
+                .map((n) => `<button class="pin-key" data-action="pin" data-key="${n}">${n}</button>`)
+                .join('')}
+              <button class="pin-key fn" data-action="pin-fn" data-key="clear">Clear</button>
+              <button class="pin-key" data-action="pin" data-key="0">0</button>
+              <button class="pin-key fn" data-action="pin-fn" data-key="back">${icon('back', 16)}</button>
+            </div>
+            <div class="login-err" id="login-err"></div>
+            <div class="demo-hint">First run: Owner · PIN 1234 &nbsp;|&nbsp; Cashier · PIN 1111</div>
+          </div>
+        </div>
+      </div>`;
+    },
+
+    _bindLogin() {
+      this.state.pin = '';
+      this._paintPin();
+    },
+
+    _paintPin() {
+      const dots = document.querySelectorAll('#pin-dots .pin-dot');
+      const pin = this.state.pin || '';
+      dots.forEach((d, i) => d.classList.toggle('on', i < pin.length));
+    },
+
+    async _submitPin() {
+      const pin = this.state.pin || '';
+      if (pin.length < 4) return;
+      const err = document.getElementById('login-err');
+      try {
+        await this.login(Number(this.state.loginUser), pin);
+      } catch (e) {
+        this.state.pin = '';
+        this._paintPin();
+        if (err) {
+          err.textContent = e.message || 'Sign in failed';
+          err.classList.add('show');
+        }
+        setTimeout(() => err && err.classList.remove('show'), 2600);
+      }
+    },
+  });
+
+  window.U = { icon, esc, attr, money, moneyShort, num, qty, fmtDate, fmtTime, todayKey, initials, computeCart };
+
+  /* modal control buttons */
+  document.addEventListener('click', (e) => {
+    const ok = e.target.closest('[data-modal-ok]');
+    const cancel = e.target.closest('[data-modal-cancel]');
+    if (ok) {
+      if (App._promptResolve) {
+        const v = App._promptGet ? App._promptGet() : '';
+        const r = App._promptResolve;
+        App._promptResolve = null;
+        App._promptGet = null;
+        App.closeModal();
+        r(v);
+      } else if (App._confirmResolve) {
+        const r = App._confirmResolve;
+        App._confirmResolve = null;
+        App.closeModal();
+        r(true);
+      } else {
+        const form = ok.closest('form');
+        if (form) form.requestSubmit();
+        else App.closeModal();
+      }
+    }
+    if (cancel) App.closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const root = document.getElementById('modal-root');
+      if (root && root.children.length) {
+        e.preventDefault();
+        App.closeModal();
+        return;
+      }
+      if (App.state.user) {
+        const sel = document.querySelector('.line.selected');
+        if (sel) {
+          App.state.selectedLine = null;
+          App.render();
+        }
+      }
+    }
+  });
+
+  App.icon = icon;
+  App.esc = esc;
+  App.attr = attr;
+  App.money = money;
+  App.moneyShort = moneyShort;
+  App.fmtDate = fmtDate;
+  App.fmtTime = fmtTime;
+  App.todayKey = todayKey;
+  App.initials = initials;
+})();
