@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const db = require('./db');
@@ -11,6 +11,8 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
 function createWindow() {
+  const display = screen.getPrimaryDisplay();
+  const work = display.workArea;
   const iconPath = [
     path.join(process.resourcesPath || '', 'aroklon-icon.png'),
     path.join(__dirname, '..', '..', 'build', 'icon.png'),
@@ -24,8 +26,10 @@ function createWindow() {
   });
 
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    x: work.x,
+    y: work.y,
+    width: work.width,
+    height: work.height,
     minWidth: 1100,
     minHeight: 700,
     show: false,
@@ -43,7 +47,13 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.maximize();
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.maximize();
+    }, 350);
+  });
 
   if (process.env.AROKLON_SMOKE) {
     const shotDir = process.env.AROKLON_SHOT;
@@ -88,17 +98,25 @@ function createWindow() {
             const s = (ms) => new Promise(r => setTimeout(r, ms));
             const A = window.App;
             for (let i = 0; i < 120 && !(A.state.users || []).length; i++) await s(50);
-            await A.login(A.state.users[0].id, '1234');
+            const input = document.getElementById('pin-input');
+            if (input) {
+              input.value = '1234';
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            }
+            for (let i = 0; i < 80 && !A.state.user; i++) await s(50);
+            if (!A.state.user) await A.login(A.state.users[0].id, '1234');
             if (!A.state.day.register_open) {
               await A.api('openDay', [0, A.state.user.id, A.state.day.business_date]);
               A.state.day = await A.api('getDayState');
             }
             A.state.settings.ask_qty = '0';
             await s(400);
-            return { ok: true, products: A.state.products.length, open: A.state.day.register_open };
+            return { ok: true, products: A.state.products.length, open: A.state.day.register_open, pin: A.state.pin };
           })()`,
           'login'
         );
+        out.maximized = mainWindow.isMaximized();
         await shot('02-sales');
 
         await js(

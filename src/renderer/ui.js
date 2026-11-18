@@ -483,6 +483,7 @@
           items: [
             { route: 'sales', label: 'Sales', icon: 'sales' },
             { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+            { route: 'day', label: 'Register', icon: 'day' },
           ],
         },
         {
@@ -599,7 +600,7 @@
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">Aroklon 1.0 · Local database · No account required</div>
+          <div class="login-foot">Aroklon 1.0.1 · Local database · No account required</div>
         </div>
         <div class="login-panel">
           <div class="login-card">
@@ -615,9 +616,10 @@
                 )
                 .join('')}
             </div>
-            <div class="pin-dots" id="pin-dots">${[0, 1, 2, 3]
-              .map((i) => '<span class="pin-dot"></span>')
-              .join('')}</div>
+            <div class="field" style="margin:12px 0 4px">
+              <label for="pin-input">PIN</label>
+              <input id="pin-input" class="input" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Enter PIN" style="height:48px;text-align:center;letter-spacing:10px;font-size:20px;font-weight:600" />
+            </div>
             <div class="pin-pad" id="pin-pad">
               ${[1, 2, 3, 4, 5, 6, 7, 8, 9]
                 .map((n) => `<button class="pin-key" data-action="pin" data-key="${n}">${n}</button>`)
@@ -626,8 +628,9 @@
               <button class="pin-key" data-action="pin" data-key="0">0</button>
               <button class="pin-key fn" data-action="pin-fn" data-key="back">${icon('back', 16)}</button>
             </div>
+            <button class="btn primary block" style="margin-top:12px;height:46px;font-size:14px" data-action="pin-submit">Sign in</button>
             <div class="login-err" id="login-err"></div>
-            <div class="demo-hint">First run: Owner · PIN 1234 &nbsp;|&nbsp; Cashier · PIN 1111</div>
+            <div class="demo-hint">Type your PIN and press <b>Enter</b> · Owner 1234 &nbsp;|&nbsp; Cashier 1111</div>
           </div>
         </div>
       </div>`;
@@ -635,24 +638,57 @@
 
     _bindLogin() {
       this.state.pin = '';
+      const input = document.getElementById('pin-input');
+      if (input) {
+        input.value = '';
+        setTimeout(() => {
+          try {
+            input.focus();
+          } catch (e) {}
+        }, 60);
+        input.addEventListener('input', () => {
+          const digits = String(input.value).replace(/\D/g, '').slice(0, 8);
+          if (input.value !== digits) input.value = digits;
+          this.state.pin = digits;
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this._submitPin();
+          }
+        });
+      }
       this._paintPin();
     },
 
     _paintPin() {
-      const dots = document.querySelectorAll('#pin-dots .pin-dot');
       const pin = this.state.pin || '';
-      dots.forEach((d, i) => d.classList.toggle('on', i < pin.length));
+      const input = document.getElementById('pin-input');
+      if (input && document.activeElement !== input) input.value = pin;
     },
 
     async _submitPin() {
       const pin = this.state.pin || '';
-      if (pin.length < 4) return;
+      if (pin.length < 4) {
+        const err = document.getElementById('login-err');
+        if (err) {
+          err.textContent = 'Enter at least 4 digits';
+          err.classList.add('show');
+          setTimeout(() => err.classList.remove('show'), 2200);
+        }
+        return;
+      }
       const err = document.getElementById('login-err');
       try {
         await this.login(Number(this.state.loginUser), pin);
       } catch (e) {
         this.state.pin = '';
         this._paintPin();
+        const input = document.getElementById('pin-input');
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
         if (err) {
           err.textContent = e.message || 'Sign in failed';
           err.classList.add('show');

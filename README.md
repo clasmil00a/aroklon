@@ -51,8 +51,9 @@ subscription.
 The app seeds a small demo catalogue so you can try it immediately.
 
 1. Sign in (Owner / `1234`).
-2. Open the **Register** screen from the top bar and enter an opening cash float.
-   Sales are blocked until the register is open.
+2. Open the **Register** screen from the left sidebar (or the Register chip in
+   the top bar) and enter an opening cash float. Sales are blocked until the
+   register is open.
 3. Go to **Sales** and start ringing.
 
 | User | PIN |

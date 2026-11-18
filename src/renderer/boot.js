@@ -102,6 +102,28 @@
     }
   });
 
+  /* --------------------------------------------------------------- login keyboard */
+
+  document.addEventListener('keydown', (e) => {
+    if (A.state.user) return;
+    if (document.getElementById('modal-root').children.length) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      if (A.actions['pin']) A.actions['pin']({ key: e.key }, null, e);
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (A.actions['pin-fn']) A.actions['pin-fn']({ key: 'back' }, null, e);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      A._submitPin();
+    } else if (e.key === 'Escape') {
+      A.state.pin = '';
+      A._paintPin();
+    }
+  });
+
   /* ---------------------------------------------------------------- menu */
 
   window.api.onMenu((action) => {

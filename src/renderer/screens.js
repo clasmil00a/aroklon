@@ -1750,18 +1750,15 @@
     if (pin.length >= 8) return;
     A.state.pin = pin + String(ds.key);
     A._paintPin();
-    if (A.state.pin.length >= 4) {
-      const err = document.getElementById('login-err');
-      if (err) err.classList.remove('show');
-    }
   });
 
   A.action('pin-fn', (ds) => {
     if (ds.key === 'clear') A.state.pin = '';
     else if (ds.key === 'back') A.state.pin = (A.state.pin || '').slice(0, -1);
     A._paintPin();
-    if (A.state.pin.length >= 4) A._submitPin();
   });
+
+  A.action('pin-submit', () => A._submitPin());
 
   /* ------------------------------------------------------------- keyboard */
 
