@@ -11,6 +11,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const asar = require('@electron/asar');
 const PELibrary = require('pe-library');
@@ -19,7 +20,7 @@ const ResEdit = require('resedit');
 const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const APP_NAME = 'Aroklon';
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const ELECTRON_VERSION = '45.3.4';
 
 function findElectronZip() {
@@ -35,11 +36,14 @@ function findElectronZip() {
 function stageApp() {
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'aroklon-app-'));
   fs.cpSync(path.join(ROOT, 'src'), path.join(stage, 'src'), { recursive: true });
-  fs.cpSync(
-    path.join(ROOT, 'node_modules', 'sql.js'),
-    path.join(stage, 'node_modules', 'sql.js'),
-    { recursive: true }
-  );
+  // sql.js only needs these three files at runtime. The full package is ~30 MB;
+  // trimming it keeps app.asar around 1 MB so updates stay tiny.
+  const sqlSrc = path.join(ROOT, 'node_modules', 'sql.js');
+  const sqlDst = path.join(stage, 'node_modules', 'sql.js');
+  fs.mkdirSync(path.join(sqlDst, 'dist'), { recursive: true });
+  fs.copyFileSync(path.join(sqlSrc, 'package.json'), path.join(sqlDst, 'package.json'));
+  fs.copyFileSync(path.join(sqlSrc, 'dist', 'sql-wasm.js'), path.join(sqlDst, 'dist', 'sql-wasm.js'));
+  fs.copyFileSync(path.join(sqlSrc, 'dist', 'sql-wasm.wasm'), path.join(sqlDst, 'dist', 'sql-wasm.wasm'));
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   delete pkg.devDependencies;
   delete pkg.scripts;
@@ -121,6 +125,16 @@ function makeZip(zipPath, folder, cwd) {
   console.log('Electron runtime:', zip);
   extractZip(zip, outDir);
 
+  // Slim the base: keep only the en-US locale and drop the Chromium license page.
+  const localesDir = path.join(outDir, 'locales');
+  if (fs.existsSync(localesDir)) {
+    for (const f of fs.readdirSync(localesDir)) {
+      if (f.endsWith('.pak') && f !== 'en-US.pak') fs.rmSync(path.join(localesDir, f));
+    }
+  }
+  const licensePage = path.join(outDir, 'LICENSES.chromium.html');
+  if (fs.existsSync(licensePage)) fs.rmSync(licensePage);
+
   // Electron loads resources/app.asar when default_app.asar is absent.
   const defaultApp = path.join(outDir, 'resources', 'default_app.asar');
   if (fs.existsSync(defaultApp)) fs.rmSync(defaultApp);
@@ -129,6 +143,32 @@ function makeZip(zipPath, folder, cwd) {
   console.log('Packing app.asar…');
   await asar.createPackage(stage, path.join(outDir, 'resources', 'app.asar'));
   fs.rmSync(stage, { recursive: true, force: true });
+
+  // Small app-only patch + manifest for the in-app updater.
+  const appAsar = path.join(outDir, 'resources', 'app.asar');
+  const releaseDir = path.join(DIST, 'releases');
+  fs.mkdirSync(releaseDir, { recursive: true });
+  const patchName = `app-${VERSION}.asar`;
+  const patchPath = path.join(releaseDir, patchName);
+  fs.copyFileSync(appAsar, patchPath);
+  const sha256 = crypto.createHash('sha256').update(fs.readFileSync(patchPath)).digest('hex');
+  let electronMajor = '45';
+  try {
+    electronMajor = JSON.parse(fs.readFileSync(path.join(ROOT, 'node_modules', 'electron', 'package.json'), 'utf8')).version.split('.')[0];
+  } catch (e) {}
+  const manifest = {
+    version: VERSION,
+    tag: `v${VERSION}`,
+    asar: patchName,
+    sha256,
+    electron: electronMajor,
+    minVersion: '1.0.0',
+    built: new Date().toISOString(),
+    notes: 'Aroklon app-only patch. Replace resources/app.asar; no runtime download needed.',
+  };
+  fs.writeFileSync(path.join(releaseDir, 'latest.json'), JSON.stringify(manifest, null, 2));
+  console.log('patch:', patchPath, `${(fs.statSync(patchPath).size / 1024).toFixed(1)} KB`);
+  console.log('manifest:', path.join(releaseDir, 'latest.json'));
 
   const exePath = path.join(outDir, 'electron.exe');
   const finalExe = path.join(outDir, `${APP_NAME}.exe`);
@@ -163,7 +203,43 @@ function makeZip(zipPath, folder, cwd) {
       `lalu klik Open register.\n\n` +
       `Data disimpan otomatis di folder pengguna Windows (SQLite).\n` +
       `Backup tersedia di menu Settings > Data.\n\n` +
+      `Update aplikasi: Settings > Data > Check for updates.\n` +
+      `Kalau update gagal, tutup Aroklon lalu jalankan Update-Aroklon.bat.\n` +
+      `Update hanya mengganti app.asar (kecil), bukan runtime penuh.\n\n` +
       `Dibuat dengan Electron. Tidak berafiliasi dengan produk POS lain.\n`
+  );
+
+  // Standalone updater (fallback when the in-app updater cannot run)
+  const updaterPs1 = `$ErrorActionPreference = 'Stop'
+$repo = 'clasmil00a/aroklon'
+$appDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+try {
+  $headers = @{ 'User-Agent' = 'Aroklon-Updater'; 'Accept' = 'application/vnd.github+json' }
+  $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
+  $metaAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
+  if (-not $metaAsset) { throw 'latest.json tidak ditemukan' }
+  $meta = Invoke-RestMethod $metaAsset.browser_download_url -Headers $headers
+  $asarAsset = $release.assets | Where-Object { $_.name -eq $meta.asar } | Select-Object -First 1
+  if (-not $asarAsset) { throw "aset $($meta.asar) tidak ditemukan" }
+  $tmp = Join-Path $env:TEMP $meta.asar
+  Invoke-WebRequest $asarAsset.browser_download_url -OutFile $tmp -UseBasicParsing -Headers $headers
+  $hash = (Get-FileHash $tmp -Algorithm SHA256).Hash.ToLower()
+  if ($hash -ne $meta.sha256) { throw 'SHA-256 tidak cocok. Update dibatalkan.' }
+  taskkill /IM Aroklon.exe /F 2>$null | Out-Null
+  Start-Sleep -Seconds 2
+  Copy-Item $tmp (Join-Path $appDir 'resources\\app.asar') -Force
+  Remove-Item $tmp -Force
+  Start-Process (Join-Path $appDir 'Aroklon.exe')
+  Write-Host "Update v$($meta.version) berhasil. Aroklon dibuka ulang."
+} catch {
+  Write-Host "Update gagal: $($_.Exception.Message)"
+  Read-Host 'Tekan Enter untuk keluar'
+}
+`;
+  fs.writeFileSync(path.join(outDir, 'Update-Aroklon.ps1'), updaterPs1);
+  fs.writeFileSync(
+    path.join(outDir, 'Update-Aroklon.bat'),
+    `@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Update-Aroklon.ps1"\r\npause\r\n`
   );
 
   const zipPath = path.join(DIST, `Aroklon-win32-x64.zip`);

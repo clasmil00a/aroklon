@@ -31,6 +31,8 @@ subscription.
 - **Register** — open/close business day with opening float, cash in/out, X
   report and Z report.
 - **Users** — PIN sign-in with access levels (Owner / Manager / Cashier).
+- **Themes** — Modern (sidebar) and Classic (top menu bar + Management tree) with a one-click toggle.
+- **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
 - **Data** — local SQLite file, backup/restore, reset.
 
 ### Keyboard shortcuts (till)
@@ -117,6 +119,29 @@ build/           icon source + generated icon.ico/png
 All data lives in a single SQLite file. **Settings → Data** can back it up,
 restore it, open the folder, or reset everything. Back up before moving the app
 to another PC.
+
+## Updates (small patches)
+
+The full download includes the Electron runtime. App code is packed separately
+as `resources/app.asar` (~1 MB). Each fix is published as a small patch:
+
+- **In-app:** Settings → Data → **Check for updates**. It verifies the SHA-256,
+  downloads `app-<version>.asar`, then restarts after swapping the file.
+- **Manual fallback:** close Aroklon and run `Update-Aroklon.bat` in the app
+  folder. It fetches the latest patch from GitHub Releases, checks the hash and
+  replaces `resources/app.asar`.
+
+The updater refuses a patch that needs a different Electron major version; in
+that case download the new full base.
+
+## Build outputs
+
+```
+dist/Aroklon-win32-x64/Aroklon.exe
+dist/Aroklon-win32-x64.zip
+dist/releases/app-1.0.2.asar
+dist/releases/latest.json
+```
 
 ## License
 

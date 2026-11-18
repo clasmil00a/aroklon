@@ -3,6 +3,8 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { spawn } = require('child_process');
 const db = require('./db');
 
 let mainWindow = null;
@@ -163,6 +165,40 @@ function createWindow() {
         await shot('12-settings');
         await js(`(() => { window.App.go('day'); return true; })()`, 'day');
         await shot('13-day');
+
+        out.classic = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App;
+            const res = {};
+            A.setTheme('classic');
+            await s(350);
+            res.menu = !!document.querySelector('.classic-menubar');
+            res.posInClassic = !!document.querySelector('.pos');
+            A.go('products');
+            await s(500);
+            res.tree = !!document.querySelector('.classic-tree');
+            res.productRows = document.querySelectorAll('table.data tbody tr').length;
+            A.go('settings', { tab: 'countries' });
+            await s(600);
+            res.countryTab = !!document.querySelector('[data-tab-panel="set-countries"]');
+            res.countryRows = document.querySelectorAll('[data-tab-panel="set-countries"] table.data tbody tr').length;
+            A.go('sales');
+            await s(300);
+            res.salesClassic = !!document.querySelector('.pos');
+            res.salesOverflow = document.documentElement.scrollWidth > innerWidth + 1;
+            res.menubarH = Math.round((document.querySelector('.classic-menubar') || { getBoundingClientRect: () => ({ height: 0 }) }).getBoundingClientRect().height);
+            res.statusH = Math.round((document.querySelector('.classic-status') || { getBoundingClientRect: () => ({ height: 0 }) }).getBoundingClientRect().height);
+            res.treeOnSales = !!document.querySelector('.classic-tree');
+            A.setTheme('modern');
+            await s(250);
+            res.modernSidebar = !!document.querySelector('.sidebar');
+            return res;
+          })()`,
+          'classic'
+        );
+
+        out.update = await js(`window.api.checkUpdate()`, 'update');
 
         out.dom = await js(
           `(() => ({
@@ -398,6 +434,10 @@ function buildMenu() {
           click: () => mainWindow && mainWindow.webContents.send('menu', 'shortcuts'),
         },
         {
+          label: 'Check for updates',
+          click: () => mainWindow && mainWindow.webContents.send('menu', 'check-update'),
+        },
+        {
           label: 'About Aroklon',
           click: () =>
             dialog.showMessageBox(mainWindow, {
@@ -479,6 +519,131 @@ ipcMain.handle('app:invoke', async (_e, action, payload) => {
 });
 
 ipcMain.handle('app:meta', () => db.meta());
+
+/* ------------------------------------------------------------- updates */
+
+const REPO = 'clasmil00a/aroklon';
+const RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`;
+const UPDATE_HEADERS = { 'User-Agent': 'Aroklon-Updater', Accept: 'application/vnd.github+json' };
+
+function compareVersions(a, b) {
+  const pa = String(a || '0').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '0').split('.').map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url, { headers: UPDATE_HEADERS });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function getLatestMeta() {
+  const rel = await fetchJson(RELEASE_API);
+  const metaAsset = (rel.assets || []).find((a) => a.name === 'latest.json');
+  if (!metaAsset) throw new Error('latest.json tidak ditemukan di rilis terbaru');
+  const meta = await fetchJson(metaAsset.browser_download_url);
+  const asarAsset = (rel.assets || []).find((a) => a.name === meta.asar);
+  if (!asarAsset) throw new Error(`aset ${meta.asar} tidak ditemukan`);
+  return {
+    ...meta,
+    tag: rel.tag_name,
+    body: rel.body || '',
+    asarUrl: asarAsset.browser_download_url,
+    size: asarAsset.size,
+  };
+}
+
+async function downloadFile(url, dest) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'Aroklon-Updater' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  fs.writeFileSync(dest, buf);
+  return buf;
+}
+
+ipcMain.handle('app:checkUpdate', async () => {
+  try {
+    const meta = await getLatestMeta();
+    const current = app.getVersion();
+    const electronMajor = String(process.versions.electron).split('.')[0];
+    const compatible = String(meta.electron || '').split('.')[0] === electronMajor;
+    return {
+      ok: true,
+      current,
+      latest: meta.version,
+      tag: meta.tag,
+      available: compareVersions(meta.version, current) > 0,
+      compatible,
+      size: meta.size,
+      notes: meta.body,
+    };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+});
+
+ipcMain.handle('app:applyUpdate', async () => {
+  try {
+    const meta = await getLatestMeta();
+    const current = app.getVersion();
+    const electronMajor = String(process.versions.electron).split('.')[0];
+    if (compareVersions(meta.version, current) <= 0) return { ok: false, error: 'Sudah versi terbaru' };
+    if (String(meta.electron || '').split('.')[0] !== electronMajor)
+      return { ok: false, error: 'Patch ini butuh runtime Electron yang berbeda' };
+
+    const appDir = path.dirname(app.getPath('exe'));
+    try {
+      fs.accessSync(appDir, fs.constants.W_OK);
+    } catch (e) {
+      return {
+        ok: false,
+        error: 'Folder aplikasi tidak bisa ditulis. Jalankan Aroklon dari folder portable atau sebagai administrator.',
+      };
+    }
+
+    const updatesDir = path.join(app.getPath('userData'), 'updates');
+    fs.mkdirSync(updatesDir, { recursive: true });
+    const dest = path.join(updatesDir, meta.asar || `app-${meta.version}.asar`);
+    const buf = await downloadFile(meta.asarUrl, dest);
+    const hash = crypto.createHash('sha256').update(buf).digest('hex');
+    if (meta.sha256 && hash !== meta.sha256) return { ok: false, error: 'SHA-256 tidak cocok. Update dibatalkan.' };
+
+    const bat = path.join(updatesDir, 'apply-update.bat');
+    const script = [
+      '@echo off',
+      'setlocal',
+      `set "APP=${appDir}"`,
+      `set "NEW=${dest}"`,
+      ':waitloop',
+      'tasklist /FI "IMAGENAME eq Aroklon.exe" | find /I "Aroklon.exe" >nul',
+      'if not errorlevel 1 (',
+      '  timeout /t 1 /nobreak >nul',
+      '  goto waitloop',
+      ')',
+      'copy /Y "%NEW%" "%APP%\\resources\\app.asar"',
+      'if errorlevel 1 (',
+      '  echo Gagal menyalin app.asar. & pause',
+      '  exit /b 1',
+      ')',
+      'del "%NEW%"',
+      'start "" "%APP%\\Aroklon.exe"',
+      'del "%~f0"',
+      '',
+    ].join('\r\n');
+    fs.writeFileSync(bat, script);
+    spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    setTimeout(() => app.quit(), 450);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+});
 
 ipcMain.handle('app:backup', () => doBackup());
 ipcMain.handle('app:restore', () => doRestore());

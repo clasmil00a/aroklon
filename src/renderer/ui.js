@@ -42,6 +42,7 @@
     filter: '<path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/>',
     refresh: '<path d="M20 11a8 8 0 1 0 .5 4"/><path d="M20 4v7h-7"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
     card: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 15h4"/>',
     qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v7h-7"/>',
     trend: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
@@ -316,6 +317,15 @@
       selectedLine: null,
       pay: null,
       report: null,
+      theme: (() => {
+        try {
+          return localStorage.getItem('aroklon.theme') === 'classic' ? 'classic' : 'modern';
+        } catch (e) {
+          return 'modern';
+        }
+      })(),
+      settingsTab: 'company',
+      update: null,
     },
     actions: {},
     screens: {},
@@ -376,6 +386,9 @@
 
     render() {
       const root = document.getElementById('app');
+      const theme = this.state.theme === 'classic' ? 'classic' : 'modern';
+      document.body.dataset.theme = theme;
+
       if (!this.state.user) {
         root.innerHTML = this._loginHtml();
         this._bindLogin();
@@ -392,14 +405,7 @@
 
       const screen = this.screens[this.state.route] || this.screens.sales;
       const meta = screen.meta || { title: 'Aroklon' };
-      root.innerHTML = `
-        <div class="shell">
-          ${this._sidebar()}
-          <div class="main">
-            ${this._topbar(meta)}
-            <div class="view ${screen.flush ? 'flush' : ''}" id="view">${screen.render()}</div>
-          </div>
-        </div>`;
+      root.innerHTML = theme === 'classic' ? this._shellClassic(screen, meta) : this._shellModern(screen, meta);
 
       if (focusId) {
         const el = document.getElementById(focusId);
@@ -414,6 +420,153 @@
           }
         }
       }
+    },
+
+    setTheme(theme) {
+      this.state.theme = theme === 'classic' ? 'classic' : 'modern';
+      try {
+        localStorage.setItem('aroklon.theme', this.state.theme);
+      } catch (e) {}
+      document.body.dataset.theme = this.state.theme;
+      this.render();
+    },
+
+    _shellModern(screen, meta) {
+      return `
+        <div class="shell">
+          ${this._sidebar()}
+          <div class="main">
+            ${this._topbar(meta)}
+            <div class="view ${screen.flush ? 'flush' : ''}" id="view">${screen.render()}</div>
+          </div>
+        </div>`;
+    },
+
+    _shellClassic(screen, meta) {
+      const management = ['dashboard', 'documents', 'products', 'stock', 'reports', 'customers', 'users', 'settings', 'promotions'];
+      const showTree = management.includes(this.state.route);
+      return `
+        <div class="shell shell-classic">
+          ${this._classicMenu()}
+          <div class="classic-body">
+            ${showTree ? this._classicTree() : ''}
+            <div class="main">
+              <div class="view ${screen.flush ? 'flush' : ''}" id="view">${screen.render()}</div>
+              ${this._statusbar()}
+            </div>
+          </div>
+        </div>`;
+    },
+
+    _classicMenu() {
+      const route = this.state.route;
+      const theme = this.state.theme;
+      const mgmt = [
+        ['documents', 'Documents', 'documents'],
+        ['products', 'Products', 'products'],
+        ['stock', 'Stock', 'stock'],
+        ['reports', 'Reporting', 'reports'],
+        ['customers', 'Customers & Suppliers', 'customers'],
+        ['promotions', 'Promotions', 'tag'],
+        ['users', 'Users & Security', 'users'],
+      ];
+      return `<header class="classic-menubar">
+        <div class="cmb-brand">
+          <span class="cmb-logo">${icon('store', 18)}</span>
+          <span class="cmb-name">Aroklon</span>
+        </div>
+        <nav class="cmb-nav">
+          <button class="cmb-btn ${route === 'sales' ? 'active' : ''}" data-action="nav" data-route="sales">${icon('sales', 15)}<span>Sales</span></button>
+          <button class="cmb-btn ${route === 'dashboard' ? 'active' : ''}" data-action="nav" data-route="dashboard">${icon('dashboard', 15)}<span>Dashboard</span></button>
+          <details class="cmb-menu">
+            <summary class="cmb-btn">${icon('products', 15)}<span>Management</span>${icon('down', 12)}</summary>
+            <div class="cmb-popup">
+              ${mgmt
+                .map(
+                  ([r, label, ic]) =>
+                    `<button class="cmb-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
+                      ic,
+                      15
+                    )}<span>${esc(label)}</span></button>`
+                )
+                .join('')}
+              <div class="cmb-sep"></div>
+              <button class="cmb-item" data-action="nav-settings" data-tab="tenders">${icon('cash', 15)}<span>Payment types</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="countries">${icon('globe', 15)}<span>Countries</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>Tax rates</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>My company</span></button>
+            </div>
+          </details>
+          <button class="cmb-btn ${route === 'day' ? 'active' : ''}" data-action="nav" data-route="day">${icon('day', 15)}<span>Register</span></button>
+          <button class="cmb-btn ${route === 'settings' ? 'active' : ''}" data-action="nav" data-route="settings">${icon('settings', 15)}<span>Settings</span></button>
+          <details class="cmb-menu">
+            <summary class="cmb-btn">${icon('info', 15)}<span>Help</span>${icon('down', 12)}</summary>
+            <div class="cmb-popup">
+              <button class="cmb-item" data-action="shortcuts">${icon('info', 15)}<span>Keyboard shortcuts</span></button>
+              <button class="cmb-item" data-action="check-update">${icon('refresh', 15)}<span>Check for updates</span></button>
+              <button class="cmb-item" data-action="about">${icon('info', 15)}<span>About Aroklon</span></button>
+            </div>
+          </details>
+        </nav>
+        <div class="cmb-right">
+          <span class="cmb-chip">${icon('store', 13)} ${esc(
+            (this.state.registers || []).find((r) => r.is_primary)?.name || 'Register'
+          )}</span>
+          <span class="cmb-chip">${icon('users', 13)} ${esc(this.state.user.name)}</span>
+          <button class="cmb-btn" data-action="toggle-theme" title="Ganti tema">${icon('settings', 14)}<span>${
+            theme === 'classic' ? 'Modern' : 'Classic'
+          }</span></button>
+          <button class="cmb-btn" data-action="logout" title="Sign out">${icon('logout', 14)}<span>Sign out</span></button>
+        </div>
+      </header>`;
+    },
+
+    _classicTree() {
+      const route = this.state.route;
+      const tab = this.state.settingsTab || (this.state.params && this.state.params.tab) || 'company';
+      const item = (r, label, ic) =>
+        `<button class="ct-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
+          ic,
+          15
+        )}<span>${esc(label)}</span></button>`;
+      const sitem = (t, label, ic) =>
+        `<button class="ct-item ${route === 'settings' && tab === t ? 'active' : ''}" data-action="nav-settings" data-tab="${t}">${icon(
+          ic,
+          15
+        )}<span>${esc(label)}</span></button>`;
+      return `<aside class="classic-tree">
+        <div class="ct-head">Management</div>
+        ${item('dashboard', 'Dashboard', 'dashboard')}
+        ${item('documents', 'Documents', 'documents')}
+        ${item('products', 'Products', 'products')}
+        ${item('stock', 'Stock', 'stock')}
+        ${item('reports', 'Reporting', 'reports')}
+        ${item('customers', 'Customers & Suppliers', 'customers')}
+        ${item('promotions', 'Promotions', 'tag')}
+        <div class="ct-sep"></div>
+        <div class="ct-label">Setup</div>
+        ${sitem('company', 'My company', 'store')}
+        ${sitem('tax', 'Tax rates', 'tag')}
+        ${sitem('tenders', 'Payment types', 'cash')}
+        ${sitem('countries', 'Countries', 'globe')}
+        ${item('users', 'Users & Security', 'users')}
+      </aside>`;
+    },
+
+    _statusbar() {
+      const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
+      const d = this.state.day && this.state.day.business_date ? new Date(this.state.day.business_date + 'T12:00:00') : new Date();
+      const dateStr = isNaN(d.getTime())
+        ? ''
+        : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      return `<footer class="classic-status">
+        <span>${icon('store', 13)} ${esc(reg.name || 'Register')}</span>
+        <span>${icon('users', 13)} ${esc(this.state.user.name)}</span>
+        <span>${icon('day', 13)} ${esc(dateStr)}</span>
+        <span class="spacer"></span>
+        <span class="ok">${icon('check', 13)} Database connected</span>
+        <span class="ver">v${esc((this.state.meta && this.state.meta.version) || '1.0.0')}</span>
+      </footer>`;
     },
 
     refresh() {
@@ -499,6 +652,7 @@
             { route: 'documents', label: 'Documents', icon: 'documents' },
             { route: 'customers', label: 'Customers', icon: 'customers' },
             { route: 'reports', label: 'Reports', icon: 'reports' },
+            { route: 'promotions', label: 'Promotions', icon: 'tag' },
           ],
         },
         {
@@ -567,6 +721,9 @@
           </span>
           <span class="chip">${icon('store', 14)} ${esc(reg.name || 'Register')}</span>
           <span class="chip">${icon('day', 14)} ${esc(dateStr)}</span>
+          <button class="btn sm" data-action="toggle-theme" title="Ganti tema">${icon('settings', 14)} ${
+            this.state.theme === 'classic' ? 'Modern' : 'Classic'
+          }</button>
           <button class="btn sm" data-action="cash">${icon('cash', 15)} Cash in / out</button>
         </div>
       </header>`;
@@ -600,7 +757,7 @@
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">Aroklon 1.0.1 · Local database · No account required</div>
+          <div class="login-foot">Aroklon 1.0.2 · Local database · No account required</div>
         </div>
         <div class="login-panel">
           <div class="login-card">

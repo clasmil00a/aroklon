@@ -444,6 +444,27 @@
     A.go(ds.route, ds.params ? JSON.parse(ds.params) : {});
   });
 
+  A.action('nav-settings', (ds) => {
+    A.state.settingsTab = ds.tab || 'company';
+    A.go('settings', { tab: ds.tab || 'company' });
+  });
+
+  A.action('toggle-theme', () => {
+    A.setTheme(A.state.theme === 'classic' ? 'modern' : 'classic');
+  });
+
+  A.action('shortcuts', () => {
+    A.toast('F2 discount · F3 search · F4 quantity · F8 hold · F10 payment · F12 quick pay · Del remove', 'good', 7000);
+  });
+
+  A.action('about', () => {
+    A.toast(
+      'Aroklon v' + ((A.state.meta && A.state.meta.version) || '1.0.0') + ' — offline Windows POS. Data lokal, tanpa akun.',
+      'good',
+      5000
+    );
+  });
+
   A.action('logout', async () => {
     const ok = await A.confirm({
       title: 'Sign out?',
@@ -671,6 +692,7 @@
   }
 
   A.action('tab', (ds) => {
+    if (String(ds.target).startsWith('set-')) A.state.settingsTab = ds.target.slice(4);
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     const btn = document.querySelector(`.tab[data-target="${ds.target}"]`);
     if (btn) btn.classList.add('active');

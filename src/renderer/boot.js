@@ -12,6 +12,15 @@
   /* --------------------------------------------------------------- click */
 
   document.addEventListener('click', async (e) => {
+    const menu = e.target.closest('details.cmb-menu');
+    if (menu) {
+      const btn = e.target.closest('button');
+      if (btn) menu.open = false;
+    }
+    document.querySelectorAll('details.cmb-menu[open]').forEach((d) => {
+      if (!d.contains(e.target)) d.open = false;
+    });
+
     const el = e.target.closest('[data-action]');
     if (!el) return;
     const name = el.dataset.action;
@@ -132,6 +141,13 @@
     else if (action === 'sales') A.go('sales');
     else if (action === 'shortcuts') {
       A.toast('F2 discount · F3 search · F4 quantity · F8 hold · F10 payment · F12 quick pay · Del remove', 'good', 7000);
+    } else if (action === 'check-update') {
+      if (A.state.route !== 'settings' || (A.state.params && A.state.params.tab) !== 'data') {
+        A.go('settings', { tab: 'data' });
+      }
+      setTimeout(() => {
+        if (A.actions['check-update']) A.actions['check-update']();
+      }, 500);
     } else if (action === 'print-preview') {
       A.toast('Open Documents or Reports and press Print to preview.', 'good', 4000);
     }

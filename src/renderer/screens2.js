@@ -50,6 +50,20 @@
     if (A.state.reportId) await loadReport(A.state.reportId);
   });
 
+  A.screens.promotions = {
+    meta: { title: 'Promotions', sub: 'Happy hour, bundles and rules' },
+    render() {
+      return `<div class="card">
+        <div class="card-head"><h2>Promotions &amp; actions</h2><div class="right"><span class="badge gray">Soon</span></div></div>
+        <div class="card-body">${SH.empty({
+          icon: 'tag',
+          title: 'Not included in this edition',
+          text: 'Promotions and happy-hour rules are planned for a future release. Cart discounts, item discounts, customer discounts and tax overrides are available today.',
+        })}</div>
+      </div>`;
+    },
+  };
+
   /* ------------------------------------------------------------ documents */
 
   A.state.docFilters = A.state.docFilters || { type: '', status: '', from: '', to: '', number: '' };
@@ -706,21 +720,25 @@
     render() {
       const s = A.state.settings || {};
       const c = A.state.company || {};
+      const tab = (A.state.params && A.state.params.tab) || A.state.settingsTab || 'company';
+      A.state.settingsTab = tab;
+      const ps = (t) => (tab === t ? '' : 'style="display:none"');
       return `<div class="card">
         <div class="tabs">
           ${[
             ['company', 'Company'],
             ['tax', 'Tax rates'],
             ['tenders', 'Payment types'],
+            ['countries', 'Countries'],
             ['registers', 'Registers'],
             ['prefs', 'Preferences'],
             ['data', 'Data'],
           ]
-            .map((t, i) => `<button class="tab ${i === 0 ? 'active' : ''}" data-action="tab" data-target="set-${t[0]}">${t[1]}</button>`)
+            .map((t) => `<button class="tab ${tab === t[0] ? 'active' : ''}" data-action="tab" data-target="set-${t[0]}">${t[1]}</button>`)
             .join('')}
         </div>
         <div class="card-body">
-          <div data-tab-panel="set-company">
+          <div data-tab-panel="set-company" ${ps('company')}>
             <form data-form="save-company">
               <div class="form-grid" style="max-width:820px">
                 ${SH.field('Store name', SH.input('name', c.name, { required: true }), { span: 2 })}
@@ -738,7 +756,7 @@
             </form>
           </div>
 
-          <div data-tab-panel="set-tax" style="display:none">
+          <div data-tab-panel="set-tax" ${ps('tax')}>
             <div class="row mb12"><div><div class="strong">Tax rates</div><div class="small muted">VAT, GST or sales tax. Multiple rates can apply to one product.</div></div><span class="spacer"></span>
               <button class="btn primary sm" data-action="tax-new">${icon('plus', 15)} Add tax rate</button></div>
             ${miniTable(
@@ -755,7 +773,7 @@
             )}
           </div>
 
-          <div data-tab-panel="set-tenders" style="display:none">
+          <div data-tab-panel="set-tenders" ${ps('tenders')}>
             <div class="row mb12"><div><div class="strong">Payment types</div><div class="small muted">Cash, card and any other tender you accept.</div></div><span class="spacer"></span>
               <button class="btn primary sm" data-action="tender-new">${icon('plus', 15)} Add payment type</button></div>
             ${miniTable(
@@ -773,7 +791,23 @@
             )}
           </div>
 
-          <div data-tab-panel="set-registers" style="display:none">
+          <div data-tab-panel="set-countries" ${ps('countries')}>
+            <div class="row mb12"><div><div class="strong">Countries</div><div class="small muted">Used on customers and suppliers.</div></div><span class="spacer"></span>
+              <button class="btn primary sm" data-action="country-new">${icon('plus', 15)} Add country</button></div>
+            ${miniTable(
+              ['Country', 'Code', 'Active', ''],
+              (A.state.countries || []).map(
+                (c) => [
+                  esc(c.name),
+                  esc(c.code || '—'),
+                  c.active ? SH.badge('Active', 'good') : SH.badge('Off', 'gray'),
+                  `<div class="row gap8" style="justify-content:flex-end"><button class="icon-btn" data-action="country-edit" data-id="${c.id}">${icon('edit', 15)}</button></div>`,
+                ]
+              )
+            )}
+          </div>
+
+          <div data-tab-panel="set-registers" ${ps('registers')}>
             <div class="row mb12"><div><div class="strong">Cash registers</div><div class="small muted">One till per PC in the free edition.</div></div><span class="spacer"></span>
               <button class="btn primary sm" data-action="register-new">${icon('plus', 15)} Add register</button></div>
             ${miniTable(
@@ -791,7 +825,18 @@
             )}
           </div>
 
-          <div data-tab-panel="set-prefs" style="display:none">
+          <div data-tab-panel="set-prefs" ${ps('prefs')}>
+            <div class="card mb16"><div class="card-body">
+              <div class="strong mb8">Appearance</div>
+              <div class="field" style="max-width:280px">
+                <label>Theme</label>
+                ${SH.select('theme', [
+                  { value: 'modern', label: 'Modern — sidebar' },
+                  { value: 'classic', label: 'Classic — menu bar + management tree' },
+                ], A.state.theme, { dataChange: 'pref-theme' })}
+              </div>
+              <p class="hint mt8">Tema Classic meniru tata letak POS desktop klasik dengan menu atas dan pohon Management. Semua aset tetap milik Aroklon.</p>
+            </div></div>
             <form data-form="save-prefs">
               <div class="grid" style="grid-template-columns:1fr 1fr;max-width:860px">
                 <div class="card"><div class="card-body">
@@ -813,7 +858,18 @@
             </form>
           </div>
 
-          <div data-tab-panel="set-data" style="display:none">
+          <div data-tab-panel="set-data" ${ps('data')}>
+            <div class="card mb16"><div class="card-body">
+              <div class="row wrap gap8">
+                <div>
+                  <div class="strong">Updates</div>
+                  <div class="small muted">Aroklon v${esc((A.state.meta && A.state.meta.version) || '1.0.0')} · app-only patch, bukan download runtime penuh.</div>
+                </div>
+                <span class="spacer"></span>
+                <button class="btn" data-action="check-update">${icon('refresh', 15)} Check for updates</button>
+              </div>
+              <div id="update-status" class="small muted mt8"></div>
+            </div></div>
             <div class="grid" style="grid-template-columns:1fr 1fr;max-width:900px">
               <div class="card"><div class="card-body">
                 <div class="strong mb8">Backup & restore</div>
@@ -925,6 +981,26 @@
         ${SH.modalFoot(p.id ? 'Save changes' : 'Create register')}
       `,
       { size: '' }
+    );
+  }
+
+  A.action('country-new', () => openCountryEditor(null));
+  A.action('country-edit', (ds) =>
+    openCountryEditor((A.state.countries || []).find((c) => String(c.id) === String(ds.id)))
+  );
+  function openCountryEditor(c) {
+    const p = c || { name: '', code: '', active: true };
+    A.modal(
+      `<form data-form="save-country">
+        <input type="hidden" name="id" value="${attr(p.id || '')}" />
+        ${SH.modalHead(p.id ? 'Edit country' : 'Add country')}
+        <div class="modal-body"><div class="form-grid">
+          ${SH.field('Name', SH.input('name', p.name, { required: true, placeholder: 'e.g. Indonesia' }))}
+          ${SH.field('Code', SH.input('code', p.code, { placeholder: 'e.g. ID' }))}
+          <div class="span2">${SH.checkbox('active', 'Active', p.active !== false)}</div>
+        </div></div>
+        ${SH.modalFoot(p.id ? 'Save changes' : 'Create country')}
+      </form>`
     );
   }
 
@@ -1237,6 +1313,52 @@
     A.toast('Document saved');
   });
 
+  A.action('check-update', async () => {
+    const status = document.getElementById('update-status');
+    if (status) status.textContent = 'Checking for updates…';
+    try {
+      const res = await window.api.checkUpdate();
+      if (!res.ok) throw new Error(res.error || 'Check failed');
+      A.state.update = res;
+      if (res.available) {
+        if (status)
+          status.innerHTML =
+            `Update <b>v${esc(res.latest)}</b> tersedia (${(Number(res.size || 0) / 1048576).toFixed(2)} MB). ` +
+            `<button class="btn sm primary" data-action="apply-update">Download &amp; restart</button>`;
+        A.toast(`Update v${res.latest} tersedia`, 'good');
+      } else if (!res.compatible) {
+        if (status) status.textContent = 'Update butuh runtime Electron baru. Download installer penuh.';
+        A.toast('Update butuh versi runtime baru', 'warn');
+      } else {
+        if (status) status.textContent = `Sudah versi terbaru (v${esc(res.current)}).`;
+        A.toast('Aroklon sudah versi terbaru', 'good');
+      }
+    } catch (e) {
+      if (status) status.textContent = 'Gagal memeriksa update: ' + e.message;
+      A.toast('Gagal memeriksa update: ' + e.message, 'bad');
+    }
+  });
+
+  A.action('apply-update', async () => {
+    const ok = await A.confirm({
+      title: 'Update & restart?',
+      message:
+        'Aplikasi akan ditutup, <b>resources/app.asar</b> diganti dengan versi terbaru, lalu Aroklon dibuka lagi. Data tetap aman.',
+      confirmLabel: 'Update & restart',
+    });
+    if (!ok) return;
+    try {
+      const res = await window.api.applyUpdate();
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Apply failed');
+    } catch (e) {
+      A.toast('Update gagal: ' + e.message, 'bad', 5000);
+    }
+  });
+
+  A.action('change:pref-theme', (ds, el) => {
+    A.setTheme(el.value);
+  });
+
   /* tax / tender / register delete actions */
   A.action('tax-delete', async (ds) => {
     const ok = await A.confirm({ title: 'Delete tax rate?', message: '', confirmLabel: 'Delete', danger: true });
@@ -1343,7 +1465,7 @@
       id: fd.get('id') ? Number(fd.get('id')) : null,
       name: String(fd.get('name') || '').trim(),
       code: String(fd.get('code') || ''),
-      active: fd.get('active') !== '0',
+      active: fd.get('active') === '1',
     });
     A.closeModal();
     A.state.countries = await A.api('listCountries');
