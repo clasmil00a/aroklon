@@ -538,7 +538,7 @@ function compareVersions(a, b) {
 }
 
 async function fetchJson(url) {
-  const res = await fetch(url, { headers: UPDATE_HEADERS });
+  const res = await fetch(url, { headers: UPDATE_HEADERS, signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -560,7 +560,7 @@ async function getLatestMeta() {
 }
 
 async function downloadFile(url, dest) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'Aroklon-Updater' } });
+  const res = await fetch(url, { headers: { 'User-Agent': 'Aroklon-Updater' }, signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(dest, buf);
@@ -609,17 +609,23 @@ ipcMain.handle('app:applyUpdate', async () => {
 
     const updatesDir = path.join(app.getPath('userData'), 'updates');
     fs.mkdirSync(updatesDir, { recursive: true });
-    const dest = path.join(updatesDir, meta.asar || `app-${meta.version}.asar`);
-    const buf = await downloadFile(meta.asarUrl, dest);
+    const finalPath = path.join(updatesDir, meta.asar || `app-${meta.version}.asar`);
+    // Electron patches fs for .asar paths; download to a plain extension first.
+    const tmpPath = finalPath + '.download';
+    const buf = await downloadFile(meta.asarUrl, tmpPath);
     const hash = crypto.createHash('sha256').update(buf).digest('hex');
-    if (meta.sha256 && hash !== meta.sha256) return { ok: false, error: 'SHA-256 tidak cocok. Update dibatalkan.' };
+    if (meta.sha256 && hash !== meta.sha256) {
+      try { fs.rmSync(tmpPath); } catch (e) {}
+      return { ok: false, error: 'SHA-256 tidak cocok. Update dibatalkan.' };
+    }
+    fs.renameSync(tmpPath, finalPath);
 
     const bat = path.join(updatesDir, 'apply-update.bat');
     const script = [
       '@echo off',
       'setlocal',
       `set "APP=${appDir}"`,
-      `set "NEW=${dest}"`,
+      `set "NEW=${finalPath}"`,
       ':waitloop',
       'tasklist /FI "IMAGENAME eq Aroklon.exe" | find /I "Aroklon.exe" >nul',
       'if not errorlevel 1 (',
@@ -637,9 +643,16 @@ ipcMain.handle('app:applyUpdate', async () => {
       '',
     ].join('\r\n');
     fs.writeFileSync(bat, script);
-    spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-    setTimeout(() => app.quit(), 450);
-    return { ok: true };
+    return await new Promise((resolve) => {
+      const child = spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true });
+      child.once('error', (err) => {
+        resolve({ ok: false, error: 'Gagal menjalankan updater: ' + err.message });
+      });
+      child.once('spawn', () => {
+        setTimeout(() => app.quit(), 450);
+        resolve({ ok: true });
+      });
+    });
   } catch (e) {
     return { ok: false, error: e.message || String(e) };
   }
