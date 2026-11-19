@@ -7,7 +7,7 @@
 (function () {
   const A = window.App;
   const U = window.U;
-  const { esc, attr, icon, money, qty, fmtDate, fmtTime, initials } = U;
+  const { esc, attr, icon, money, qty, fmtDate, fmtTime, initials, t, locale } = U;
   const SH = window.SH;
 
   /* ------------------------------------------------------------- loaders */
@@ -51,7 +51,7 @@
   });
 
   A.screens.promotions = {
-    meta: { title: 'Promotions', sub: 'Happy hour, bundles and rules' },
+    meta: { title: t('Promotions'), sub: t('Happy hour, bundles and rules') },
     render() {
       return `<div class="card">
         <div class="card-head"><h2>Promotions &amp; actions</h2><div class="right"><span class="badge gray">Soon</span></div></div>
@@ -77,7 +77,7 @@
   ];
 
   A.screens.documents = {
-    meta: { title: 'Documents', sub: 'Purchases, counts and stock movements' },
+    meta: { title: t('Documents'), sub: t('Purchases, counts and stock movements') },
     render() {
       const f = A.state.docFilters;
       const docs = A.state.documents || [];
@@ -92,17 +92,17 @@
           <div class="filters">
             <div class="field"><label>Type</label>${SH.select(
               'doc-type',
-              [{ value: '', label: 'All types' }].concat(
+              [{ value: '', label: t('All types') }].concat(
                 ['sale', 'refund'].concat(DOC_TYPES.map((d) => d.id)).map((t) => ({ value: t, label: SH.docTypeLabel(t) }))
               ),
               f.type,
               { dataChange: 'doc-filter', dataKey: 'type' }
             )}</div>
-            <div class="field"><label>Status</label>${SH.select('doc-status', [
-              { value: '', label: 'Any' },
-              { value: 'closed', label: 'Closed' },
-              { value: 'partial', label: 'Partial' },
-              { value: 'open', label: 'Open' },
+            <div class="field"><label>${esc(t('Status'))}</label>${SH.select('doc-status', [
+              { value: '', label: t('Any') },
+              { value: 'closed', label: t('Closed') },
+              { value: 'partial', label: t('Partial') },
+              { value: 'open', label: t('Open') },
             ], f.status, { dataChange: 'doc-filter', dataKey: 'status' })}</div>
             <div class="field"><label>From</label><input class="input" type="date" data-change="doc-filter" data-key="from" value="${attr(f.from)}" /></div>
             <div class="field"><label>To</label><input class="input" type="date" data-change="doc-filter" data-key="to" value="${attr(f.to)}" /></div>
@@ -123,7 +123,7 @@
                         <td>${esc(d.customer_name || '—')}</td>
                         <td class="small muted">${esc(d.user_name || '—')}</td>
                         <td class="num mono strong">${money(d.total)}</td>
-                        <td>${SH.badge(d.status || 'closed', d.status === 'open' ? 'warn' : d.status === 'partial' ? 'info' : 'good')}</td>
+                        <td>${SH.badge(t(d.status || 'closed'), d.status === 'open' ? 'warn' : d.status === 'partial' ? 'info' : 'good')}</td>
                         <td class="right"><button class="btn sm" data-action="doc-view" data-id="${d.id}">View</button></td>
                       </tr>`
                     )
@@ -364,7 +364,7 @@
   /* ------------------------------------------------------------- customers */
 
   A.screens.customers = {
-    meta: { title: 'Customers', sub: 'Contacts, suppliers and loyalty' },
+    meta: { title: t('Customers'), sub: t('Contacts, suppliers and loyalty') },
     render() {
       const all = A.state.allCustomers || [];
       const type = A.state.customerType || 'customer';
@@ -396,11 +396,11 @@
                     (c) => `<tr>
                       <td><div class="row gap8"><span class="avatar" style="width:30px;height:30px;border-radius:8px;font-size:11px">${esc(initials(c.name))}</span><div><div class="strong">${esc(
                       c.name
-                    )}</div>${c.discount_type ? `<div class="small muted">${esc(c.discount_type)} ${U.num(c.discount_value)}</div>` : ''}</div></div></td>
+                    )}</div>${c.discount_type ? `<div class="small muted">${esc(c.discount_type === 'percent' ? t('Percentage') : t('Fixed amount'))} ${U.num(c.discount_value)}</div>` : ''}</div></div></td>
                       <td>${esc(c.company || '—')}</td>
                       <td class="muted">${esc(c.phone || '—')}</td>
                       <td class="muted">${esc(c.email || '—')}</td>
-                      <td>${c.card_count ? `<span class="badge info">${c.card_count} card(s)</span>` : '<span class="muted">—</span>'}</td>
+                      <td>${c.card_count ? `<span class="badge info">${esc(t('{n} cards', { n: c.card_count }))}</span>` : '<span class="muted">—</span>'}</td>
                       <td class="num mono">${money(c.balance)}</td>
                       <td class="right"><div class="row gap8" style="justify-content:flex-end">
                         <button class="icon-btn" data-action="customer-edit" data-id="${c.id}" title="Edit">${icon('edit', 16)}</button>
@@ -511,7 +511,7 @@
   };
 
   A.screens.reports = {
-    meta: { title: 'Reports', sub: 'Print or export your numbers' },
+    meta: { title: t('Reports'), sub: t('Print or export your numbers') },
     render() {
       const rep = A.state.reportId;
       const rows = A.state.reportRows || [];
@@ -529,7 +529,7 @@
             <div class="right">
               ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<input class="input" type="date" data-change="report-filter" data-key="from" value="${attr(A.state.reportFilters.from)}" style="width:145px" />
               <input class="input" type="date" data-change="report-filter" data-key="to" value="${attr(A.state.reportFilters.to)}" style="width:145px" />
-              <button class="btn sm" data-action="report-load">${icon('refresh', 14)} Run</button>` : ''}
+              <button class="btn sm" data-action="report-load">${icon('refresh', 14)} ${esc(t('Run'))}</button>` : ''}
               <button class="btn sm" data-action="report-print">${icon('print', 14)} Print</button>
               <button class="btn sm" data-action="report-csv">${icon('download', 14)} CSV</button>
             </div>
@@ -635,7 +635,7 @@
   /* ----------------------------------------------------------------- users */
 
   A.screens.users = {
-    meta: { title: 'Users', sub: 'Staff accounts and access levels' },
+    meta: { title: t('Users'), sub: t('Staff accounts and access levels') },
     render() {
       const users = A.state.users || [];
       const levels = A.state.accessLevels || [];
@@ -716,7 +716,7 @@
   /* -------------------------------------------------------------- settings */
 
   A.screens.settings = {
-    meta: { title: 'Settings', sub: 'Company, tax, tenders and data' },
+    meta: { title: t('Settings'), sub: t('Company, tax, tenders and data') },
     render() {
       const s = A.state.settings || {};
       const c = A.state.company || {};
@@ -792,7 +792,7 @@
           </div>
 
           <div data-tab-panel="set-countries" ${ps('countries')}>
-            <div class="row mb12"><div><div class="strong">Countries</div><div class="small muted">Used on customers and suppliers.</div></div><span class="spacer"></span>
+            <div class="row mb12"><div><div class="strong">${esc(t('Countries'))}</div><div class="small muted">${esc(t('Used on customers and suppliers.'))}</div></div><span class="spacer"></span>
               <button class="btn primary sm" data-action="country-new">${icon('plus', 15)} Add country</button></div>
             ${miniTable(
               ['Country', 'Code', 'Active', ''],
@@ -827,15 +827,32 @@
 
           <div data-tab-panel="set-prefs" ${ps('prefs')}>
             <div class="card mb16"><div class="card-body">
-              <div class="strong mb8">Appearance</div>
-              <div class="field" style="max-width:280px">
-                <label>Theme</label>
-                ${SH.select('theme', [
-                  { value: 'modern', label: 'Modern — sidebar' },
-                  { value: 'classic', label: 'Classic — menu bar + management tree' },
-                ], A.state.theme, { dataChange: 'pref-theme' })}
+              <div class="strong mb8">${esc(t('Appearance'))}</div>
+              <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+                <div class="field">
+                  <label>${esc(t('Layout'))}</label>
+                  ${SH.select('layout', [
+                    { value: 'modern', label: t('Modern') },
+                    { value: 'classic', label: t('Classic') },
+                  ], A.state.theme, { dataChange: 'pref-layout' })}
+                </div>
+                <div class="field">
+                  <label>${esc(t('Color mode'))}</label>
+                  ${SH.select('mode', [
+                    { value: 'dark', label: t('Dark') },
+                    { value: 'light', label: t('Light') },
+                    { value: 'system', label: t('System') },
+                  ], A.state.mode || 'dark', { dataChange: 'pref-mode' })}
+                </div>
+                <div class="field">
+                  <label>${esc(t('Language'))}</label>
+                  ${SH.select('lang', [
+                    { value: 'id', label: 'Bahasa Indonesia' },
+                    { value: 'en', label: 'English' },
+                  ], window.I18N ? I18N.lang : 'id', { dataChange: 'pref-language' })}
+                </div>
               </div>
-              <p class="hint mt8">Tema Classic meniru tata letak POS desktop klasik dengan menu atas dan pohon Management. Semua aset tetap milik Aroklon.</p>
+              <p class="hint mt8">${esc(t('Classic = classic desktop POS layout with a top menu and Management tree. All assets remain Aroklon’s.'))}</p>
             </div></div>
             <form data-form="save-prefs">
               <div class="grid" style="grid-template-columns:1fr 1fr;max-width:860px">

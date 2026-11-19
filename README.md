@@ -31,7 +31,9 @@ subscription.
 - **Register** — open/close business day with opening float, cash in/out, X
   report and Z report.
 - **Users** — PIN sign-in with access levels (Owner / Manager / Cashier).
-- **Themes** — Modern (sidebar) and Classic (top menu bar + Management tree) with a one-click toggle.
+- **Themes** — Modern (sidebar) and Classic (top menu bar + Management tree) layout, each with **Dark** (default), **Light** or **System** colour mode.
+- **Languages** — Bahasa Indonesia (default) and English, switchable at login or in Settings.
+- **Receipts** — white paper with dark text in every colour mode.
 - **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
 - **Data** — local SQLite file, backup/restore, reset.
 
@@ -139,7 +141,7 @@ that case download the new full base.
 ```
 dist/Aroklon-win32-x64/Aroklon.exe
 dist/Aroklon-win32-x64.zip
-dist/releases/app-1.0.2.asar
+dist/releases/app-1.0.3.asar
 dist/releases/latest.json
 ```
 

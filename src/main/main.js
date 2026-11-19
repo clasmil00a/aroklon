@@ -142,7 +142,12 @@ function createWindow() {
             const A = window.App;
             await A.actions['pay-confirm']({}, null, {});
             await s(700);
-            return { number: A.state.lastReceipt && A.state.lastReceipt.number, total: A.state.lastReceipt && A.state.lastReceipt.total };
+            const paper = document.querySelector('.receipt-paper');
+            return {
+              number: A.state.lastReceipt && A.state.lastReceipt.number,
+              total: A.state.lastReceipt && A.state.lastReceipt.total,
+              receipt: paper ? { bg: getComputedStyle(paper).backgroundColor, color: getComputedStyle(paper).color } : null,
+            };
           })()`,
           'confirm'
         );
@@ -206,10 +211,67 @@ function createWindow() {
             kpis: document.querySelectorAll('.kpi').length,
             tables: document.querySelectorAll('table.data').length,
             tabs: document.querySelectorAll('.tab').length,
-            bodyText: document.body.innerText.slice(0, 240)
+            bodyText: document.body.innerText.slice(0, 400)
           }))()`,
           'dom'
         );
+
+        out.i18n = await js(
+          `(() => ({
+            lang: window.I18N && I18N.lang,
+            locale: window.I18N && I18N.locale(),
+            mode: document.documentElement.dataset.mode,
+            layout: document.documentElement.dataset.layout,
+            missing: window.I18N ? Array.from(I18N.missing).slice(0, 80) : []
+          }))()`,
+          'i18n'
+        );
+
+        out.theme = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App;
+            const snap = () => ({
+              mode: document.documentElement.dataset.mode,
+              layout: document.documentElement.dataset.layout,
+              bg: getComputedStyle(document.body).backgroundColor,
+              text: getComputedStyle(document.body).color
+            });
+            const dark = snap();
+            A.setMode('light'); await s(300);
+            const light = snap();
+            A.setMode('dark'); await s(250);
+            A.setTheme('classic'); await s(350);
+            const classicDark = {
+              menu: getComputedStyle(document.querySelector('.classic-menubar') || document.body).backgroundColor,
+              tree: getComputedStyle(document.querySelector('.classic-tree') || document.body).backgroundColor,
+              card: getComputedStyle(document.querySelector('.card') || document.body).backgroundColor
+            };
+            A.setTheme('modern'); await s(250);
+            A.setLanguage('en'); await s(300);
+            const en = document.body.innerText.replace(/\\s+/g, ' ').slice(0, 140);
+            A.setLanguage('id'); await s(300);
+            return { dark, light, classicDark, en, back: document.body.innerText.replace(/\\s+/g, ' ').slice(0, 100) };
+          })()`,
+          'theme'
+        );
+
+        out.texts = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App;
+            const res = {};
+            for (const r of ['sales','dashboard','products','stock','documents','customers','reports','users','settings','day','promotions']) {
+              A.go(r);
+              await s(450);
+              res[r] = document.body.innerText.replace(/\\s+/g, ' ').slice(0, 700);
+            }
+            return res;
+          })()`,
+          'texts'
+        );
+
+        out.lastError = await js(`window.__lastError`, 'lasterr');
 
         await js(`(() => { window.App.go('sales'); return true; })()`, 'back-sales');
         out.layout = await js(

@@ -20,7 +20,7 @@ const ResEdit = require('resedit');
 const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const APP_NAME = 'Aroklon';
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 const ELECTRON_VERSION = '45.3.4';
 
 function findElectronZip() {

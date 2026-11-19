@@ -9,6 +9,19 @@
   const U = window.U;
   const { esc, icon } = U;
 
+  window.__lastError = null;
+  window.addEventListener('error', (e) => {
+    const text = 'RENDER ERROR: ' + e.message + '\n' + (e.error && e.error.stack ? e.error.stack : '');
+    window.__lastError = text;
+    console.error(text);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e.reason;
+    const text = 'PROMISE ERROR: ' + ((r && (r.stack || r.message)) || r);
+    window.__lastError = text;
+    console.error(text);
+  });
+
   /* --------------------------------------------------------------- click */
 
   document.addEventListener('click', async (e) => {

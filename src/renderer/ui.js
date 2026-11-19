@@ -18,6 +18,7 @@
       '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>',
     cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/>',
     day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -66,13 +67,15 @@
       .replace(/'/g, '&#39;');
 
   const attr = (v) => esc(v);
+  const t = (key, vars) => (window.I18N ? window.I18N.t(key, vars) : key);
+  const locale = () => (window.I18N ? window.I18N.locale() : 'id-ID');
 
   function money(c, opts = {}) {
     const st = window.App ? window.App.state : null;
     const symbol = (opts.symbol != null ? opts.symbol : st && st.company && st.company.symbol) || 'Rp';
     const n = (Number(c) || 0) / 100;
     const decimals = Math.abs(n % 1) > 0.0001 ? 2 : 0;
-    const s = n.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+    const s = n.toLocaleString(locale(), { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
     return `${symbol} ${s}`;
   }
 
@@ -98,16 +101,16 @@
     if (!iso) return '—';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
-    const date = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    const date = d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
     if (!withTime) return date;
-    return `${date} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+    return `${date} ${d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}`;
   }
 
   function fmtTime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '—';
-    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
   }
 
   function todayKey() {
@@ -194,7 +197,9 @@
     const el = document.createElement('div');
     el.className = `toast ${type}`;
     const ic = type === 'good' ? 'check' : type === 'bad' ? 'warning' : type === 'warn' ? 'warning' : 'info';
-    el.innerHTML = `<span class="ti">${icon(ic, 16)}</span><span>${esc(message)}</span>`;
+    const translated = window.I18N ? window.I18N.exact(message) : null;
+    const text = translated || message;
+    el.innerHTML = `<span class="ti">${icon(ic, 16)}</span><span>${esc(text)}</span>`;
     root.appendChild(el);
     setTimeout(() => {
       el.style.transition = 'opacity .2s, transform .2s';
@@ -209,6 +214,7 @@
   function modal(html, opts = {}) {
     const root = document.getElementById('modal-root');
     root.innerHTML = `<div class="overlay" data-overlay><div class="modal ${opts.size || ''}" role="dialog" aria-modal="true">${html}</div></div>`;
+    if (window.App && App._translateDom) App._translateDom(root);
     const overlay = root.querySelector('[data-overlay]');
     overlay.addEventListener('mousedown', (e) => {
       if (e.target === overlay && opts.dismissible !== false) closeModal();
@@ -319,9 +325,19 @@
       report: null,
       theme: (() => {
         try {
-          return localStorage.getItem('aroklon.theme') === 'classic' ? 'classic' : 'modern';
+          const saved = localStorage.getItem('aroklon.layout') || localStorage.getItem('aroklon.theme');
+          const initial = saved || document.documentElement.dataset.layout;
+          return initial === 'classic' ? 'classic' : 'modern';
         } catch (e) {
           return 'modern';
+        }
+      })(),
+      mode: (() => {
+        try {
+          const saved = localStorage.getItem('aroklon.mode');
+          return ['dark', 'light', 'system'].includes(saved) ? saved : 'dark';
+        } catch (e) {
+          return 'dark';
         }
       })(),
       settingsTab: 'company',
@@ -387,7 +403,8 @@
     render() {
       const root = document.getElementById('app');
       const theme = this.state.theme === 'classic' ? 'classic' : 'modern';
-      document.body.dataset.theme = theme;
+      document.documentElement.dataset.layout = theme;
+      this.applyMode();
 
       if (!this.state.user) {
         root.innerHTML = this._loginHtml();
@@ -420,15 +437,76 @@
           }
         }
       }
+      this._translateDom(root);
+    },
+
+    _translateDom(root) {
+      if (!window.I18N || window.I18N.lang !== 'id' || !root) return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const p = node.parentElement;
+          if (!p) return NodeFilter.FILTER_REJECT;
+          if (['SCRIPT', 'STYLE', 'CODE', 'PRE'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+          if (p.closest('[data-notranslate]')) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      for (const node of nodes) {
+        const raw = node.nodeValue;
+        if (!raw || !raw.trim()) continue;
+        const lead = (raw.match(/^\s*/) || [''])[0];
+        const tail = (raw.match(/\s*$/) || [''])[0];
+        const core = raw.trim();
+        const tr = window.I18N.exact(core);
+        if (tr && tr !== core) node.nodeValue = lead + tr + tail;
+      }
+      root.querySelectorAll('[placeholder]').forEach((el) => {
+        const tr = window.I18N.exact(el.getAttribute('placeholder'));
+        if (tr) el.setAttribute('placeholder', tr);
+      });
+      root.querySelectorAll('[title]').forEach((el) => {
+        const tr = window.I18N.exact(el.getAttribute('title'));
+        if (tr) el.setAttribute('title', tr);
+      });
     },
 
     setTheme(theme) {
       this.state.theme = theme === 'classic' ? 'classic' : 'modern';
       try {
-        localStorage.setItem('aroklon.theme', this.state.theme);
+        localStorage.setItem('aroklon.layout', this.state.theme);
       } catch (e) {}
-      document.body.dataset.theme = this.state.theme;
+      document.documentElement.dataset.layout = this.state.theme;
       this.render();
+    },
+
+    applyMode() {
+      const mode = this.state.mode || 'dark';
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const effective = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+      document.documentElement.dataset.mode = effective === 'dark' ? 'dark' : 'light';
+      return effective;
+    },
+
+    setMode(mode) {
+      this.state.mode = ['dark', 'light', 'system'].includes(mode) ? mode : 'dark';
+      try {
+        localStorage.setItem('aroklon.mode', this.state.mode);
+      } catch (e) {}
+      this.applyMode();
+      this.render();
+    },
+
+    toggleMode() {
+      const current = document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light';
+      this.setMode(current === 'dark' ? 'light' : 'dark');
+    },
+
+    setLanguage(lang) {
+      if (window.I18N) window.I18N.set(lang === 'en' ? 'en' : 'id');
+      this.render();
+      if (window.api && window.api.setLang) window.api.setLang(lang === 'en' ? 'en' : 'id');
     },
 
     _shellModern(screen, meta) {
@@ -461,6 +539,7 @@
     _classicMenu() {
       const route = this.state.route;
       const theme = this.state.theme;
+      const dark = document.documentElement.dataset.mode === 'dark';
       const mgmt = [
         ['documents', 'Documents', 'documents'],
         ['products', 'Products', 'products'],
@@ -476,10 +555,12 @@
           <span class="cmb-name">Aroklon</span>
         </div>
         <nav class="cmb-nav">
-          <button class="cmb-btn ${route === 'sales' ? 'active' : ''}" data-action="nav" data-route="sales">${icon('sales', 15)}<span>Sales</span></button>
-          <button class="cmb-btn ${route === 'dashboard' ? 'active' : ''}" data-action="nav" data-route="dashboard">${icon('dashboard', 15)}<span>Dashboard</span></button>
+          <button class="cmb-btn ${route === 'sales' ? 'active' : ''}" data-action="nav" data-route="sales">${icon('sales', 15)}<span>${esc(t('Sales'))}</span></button>
+          <button class="cmb-btn ${route === 'dashboard' ? 'active' : ''}" data-action="nav" data-route="dashboard">${icon('dashboard', 15)}<span>${esc(
+            t('Dashboard')
+          )}</span></button>
           <details class="cmb-menu">
-            <summary class="cmb-btn">${icon('products', 15)}<span>Management</span>${icon('down', 12)}</summary>
+            <summary class="cmb-btn">${icon('products', 15)}<span>${esc(t('Management'))}</span>${icon('down', 12)}</summary>
             <div class="cmb-popup">
               ${mgmt
                 .map(
@@ -487,36 +568,40 @@
                     `<button class="cmb-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
                       ic,
                       15
-                    )}<span>${esc(label)}</span></button>`
+                    )}<span>${esc(t(label))}</span></button>`
                 )
                 .join('')}
               <div class="cmb-sep"></div>
-              <button class="cmb-item" data-action="nav-settings" data-tab="tenders">${icon('cash', 15)}<span>Payment types</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="countries">${icon('globe', 15)}<span>Countries</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>Tax rates</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>My company</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="tenders">${icon('cash', 15)}<span>${esc(t('Payment types'))}</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="countries">${icon('globe', 15)}<span>${esc(t('Countries'))}</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>${esc(t('Tax rates'))}</span></button>
+              <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>${esc(t('My company'))}</span></button>
             </div>
           </details>
-          <button class="cmb-btn ${route === 'day' ? 'active' : ''}" data-action="nav" data-route="day">${icon('day', 15)}<span>Register</span></button>
-          <button class="cmb-btn ${route === 'settings' ? 'active' : ''}" data-action="nav" data-route="settings">${icon('settings', 15)}<span>Settings</span></button>
+          <button class="cmb-btn ${route === 'day' ? 'active' : ''}" data-action="nav" data-route="day">${icon('day', 15)}<span>${esc(t('Register'))}</span></button>
+          <button class="cmb-btn ${route === 'settings' ? 'active' : ''}" data-action="nav" data-route="settings">${icon('settings', 15)}<span>${esc(
+            t('Settings')
+          )}</span></button>
           <details class="cmb-menu">
-            <summary class="cmb-btn">${icon('info', 15)}<span>Help</span>${icon('down', 12)}</summary>
+            <summary class="cmb-btn">${icon('info', 15)}<span>${esc(t('Help'))}</span>${icon('down', 12)}</summary>
             <div class="cmb-popup">
-              <button class="cmb-item" data-action="shortcuts">${icon('info', 15)}<span>Keyboard shortcuts</span></button>
-              <button class="cmb-item" data-action="check-update">${icon('refresh', 15)}<span>Check for updates</span></button>
-              <button class="cmb-item" data-action="about">${icon('info', 15)}<span>About Aroklon</span></button>
+              <button class="cmb-item" data-action="shortcuts">${icon('info', 15)}<span>${esc(t('Keyboard shortcuts'))}</span></button>
+              <button class="cmb-item" data-action="check-update">${icon('refresh', 15)}<span>${esc(t('Check for updates'))}</span></button>
+              <button class="cmb-item" data-action="about">${icon('info', 15)}<span>${esc(t('About Aroklon'))}</span></button>
             </div>
           </details>
         </nav>
         <div class="cmb-right">
-          <span class="cmb-chip">${icon('store', 13)} ${esc(
-            (this.state.registers || []).find((r) => r.is_primary)?.name || 'Register'
-          )}</span>
-          <span class="cmb-chip">${icon('users', 13)} ${esc(this.state.user.name)}</span>
-          <button class="cmb-btn" data-action="toggle-theme" title="Ganti tema">${icon('settings', 14)}<span>${
-            theme === 'classic' ? 'Modern' : 'Classic'
-          }</span></button>
-          <button class="cmb-btn" data-action="logout" title="Sign out">${icon('logout', 14)}<span>Sign out</span></button>
+          <span class="cmb-chip">${icon('store', 13)} ${esc((this.state.registers || []).find((r) => r.is_primary)?.name || t('Register'))}</span>
+          <span class="cmb-chip" data-notranslate>${icon('users', 13)} ${esc(this.state.user.name)}</span>
+          <button class="cmb-btn" data-action="toggle-mode" title="${esc(t(dark ? 'Light' : 'Dark'))}">${icon(
+            dark ? 'day' : 'moon',
+            14
+          )}<span>${esc(t(dark ? 'Light' : 'Dark'))}</span></button>
+          <button class="cmb-btn" data-action="toggle-theme" title="${esc(t('Theme'))}">${icon('settings', 14)}<span>${esc(
+            t(theme === 'classic' ? 'Modern' : 'Classic')
+          )}</span></button>
+          <button class="cmb-btn" data-action="logout" title="${esc(t('Sign out'))}">${icon('logout', 14)}<span>${esc(t('Sign out'))}</span></button>
         </div>
       </header>`;
     },
@@ -528,12 +613,12 @@
         `<button class="ct-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
           ic,
           15
-        )}<span>${esc(label)}</span></button>`;
-      const sitem = (t, label, ic) =>
-        `<button class="ct-item ${route === 'settings' && tab === t ? 'active' : ''}" data-action="nav-settings" data-tab="${t}">${icon(
+        )}<span>${esc(t(label))}</span></button>`;
+      const sitem = (key, label, ic) =>
+        `<button class="ct-item ${route === 'settings' && tab === key ? 'active' : ''}" data-action="nav-settings" data-tab="${key}">${icon(
           ic,
           15
-        )}<span>${esc(label)}</span></button>`;
+        )}<span>${esc(t(label))}</span></button>`;
       return `<aside class="classic-tree">
         <div class="ct-head">Management</div>
         ${item('dashboard', 'Dashboard', 'dashboard')}
@@ -558,13 +643,13 @@
       const d = this.state.day && this.state.day.business_date ? new Date(this.state.day.business_date + 'T12:00:00') : new Date();
       const dateStr = isNaN(d.getTime())
         ? ''
-        : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        : d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
       return `<footer class="classic-status">
-        <span>${icon('store', 13)} ${esc(reg.name || 'Register')}</span>
-        <span>${icon('users', 13)} ${esc(this.state.user.name)}</span>
+        <span>${icon('store', 13)} ${esc(reg.name || t('Register'))}</span>
+        <span data-notranslate>${icon('users', 13)} ${esc(this.state.user.name)}</span>
         <span>${icon('day', 13)} ${esc(dateStr)}</span>
         <span class="spacer"></span>
-        <span class="ok">${icon('check', 13)} Database connected</span>
+        <span class="ok">${icon('check', 13)} ${esc(t('Database connected'))}</span>
         <span class="ver">v${esc((this.state.meta && this.state.meta.version) || '1.0.0')}</span>
       </footer>`;
     },
@@ -671,11 +756,11 @@
       ).length;
       const nav = this._navGroups()
         .map(
-          (g) => `<div class="nav-label">${esc(g.label)}</div>` +
+          (g) => `<div class="nav-label">${esc(t(g.label))}</div>` +
           g.items
             .map(
               (it) => `<button class="nav-item ${this.state.route === it.route ? 'active' : ''}" data-action="nav" data-route="${it.route}">
-                ${icon(it.icon, 18)}<span>${esc(it.label)}</span>
+                ${icon(it.icon, 18)}<span>${esc(t(it.label))}</span>
                 ${it.route === 'stock' && lowCount ? `<span class="nav-badge">${lowCount}</span>` : ''}
               </button>`
             )
@@ -693,7 +778,7 @@
           <div class="user-card">
             <div class="avatar">${esc(initials(this.state.user.name))}</div>
             <div style="min-width:0;flex:1">
-              <div class="user-name">${esc(this.state.user.name)}</div>
+              <div class="user-name" data-notranslate>${esc(this.state.user.name)}</div>
               <div class="user-role">${esc(this.state.user.access_name || 'Cashier')}</div>
             </div>
             <button class="icon-btn" data-action="logout" title="Sign out">${icon('logout', 17)}</button>
@@ -709,7 +794,7 @@
       const d = day.business_date ? new Date(day.business_date + 'T12:00:00') : new Date();
       const dateStr = isNaN(d.getTime())
         ? day.business_date
-        : d.toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+        : d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
       return `<header class="topbar">
         <div>
           <h1>${esc(meta.title || 'Aroklon')}</h1>
@@ -717,14 +802,18 @@
         </div>
         <div class="topbar-right">
           <span class="chip ${day.register_open ? '' : 'closed'}" data-action="nav" data-route="day" style="cursor:pointer">
-            <span class="dot"></span>${day.register_open ? 'Register open' : 'Register closed'}
+            <span class="dot"></span>${esc(t(day.register_open ? 'Register open' : 'Register closed'))}
           </span>
           <span class="chip">${icon('store', 14)} ${esc(reg.name || 'Register')}</span>
           <span class="chip">${icon('day', 14)} ${esc(dateStr)}</span>
-          <button class="btn sm" data-action="toggle-theme" title="Ganti tema">${icon('settings', 14)} ${
+          <button class="btn sm icon-only" data-action="toggle-mode" title="${document.documentElement.dataset.mode === 'dark' ? t('Light') : t('Dark')}">${icon(
+            document.documentElement.dataset.mode === 'dark' ? 'day' : 'moon',
+            16
+          )}</button>
+          <button class="btn sm" data-action="toggle-theme" title="${t('Theme')}">${icon('settings', 14)} ${t(
             this.state.theme === 'classic' ? 'Modern' : 'Classic'
-          }</button>
-          <button class="btn sm" data-action="cash">${icon('cash', 15)} Cash in / out</button>
+          )}</button>
+          <button class="btn sm" data-action="cash">${icon('cash', 15)} ${esc(t('Cash in / out'))}</button>
         </div>
       </header>`;
     },
@@ -745,49 +834,63 @@
             <div><div class="brand-name">Aroklon</div><div class="brand-sub">Point of Sale</div></div>
           </div>
           <div class="login-hero">
-            <h2>Your counter,<br /><span>under control.</span></h2>
-            <p>An offline point of sale for Windows. Sell, track stock and close the day — no internet, no subscription, your data stays on this PC.</p>
+            <h2>${esc(t('Your counter,'))}<br /><span>${esc(t('under control.'))}</span></h2>
+            <p>${esc(
+              t(
+                'An offline point of sale for Windows. Sell, track stock and close the day — no internet, no subscription, your data stays on this PC.'
+              )
+            )}</p>
             <div class="login-feats">
               ${feats
                 .map(
-                  (f) => `<div class="login-feat"><div class="ic">${icon(f[0], 16)}</div><div>${esc(f[1])}<br /><span style="opacity:.65">${esc(
-                    f[2]
+                  (f) => `<div class="login-feat"><div class="ic">${icon(f[0], 16)}</div><div>${esc(t(f[1]))}<br /><span style="opacity:.65">${esc(
+                    t(f[2])
                   )}</span></div></div>`
                 )
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">Aroklon 1.0.2 · Local database · No account required</div>
+          <div class="login-foot">${esc(t('Aroklon 1.0.3 · Local database · No account required'))}</div>
         </div>
         <div class="login-panel">
           <div class="login-card">
-            <h1>Sign in to your till</h1>
-            <p class="muted">Choose your user and enter your PIN.</p>
+            <h1>${esc(t('Sign in to your till'))}</h1>
+            <p class="muted">${esc(t('Choose your user and enter your PIN'))}</p>
             <div class="user-select" id="user-select">
               ${users
                 .map(
                   (u) => `<button class="user-pill ${String(u.id) === String(sel) ? 'active' : ''}" data-action="pick-user" data-id="${u.id}">
                     <span class="avatar">${esc(initials(u.name))}</span>
-                    <span>${esc(u.name)}</span>
+                    <span data-notranslate>${esc(u.name)}</span>
                   </button>`
                 )
                 .join('')}
             </div>
             <div class="field" style="margin:12px 0 4px">
-              <label for="pin-input">PIN</label>
-              <input id="pin-input" class="input" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Enter PIN" style="height:48px;text-align:center;letter-spacing:10px;font-size:20px;font-weight:600" />
+              <label for="pin-input">${esc(t('PIN'))}</label>
+              <input id="pin-input" class="input" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="${esc(
+                t('Enter PIN')
+              )}" style="height:48px;text-align:center;letter-spacing:10px;font-size:20px;font-weight:600" />
             </div>
             <div class="pin-pad" id="pin-pad">
               ${[1, 2, 3, 4, 5, 6, 7, 8, 9]
                 .map((n) => `<button class="pin-key" data-action="pin" data-key="${n}">${n}</button>`)
                 .join('')}
-              <button class="pin-key fn" data-action="pin-fn" data-key="clear">Clear</button>
+              <button class="pin-key fn" data-action="pin-fn" data-key="clear">${esc(t('Clear'))}</button>
               <button class="pin-key" data-action="pin" data-key="0">0</button>
               <button class="pin-key fn" data-action="pin-fn" data-key="back">${icon('back', 16)}</button>
             </div>
-            <button class="btn primary block" style="margin-top:12px;height:46px;font-size:14px" data-action="pin-submit">Sign in</button>
+            <button class="btn primary block" style="margin-top:12px;height:46px;font-size:14px" data-action="pin-submit">${esc(
+              t('Sign in')
+            )}</button>
             <div class="login-err" id="login-err"></div>
-            <div class="demo-hint">Type your PIN and press <b>Enter</b> · Owner 1234 &nbsp;|&nbsp; Cashier 1111</div>
+            <div class="demo-hint">${esc(t('Type your PIN and press Enter'))} · Owner 1234 &nbsp;|&nbsp; Cashier 1111</div>
+            <div class="row" style="justify-content:center;margin-top:14px">
+              <select class="input" style="width:auto;min-width:200px" data-change="login-lang">
+                <option value="id" ${window.I18N && I18N.lang === 'id' ? 'selected' : ''}>Bahasa Indonesia</option>
+                <option value="en" ${window.I18N && I18N.lang === 'en' ? 'selected' : ''}>English</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>`;
@@ -855,7 +958,7 @@
     },
   });
 
-  window.U = { icon, esc, attr, money, moneyShort, num, qty, fmtDate, fmtTime, todayKey, initials, computeCart };
+  window.U = { icon, esc, attr, money, moneyShort, num, qty, fmtDate, fmtTime, todayKey, initials, computeCart, t, locale };
 
   /* modal control buttons */
   document.addEventListener('click', (e) => {

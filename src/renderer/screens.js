@@ -7,7 +7,7 @@
 (function () {
   const A = window.App;
   const U = window.U;
-  const { esc, attr, icon, money, moneyShort, qty, fmtDate, fmtTime, initials } = U;
+  const { esc, attr, icon, money, moneyShort, qty, fmtDate, fmtTime, initials, t, locale } = U;
 
   /* ------------------------------------------------------------- helpers */
 
@@ -72,17 +72,19 @@
 
   SH.badge = (text, kind = 'gray') => `<span class="badge ${kind}">${text}</span>`;
 
-  SH.docTypeLabel = (t) =>
-    ({
-      sale: 'Sale',
-      refund: 'Refund',
-      purchase: 'Purchase',
-      stock_return: 'Stock return',
-      count: 'Inventory count',
-      loss: 'Loss & damage',
-      proforma: 'Proforma',
-      credit: 'Credit payment',
-    }[t] || t);
+  SH.docTypeLabel = (type) =>
+    t(
+      {
+        sale: 'Sale',
+        refund: 'Refund',
+        purchase: 'Purchase',
+        stock_return: 'Stock return',
+        count: 'Inventory count',
+        loss: 'Loss & damage',
+        proforma: 'Proforma',
+        credit: 'Credit payment',
+      }[type] || type
+    );
 
   SH.docTypeBadge = (t) => {
     const map = {
@@ -111,10 +113,10 @@
         const disc = (it.discount_total || 0) / 100;
         return `<div style="margin:3px 0">
           <div>${esc(it.name_snapshot)}</div>
-          <div class="r-line r-muted"><span>${U.qty(it.quantity)} × ${price.toLocaleString('id-ID')}</span><span>${total.toLocaleString(
-          'id-ID'
-        )}</span></div>
-          ${disc ? `<div class="r-line r-muted" style="font-size:10px"><span>discount</span><span>-${disc.toLocaleString('id-ID')}</span></div>` : ''}
+          <div class="r-line r-muted"><span>${U.qty(it.quantity)} × ${price.toLocaleString(locale())}</span><span>${total.toLocaleString(
+            locale()
+          )}</span></div>
+          ${disc ? `<div class="r-line r-muted" style="font-size:10px"><span>${esc(t('Discount'))}</span><span>-${disc.toLocaleString(locale())}</span></div>` : ''}
         </div>`;
       })
       .join('');
@@ -123,11 +125,11 @@
       .map(
         (p) => `<div class="r-line"><span>${esc(p.payment_name || 'Payment')}</span><span>${(
           p.amount / 100
-        ).toLocaleString('id-ID')}</span></div>`
+        ).toLocaleString(locale())}</span></div>`
       )
       .join('');
 
-    const money0 = (v) => (v / 100).toLocaleString('id-ID');
+    const money0 = (v) => (v / 100).toLocaleString(locale());
 
     return `<div class="receipt-paper">
       <h3>${esc(c.name || 'Aroklon')}</h3>
@@ -135,23 +137,23 @@
       ${c.phone ? `<div class="r-center r-muted">${esc(c.phone)}</div>` : ''}
       <hr />
       ${c.receipt_header ? `<div class="r-center">${esc(c.receipt_header)}</div>` : ''}
-      <div class="r-line"><span>Receipt</span><span>${esc(doc.number || '')}</span></div>
-      <div class="r-line"><span>Date</span><span>${esc(fmtDate(doc.doc_date, true))}</span></div>
-      ${doc.user ? `<div class="r-line"><span>Cashier</span><span>${esc(doc.user.name)}</span></div>` : ''}
-      ${doc.customer && doc.customer.name !== 'Walk-in Customer' ? `<div class="r-line"><span>Customer</span><span>${esc(doc.customer.name)}</span></div>` : ''}
+      <div class="r-line"><span>${esc(t('Receipt'))}</span><span>${esc(doc.number || '')}</span></div>
+      <div class="r-line"><span>${esc(t('Date'))}</span><span>${esc(fmtDate(doc.doc_date, true))}</span></div>
+      ${doc.user ? `<div class="r-line"><span>${esc(t('Cashier'))}</span><span>${esc(doc.user.name)}</span></div>` : ''}
+      ${doc.customer && !['Walk-in Customer', 'Pelanggan Umum'].includes(doc.customer.name) ? `<div class="r-line"><span>${esc(t('Customer'))}</span><span>${esc(doc.customer.name)}</span></div>` : ''}
       <hr />
-      ${lines || '<div class="r-center r-muted">No items</div>'}
+      ${lines || `<div class="r-center r-muted">${esc(t('No items'))}</div>`}
       <hr />
-      <div class="r-line"><span>Subtotal</span><span>${money0(doc.subtotal)}</span></div>
-      ${doc.discount_total ? `<div class="r-line"><span>Discount</span><span>-${money0(doc.discount_total)}</span></div>` : ''}
-      ${doc.tax_total ? `<div class="r-line"><span>Tax</span><span>${money0(doc.tax_total)}</span></div>` : ''}
-      <div class="r-line r-total"><span>TOTAL</span><span>${money0(doc.total)}</span></div>
+      <div class="r-line"><span>${esc(t('Subtotal'))}</span><span>${money0(doc.subtotal)}</span></div>
+      ${doc.discount_total ? `<div class="r-line"><span>${esc(t('Discount'))}</span><span>-${money0(doc.discount_total)}</span></div>` : ''}
+      ${doc.tax_total ? `<div class="r-line"><span>${esc(t('Tax'))}</span><span>${money0(doc.tax_total)}</span></div>` : ''}
+      <div class="r-line r-total"><span>${esc(t('TOTAL'))}</span><span>${money0(doc.total)}</span></div>
       <hr />
       ${payLines}
-      ${doc.change_total ? `<div class="r-line"><span>Change</span><span>${money0(doc.change_total)}</span></div>` : ''}
+      ${doc.change_total ? `<div class="r-line"><span>${esc(t('Change'))}</span><span>${money0(doc.change_total)}</span></div>` : ''}
       <hr />
-      <div class="r-center r-muted">${esc(c.receipt_footer || 'Thank you for your purchase!')}</div>
-      <div class="r-center r-muted" style="margin-top:6px">Powered by Aroklon</div>
+      <div class="r-center r-muted">${esc(c.receipt_footer || t('Thank you for your purchase!'))}</div>
+      <div class="r-center r-muted" style="margin-top:6px">${esc(t('Powered by Aroklon'))}</div>
     </div>`;
   };
 
@@ -160,7 +162,7 @@
     const items = doc.items || [];
     const payments = doc.payments || [];
     const row = (l, r) => `<div class="r-line"><span>${l}</span><span>${r}</span></div>`;
-    const money0 = (v) => (v / 100).toLocaleString('id-ID');
+    const money0 = (v) => (v / 100).toLocaleString(locale());
     const body = `
       <div class="r-center"><h2>${esc(c.name || 'Aroklon')}</h2>
         ${c.address ? `<div>${esc(c.address)}</div>` : ''}
@@ -168,31 +170,31 @@
       </div>
       <hr/>
       ${c.receipt_header ? `<div class="r-center">${esc(c.receipt_header)}</div>` : ''}
-      ${row('Receipt', esc(doc.number || ''))}
-      ${row('Date', esc(fmtDate(doc.doc_date, true)))}
-      ${doc.user ? row('Cashier', esc(doc.user.name)) : ''}
-      ${doc.customer ? row('Customer', esc(doc.customer.name)) : ''}
+      ${row(esc(t('Receipt')), esc(doc.number || ''))}
+      ${row(esc(t('Date')), esc(fmtDate(doc.doc_date, true)))}
+      ${doc.user ? row(esc(t('Cashier')), esc(doc.user.name)) : ''}
+      ${doc.customer ? row(esc(t('Customer')), esc(doc.customer.name)) : ''}
       <hr/>
       ${items
         .map(
           (it) =>
             `<div style="margin:4px 0"><div>${esc(it.name_snapshot)}</div>
              <div class="r-line muted"><span>${U.qty(it.quantity)} x ${money0(it.unit_price)}</span><span>${money0(it.total)}</span></div>
-             ${it.discount_total ? `<div class="r-line muted"><span>discount</span><span>-${money0(it.discount_total)}</span></div>` : ''}
+             ${it.discount_total ? `<div class="r-line muted"><span>${esc(t('Discount'))}</span><span>-${money0(it.discount_total)}</span></div>` : ''}
             </div>`
         )
         .join('')}
       <hr/>
-      ${row('Subtotal', money0(doc.subtotal))}
-      ${doc.discount_total ? row('Discount', '-' + money0(doc.discount_total)) : ''}
-      ${doc.tax_total ? row('Tax', money0(doc.tax_total)) : ''}
-      <div class="r-line total"><span>TOTAL</span><span>${money0(doc.total)}</span></div>
+      ${row(esc(t('Subtotal')), money0(doc.subtotal))}
+      ${doc.discount_total ? row(esc(t('Discount')), '-' + money0(doc.discount_total)) : ''}
+      ${doc.tax_total ? row(esc(t('Tax')), money0(doc.tax_total)) : ''}
+      <div class="r-line total"><span>${esc(t('TOTAL'))}</span><span>${money0(doc.total)}</span></div>
       <hr/>
-      ${payments.map((p) => row(esc(p.payment_name || 'Payment'), money0(p.amount))).join('')}
-      ${doc.change_total ? row('Change', money0(doc.change_total)) : ''}
+      ${payments.map((p) => row(esc(p.payment_name || t('Payment')), money0(p.amount))).join('')}
+      ${doc.change_total ? row(esc(t('Change')), money0(doc.change_total)) : ''}
       <hr/>
-      <div class="r-center muted">${esc(c.receipt_footer || 'Thank you for your purchase!')}</div>
-      <div class="r-center muted" style="margin-top:8px">Powered by Aroklon</div>`;
+      <div class="r-center muted">${esc(c.receipt_footer || t('Thank you for your purchase!'))}</div>
+      <div class="r-center muted" style="margin-top:8px">${esc(t('Powered by Aroklon'))}</div>`;
     return `<!doctype html><html><head><meta charset="utf-8"><style>
       @page { size: 80mm auto; margin: 4mm; }
       * { box-sizing: border-box; }
@@ -273,7 +275,7 @@
   }
 
   A.screens.sales = {
-    meta: { title: 'Sales', sub: 'Ring up a sale' },
+    meta: { title: t('Sales'), sub: t('Ring up a sale') },
     flush: true,
     render() {
       const cart = A.state.cart;
@@ -290,23 +292,24 @@
             <div class="search-row">
               <div class="search-box">
                 ${icon('search', 18)}
-                <input id="pos-search" class="input" data-input="pos-search" placeholder="Search name, code or barcode…" value="${attr(
-                  A.state.catalogSearch
-                )}" autocomplete="off" spellcheck="false" />
+                <input id="pos-search" class="input" data-input="pos-search" placeholder="${esc(
+                  t('Search name, code or barcode…')
+                )}" value="${attr(A.state.catalogSearch)}" autocomplete="off" spellcheck="false" />
               </div>
               <div class="search-modes">
                 ${['name', 'code', 'barcode']
                   .map(
                     (m) =>
-                      `<button class="${A.state.catalogMode === m ? 'active' : ''}" data-action="pos-mode" data-mode="${m}">${m[0].toUpperCase() +
-                      m.slice(1)}</button>`
+                      `<button class="${A.state.catalogMode === m ? 'active' : ''}" data-action="pos-mode" data-mode="${m}">${esc(
+                        t(m[0].toUpperCase() + m.slice(1))
+                      )}</button>`
                   )
                   .join('')}
               </div>
               <button class="btn icon-only" data-action="pos-focus" title="Search (F3)">${icon('search', 18)}</button>
             </div>
             <div class="chips">
-              <button class="chip-filter ${!A.state.groupFilter ? 'active' : ''}" data-action="pos-group" data-id="">All</button>
+              <button class="chip-filter ${!A.state.groupFilter ? 'active' : ''}" data-action="pos-group" data-id="">${esc(t('All'))}</button>
               ${groups
                 .map(
                   (g) =>
@@ -323,11 +326,13 @@
                 ? `<div class="product-grid" id="product-grid">${products.map(tileHtml).join('')}</div>`
                 : SH.empty({
                     icon: 'search',
-                    title: 'No products found',
+                    title: t('No products found'),
                     text: A.state.catalogSearch
-                      ? `Nothing matches “${A.state.catalogSearch}”.`
-                      : 'Add your first product to start selling.',
-                    action: `<button class="btn primary" data-action="nav" data-route="products">${icon('plus', 15)} Add product</button>`,
+                      ? t('Nothing matches “{q}”.', { q: A.state.catalogSearch })
+                      : t('Add your first product to start selling.'),
+                    action: `<button class="btn primary" data-action="nav" data-route="products">${icon('plus', 15)} ${esc(
+                      t('Add product')
+                    )}</button>`,
                   })
             }
           </div>
@@ -335,14 +340,16 @@
 
         <aside class="order">
           <div class="order-head">
-            <div class="title">Current sale<small>New sale · ${esc((A.state.registers || []).find((r) => r.is_primary)?.name || 'Register')}</small></div>
+            <div class="title">${esc(t('Current sale'))}<small>${esc(t('New sale'))} · ${esc(
+              (A.state.registers || []).find((r) => r.is_primary)?.name || t('Register')
+            )}</small></div>
             <div class="right">
               ${
                 held
-                  ? `<button class="btn sm" data-action="pos-resume">${icon('refresh', 14)} Resume</button>`
-                  : `<button class="btn sm" data-action="pos-hold" title="Hold sale (F8)">${icon('save', 14)} Hold</button>`
+                  ? `<button class="btn sm" data-action="pos-resume">${icon('refresh', 14)} ${esc(t('Resume'))}</button>`
+                  : `<button class="btn sm" data-action="pos-hold" title="${esc(t('Hold'))}">${icon('save', 14)} ${esc(t('Hold'))}</button>`
               }
-              <button class="icon-btn" data-action="pos-clear" title="Clear sale">${icon('trash', 17)}</button>
+              <button class="icon-btn" data-action="pos-clear" title="${esc(t('Clear'))}">${icon('trash', 17)}</button>
             </div>
           </div>
 
@@ -364,45 +371,47 @@
                       </div>`;
                     })
                     .join('')
-                : `<div class="cart-empty">${icon('sales', 30)}<div>No items yet<br /><span class="small">Scan, search or tap a product</span></div></div>`
+                : `<div class="cart-empty">${icon('sales', 30)}<div>${esc(t('No items yet'))}<br /><span class="small">${esc(
+                    t('Scan, search or tap a product')
+                  )}</span></div></div>`
             }
           </div>
 
           ${
             A.state.selectedLine != null && cart.items[A.state.selectedLine]
               ? `<div class="row gap8" style="padding:8px 16px;border-top:1px solid var(--line)">
-                  <span class="small muted">Qty</span>
-                  <button class="btn sm icon-only" data-action="pos-qty" data-delta="-1" title="Decrease">${icon('minus', 14)}</button>
+                  <span class="small muted">${esc(t('Qty'))}</span>
+                  <button class="btn sm icon-only" data-action="pos-qty" data-delta="-1" title="${esc(t('Decrease'))}">${icon('minus', 14)}</button>
                   <span class="strong mono">${U.qty(cart.items[A.state.selectedLine].quantity)}</span>
-                  <button class="btn sm icon-only" data-action="pos-qty" data-delta="1" title="Increase">${icon('plus', 14)}</button>
-                  <button class="btn sm" data-action="pos-item-discount">${icon('tag', 14)} Discount</button>
+                  <button class="btn sm icon-only" data-action="pos-qty" data-delta="1" title="${esc(t('Increase'))}">${icon('plus', 14)}</button>
+                  <button class="btn sm" data-action="pos-item-discount">${icon('tag', 14)} ${esc(t('Discount'))}</button>
                   <span class="spacer"></span>
-                  <button class="btn sm" data-action="pos-remove-line" style="color:var(--bad)">${icon('trash', 14)} Remove</button>
+                  <button class="btn sm" data-action="pos-remove-line" style="color:var(--bad)">${icon('trash', 14)} ${esc(t('Remove'))}</button>
                 </div>`
               : ''
           }
 
           <div class="order-foot">
-            <div class="sum-row"><span>Subtotal</span><span class="mono">${money(calc.subtotal)}</span></div>
+            <div class="sum-row"><span>${esc(t('Subtotal'))}</span><span class="mono">${money(calc.subtotal)}</span></div>
             ${
               disc.value > 0
-                ? `<div class="sum-row discount"><span>Discount (${esc(disc.type)}${
+                ? `<div class="sum-row discount"><span>${esc(t('Discount'))} (${esc(disc.type)}${
                     disc.customer ? ' · ' + esc(disc.customer) : ''
                   })</span><span class="mono">-${money(calc.discount_total)}</span></div>`
                 : ''
             }
-            <div class="sum-row"><span>Tax</span><span class="mono">${money(calc.tax_total)}</span></div>
-            <div class="sum-row total"><span>Total</span><span class="mono">${money(calc.total)}</span></div>
+            <div class="sum-row"><span>${esc(t('Tax'))}</span><span class="mono">${money(calc.tax_total)}</span></div>
+            <div class="sum-row total"><span>${esc(t('Total'))}</span><span class="mono">${money(calc.total)}</span></div>
             <div class="row gap8" style="margin-top:10px">
               <button class="btn sm" data-action="pos-customer" style="max-width:190px;overflow:hidden;text-overflow:ellipsis">
-                ${icon('customers', 14)} ${customer ? esc(customer.name) : 'Add customer'}
+                ${icon('customers', 14)} ${customer ? esc(customer.name) : esc(t('Add customer'))}
               </button>
               <span class="spacer"></span>
-              <button class="btn sm" data-action="pos-discount" title="Discount (F2)">${icon('tag', 14)} Discount</button>
-              <button class="btn sm" data-action="pos-refund" title="Refund">${icon('back', 14)} Refund</button>
+              <button class="btn sm" data-action="pos-discount" title="${esc(t('Discount'))} (F2)">${icon('tag', 14)} ${esc(t('Discount'))}</button>
+              <button class="btn sm" data-action="pos-refund" title="${esc(t('Refund'))}">${icon('back', 14)} ${esc(t('Refund'))}</button>
             </div>
             <button class="charge-btn" data-action="pos-pay" ${cart.items.length ? '' : 'disabled'}>
-              ${icon('cash', 20)} Charge ${money(calc.total)} <span class="k">F10</span>
+              ${icon('cash', 20)} ${esc(t('Charge'))} ${money(calc.total)} <span class="k">F10</span>
             </button>
           </div>
         </aside>
@@ -451,6 +460,26 @@
 
   A.action('toggle-theme', () => {
     A.setTheme(A.state.theme === 'classic' ? 'modern' : 'classic');
+  });
+
+  A.action('toggle-mode', () => {
+    A.toggleMode();
+  });
+
+  A.action('change:login-lang', (ds, el) => {
+    A.setLanguage(el.value);
+  });
+
+  A.action('change:pref-language', (ds, el) => {
+    A.setLanguage(el.value);
+  });
+
+  A.action('change:pref-layout', (ds, el) => {
+    A.setTheme(el.value);
+  });
+
+  A.action('change:pref-mode', (ds, el) => {
+    A.setMode(el.value);
   });
 
   A.action('shortcuts', () => {
@@ -607,16 +636,20 @@
   function openCustomerPicker() {
     const customers = A.state.customers || [];
     A.modal(
-      `<div class="modal-head"><div><h2>Select customer</h2><div class="sub">Attach a customer to this sale</div></div><div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon(
+      `<div class="modal-head"><div><h2>${esc(t('Select customer'))}</h2><div class="sub">${esc(
+        t('Attach a customer to this sale')
+      )}</div></div><div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon(
         'close',
         18
       )}</button></div></div>
       <div class="modal-body">
         <div class="row gap8 mb12">
-          <div class="search-box">${icon('search', 16)}<input id="cust-search" class="input" placeholder="Search name or phone…" /></div>
+          <div class="search-box">${icon('search', 16)}<input id="cust-search" class="input" placeholder="${esc(
+            t('Search name or phone…')
+          )}" /></div>
           ${
             A.state.cart.customer_id
-              ? `<button class="btn sm" data-action="pos-remove-customer">${icon('close', 14)} Walk-in</button>`
+              ? `<button class="btn sm" data-action="pos-remove-customer">${icon('close', 14)} ${esc(t('Walk-in'))}</button>`
               : ''
           }
         </div>
@@ -626,7 +659,7 @@
               (c) => `<button type="button" class="tree-item" data-action="pick-customer" data-id="${c.id}" style="width:100%;margin-bottom:2px">
                 <span class="avatar" style="width:28px;height:28px;border-radius:8px;font-size:11px">${esc(initials(c.name))}</span>
                 <span><span class="strong">${esc(c.name)}</span><br /><span class="small muted">${esc(c.phone || c.email || '')}</span></span>
-                ${c.card_count ? `<span class="badge info" style="margin-left:auto">${c.card_count} card</span>` : ''}
+                ${c.card_count ? `<span class="badge info" style="margin-left:auto">${esc(t('{n} cards', { n: c.card_count }))}</span>` : ''}
               </button>`
             )
             .join('')}
@@ -653,11 +686,15 @@
 
   function openDiscount(itemMode = false) {
     const cart = A.state.cart;
-    if (!cart.items.length) return A.toast('Add items first', 'warn');
+    if (!cart.items.length) return A.toast(t('Add items first'), 'warn');
     const ad = activeDiscount();
     if (ad.customer) {
       return A.toast(
-        `${ad.customer} has a preset ${ad.value}${ad.type === 'percent' ? '%' : ''} discount. Remove the customer to add another.`,
+        t('{customer} has a preset {value}{suffix} discount. Remove the customer to add another.', {
+          customer: ad.customer,
+          value: ad.value,
+          suffix: ad.type === 'percent' ? '%' : '',
+        }),
         'warn',
         4200
       );
@@ -666,26 +703,30 @@
     const lines = cart.items.map((it, i) => ({ value: i, label: `${it.name} — ${money(it.price)}` }));
     A.modal(
       `<form data-form="discount">
-        ${SH.modalHead('Discount')}
+        ${SH.modalHead(t('Discount'))}
         <div class="modal-body">
-          <div class="field mb12"><label>Apply to</label>
+          <div class="field mb12"><label>${esc(t('Apply to'))}</label>
             <div class="row gap8">
-              <label class="switch"><input type="radio" name="scope" value="cart" ${!itemMode ? 'checked' : ''} style="display:none"><span class="track"></span><span>Whole sale</span></label>
-              <label class="switch"><input type="radio" name="scope" value="item" ${itemMode ? 'checked' : ''} style="display:none"><span class="track"></span><span>Selected item</span></label>
+              <label class="switch"><input type="radio" name="scope" value="cart" ${!itemMode ? 'checked' : ''} style="display:none"><span class="track"></span><span>${esc(
+                t('Whole sale')
+              )}</span></label>
+              <label class="switch"><input type="radio" name="scope" value="item" ${itemMode ? 'checked' : ''} style="display:none"><span class="track"></span><span>${esc(
+                t('Selected item')
+              )}</span></label>
             </div>
           </div>
           <div class="form-grid">
-            ${SH.field('Item', SH.select('line_index', lines, selectedIndex != null ? selectedIndex : 0), { span: 2 })}
-            ${SH.field('Type', SH.select('discount_type', [
-              { value: 'percent', label: 'Percentage (%)' },
-              { value: 'fixed', label: 'Fixed amount' },
+            ${SH.field(t('Item'), SH.select('line_index', lines, selectedIndex != null ? selectedIndex : 0), { span: 2 })}
+            ${SH.field(t('Type'), SH.select('discount_type', [
+              { value: 'percent', label: t('Percentage (%)') },
+              { value: 'fixed', label: t('Fixed amount') },
             ], cart.discount.type))}
-            ${SH.field('Value', SH.input('discount_value', cart.discount.value, { type: 'number', step: '0.01', min: '0', placeholder: '0' }))}
-            ${SH.field('Tax override (%, blank = normal)', SH.input('tax_override', cart.tax_override != null ? cart.tax_override : '', { type: 'number', step: '0.01', min: '0', placeholder: 'Use product tax' }), { span: 2, hint: 'Applies to the whole sale. Leave blank to use each product’s tax rate.' })}
+            ${SH.field(t('Value'), SH.input('discount_value', cart.discount.value, { type: 'number', step: '0.01', min: '0', placeholder: '0' }))}
+            ${SH.field(t('Tax override (%, blank = normal)'), SH.input('tax_override', cart.tax_override != null ? cart.tax_override : '', { type: 'number', step: '0.01', min: '0', placeholder: t('Use product tax') }), { span: 2, hint: t('Applies to the whole sale. Leave blank to use each product’s tax rate.') })}
           </div>
-          <p class="hint mt12">Tax is calculated after discounts. A customer with a preset discount cannot receive an extra discount.</p>
+          <p class="hint mt12">${esc(t('Tax is calculated after discounts. A customer with a preset discount cannot receive an extra discount.'))}</p>
         </div>
-        ${SH.modalFoot('Apply discount')}
+        ${SH.modalFoot(t('Apply discount'))}
       </form>`,
       { size: '' }
     );
@@ -775,51 +816,53 @@
           .map(
             (s, i) =>
               `<div class="split-row"><span>${esc(
-                ((A.state.paymentTypes || []).find((p) => String(p.id) === String(s.payment_type_id)) || {}).name || 'Payment'
-              )}</span><span class="strong mono">${money(s.amount)} <button type="button" class="rm" data-action="pay-split-remove" data-index="${i}">remove</button></span></div>`
+                ((A.state.paymentTypes || []).find((p) => String(p.id) === String(s.payment_type_id)) || {}).name || t('Payment')
+              )}</span><span class="strong mono">${money(s.amount)} <button type="button" class="rm" data-action="pay-split-remove" data-index="${i}">${esc(
+                t('Remove')
+              )}</button></span></div>`
           )
           .join('')}</div>`
       : '';
 
     A.modal(
       `<div class="modal-head">
-        <div><h2>Payment</h2><div class="sub">${pay.mode === 'split' ? 'Split payment' : 'Take payment'}</div></div>
+        <div><h2>${esc(t('Payment'))}</h2><div class="sub">${esc(pay.mode === 'split' ? t('Split payment') : t('Take payment'))}</div></div>
         <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div>
       </div>
       <div class="modal-body">
         <div class="pay">
           <div>
             <div class="pay-total">
-              <div class="label">${pay.mode === 'split' ? 'Remaining' : 'Amount due'}</div>
+              <div class="label">${esc(pay.mode === 'split' ? t('Remaining') : t('Amount due'))}</div>
               <div class="amt">${money(due)}</div>
-              <div class="change"><span>Change</span><b>${money(change)}</b></div>
+              <div class="change"><span>${esc(t('Change'))}</span><b>${money(change)}</b></div>
             </div>
             <div class="tenders mt12">${tenderButtons}</div>
             ${splitList}
             <div class="field">
-              <label>${pay.mode === 'split' ? 'Tender amount' : 'Amount received'}</label>
+              <label>${esc(pay.mode === 'split' ? t('Tender amount') : t('Amount received'))}</label>
               <input id="pay-amount" class="input" value="${(tendered / 100).toFixed(0)}" readonly style="font-size:20px;font-weight:700" />
             </div>
             <div class="quick-cash">${quick}</div>
             <div class="row gap8 mt12">
               ${
                 pay.mode === 'single'
-                  ? `<button type="button" class="btn sm" data-action="pay-split">${icon('split', 14)} Split payment</button>`
-                  : `<button type="button" class="btn sm" data-action="pay-unsplit">${icon('back', 14)} Back to single</button>
-                     <button type="button" class="btn sm primary" data-action="pay-split-add">${icon('plus', 14)} Add tender</button>`
+                  ? `<button type="button" class="btn sm" data-action="pay-split">${icon('split', 14)} ${esc(t('Split payment'))}</button>`
+                  : `<button type="button" class="btn sm" data-action="pay-unsplit">${icon('back', 14)} ${esc(t('Back to single'))}</button>
+                     <button type="button" class="btn sm primary" data-action="pay-split-add">${icon('plus', 14)} ${esc(t('Add tender'))}</button>`
               }
             </div>
           </div>
           <div>
             <div class="keypad">${keypad}</div>
-            <button type="button" class="btn block mt12" data-action="pay-clear">${icon('refresh', 15)} Clear amount</button>
+            <button type="button" class="btn block mt12" data-action="pay-clear">${icon('refresh', 15)} ${esc(t('Clear amount'))}</button>
           </div>
         </div>
       </div>
       <div class="modal-foot">
-        <button type="button" class="btn" data-modal-cancel>Cancel</button>
+        <button type="button" class="btn" data-modal-cancel>${esc(t('Cancel'))}</button>
         <button type="button" class="btn ${canCharge ? 'success' : ''}" data-action="pay-confirm" ${canCharge ? '' : 'disabled'}>
-          ${icon('check', 16)} ${pay.mode === 'split' ? 'Complete payment' : 'Charge ' + money(due)}
+          ${icon('check', 16)} ${esc(pay.mode === 'split' ? t('Complete payment') : t('Charge') + ' ' + money(due))}
         </button>
       </div>`,
       { size: 'wide' }
@@ -973,18 +1016,20 @@
   async function openRefund() {
     const recent = await A.tryApi('listDocuments', { type: 'sale', limit: 10 }, 'Could not load sales');
     A.modal(
-      `<div class="modal-head"><div><h2>Refund / return</h2><div class="sub">Return items to stock and refund the customer</div></div><div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon(
+      `<div class="modal-head"><div><h2>${esc(t('Refund / return'))}</h2><div class="sub">${esc(
+        t('Return items to stock and refund the customer')
+      )}</div></div><div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon(
         'close',
         18
       )}</button></div></div>
       <div class="modal-body">
-        <div class="field"><label>Receipt number</label>
+        <div class="field"><label>${esc(t('Receipt number'))}</label>
           <div class="row gap8"><input id="refund-number" class="input" placeholder="e.g. S-000001" />
-          <button class="btn" data-action="refund-find">Find</button></div>
+          <button class="btn" data-action="refund-find">${esc(t('Find'))}</button></div>
         </div>
         <div id="refund-body" class="mt16"></div>
         <div class="divider"></div>
-        <div class="label mb8">Recent sales</div>
+        <div class="label mb8">${esc(t('Recent sales'))}</div>
         ${
           recent && recent.length
             ? `<div style="max-height:240px;overflow:auto">${recent
@@ -998,7 +1043,7 @@
                   </button>`
                 )
                 .join('')}</div>`
-            : '<p class="small muted">No sales yet.</p>'
+            : `<p class="small muted">${esc(t('No sales yet.'))}</p>`
         }
       </div>`,
       { size: '' }
@@ -1021,16 +1066,16 @@
   A.action('refund-pick', (ds) => refundPick(Number(ds.id)));
 
   async function refundPick(id) {
-    const doc = await A.tryApi('getDocument', id, 'Could not load receipt');
+    const doc = await A.tryApi('getDocument', id, t('Could not load receipt'));
     if (!doc) return;
     A.state.refundDoc = doc;
     const payTypes = (A.state.paymentTypes || []).filter((p) => p.active);
     A.modal(
       `<form data-form="do-refund">
         <input type="hidden" name="doc_id" value="${doc.id}" />
-        ${SH.modalHead('Refund ' + doc.number, fmtDate(doc.doc_date, true))}
+        ${SH.modalHead(t('Refund') + ' ' + doc.number, fmtDate(doc.doc_date, true))}
         <div class="modal-body">
-          <div class="label mb8">Select items to refund</div>
+          <div class="label mb8">${esc(t('Select items to refund'))}</div>
           <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto">
             ${doc.items
               .map(
@@ -1045,12 +1090,12 @@
               .join('')}
           </div>
           <div class="form-grid mt16">
-            ${SH.field('Refund to', SH.select('payment_type_id', payTypes.map((p) => ({ value: p.id, label: p.name })), payTypes[0] && payTypes[0].id))}
-            ${SH.field('Reason', SH.input('reason', '', { placeholder: 'Optional' }))}
+            ${SH.field(t('Refund to'), SH.select('payment_type_id', payTypes.map((p) => ({ value: p.id, label: p.name })), payTypes[0] && payTypes[0].id))}
+            ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('Optional') }))}
           </div>
-          <p class="hint mt12">Returned items are added back to stock automatically.</p>
+          <p class="hint mt12">${esc(t('Returned items are added back to stock automatically.'))}</p>
         </div>
-        ${SH.modalFoot('Refund', { danger: false })}
+        ${SH.modalFoot(t('Refund'), { danger: false })}
       </form>`,
       { size: '' }
     );
@@ -1062,18 +1107,18 @@
     const moves = A.state.cashMoves || [];
     A.modal(
       `<form data-form="cash-move">
-        ${SH.modalHead('Cash in / out')}
+        ${SH.modalHead(t('Cash in / out'))}
         <div class="modal-body">
           <div class="form-grid">
-            ${SH.field('Direction', SH.select('kind', [
-              { value: 'in', label: 'Cash in (add to drawer)' },
-              { value: 'out', label: 'Cash out (remove from drawer)' },
+            ${SH.field(t('Direction'), SH.select('kind', [
+              { value: 'in', label: t('Cash in (add to drawer)') },
+              { value: 'out', label: t('Cash out (remove from drawer)') },
             ], 'in'))}
-            ${SH.field('Amount', SH.input('amount', '', { type: 'number', step: '0.01', min: '0', placeholder: '0', required: true }))}
-            ${SH.field('Reason', SH.input('reason', '', { placeholder: 'e.g. change fund, supplier payment', required: true }), { span: 2 })}
+            ${SH.field(t('Amount'), SH.input('amount', '', { type: 'number', step: '0.01', min: '0', placeholder: '0', required: true }))}
+            ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('e.g. change fund, supplier payment'), required: true }), { span: 2 })}
           </div>
           <div class="divider"></div>
-          <div class="label mb8">Open entries</div>
+          <div class="label mb8">${esc(t('Open entries'))}</div>
           ${
             moves.length
               ? `<div style="max-height:200px;overflow:auto">${moves
@@ -1083,10 +1128,10 @@
                     }">${m.kind === 'in' ? '+' : '-'}${money(m.amount)}</span></div>`
                   )
                   .join('')}</div>`
-              : '<p class="small muted">No open cash movements.</p>'
+              : `<p class="small muted">${esc(t('No open cash movements.'))}</p>`
           }
         </div>
-        ${SH.modalFoot('Save entry')}
+        ${SH.modalFoot(t('Save entry'))}
       </form>`,
       { size: '' }
     );
@@ -1104,7 +1149,7 @@
   /* ---------------------------------------------------------------- day */
 
   A.screens.day = {
-    meta: { title: 'Register', sub: 'Open and close the business day' },
+    meta: { title: t('Register'), sub: t('Open and close the business day') },
     render() {
       const day = A.state.day || {};
       if (!day.register_open) {
@@ -1112,15 +1157,19 @@
           <div class="card-head"><div style="width:40px;height:40px;border-radius:11px;background:var(--primary-50);color:var(--primary);display:grid;place-items:center">${icon(
             'day',
             22
-          )}</div><div><h2>Open the register</h2><div class="sub muted small">Enter the starting cash in the drawer to begin a business day.</div></div></div>
+          )}</div><div><h2>${esc(t('Open the register'))}</h2><div class="sub muted small">${esc(
+            t('Enter the starting cash in the drawer to begin a business day')
+          )}</div></div></div>
           <form data-form="open-day">
             <div class="card-body">
               <div class="form-grid">
-                ${SH.field('Opening cash (float)', SH.input('opening_cash', '0', { type: 'number', step: '0.01', min: '0', required: true }), { span: 2, hint: 'The cash you are putting into the drawer at the start of the day.' })}
-                ${SH.field('Business date', SH.input('business_date', day.business_date || U.todayKey(), { type: 'date', required: true }))}
-                ${SH.field('Register', SH.select('register_id', (A.state.registers || []).map((r) => ({ value: r.id, label: r.name })), (A.state.registers || []).find((r) => r.is_primary)?.id))}
+                ${SH.field(t('Opening cash (float)'), SH.input('opening_cash', '0', { type: 'number', step: '0.01', min: '0', required: true }), { span: 2, hint: t('The cash you are putting into the drawer at the start of the day.') })}
+                ${SH.field(t('Business date'), SH.input('business_date', day.business_date || U.todayKey(), { type: 'date', required: true }))}
+                ${SH.field(t('Register'), SH.select('register_id', (A.state.registers || []).map((r) => ({ value: r.id, label: r.name })), (A.state.registers || []).find((r) => r.is_primary)?.id))}
               </div>
-              <div class="row mt20"><span class="spacer"></span><button class="btn primary lg" type="submit">${icon('day', 17)} Open register</button></div>
+              <div class="row mt20"><span class="spacer"></span><button class="btn primary lg" type="submit">${icon('day', 17)} ${esc(
+                t('Open register')
+              )}</button></div>
             </div>
           </form>
         </div>`;
@@ -1129,15 +1178,17 @@
       const summary = day.summary || null;
       return `<div class="row wrap mb16">
         <div class="card" style="flex:1;min-width:240px"><div class="card-body">
-          <div class="label">Register is open</div>
+          <div class="label">${esc(t('Register is open'))}</div>
           <div style="font-size:20px;font-weight:800;margin-top:4px">${esc(day.business_date || '')}</div>
-          <div class="small muted">Opened ${day.opened_at ? esc(fmtDate(day.opened_at, true)) : '—'} · Float ${money(day.opening_cash)}</div>
+          <div class="small muted">${esc(t('Opened'))} ${day.opened_at ? esc(fmtDate(day.opened_at, true)) : '—'} · ${esc(t('Float'))} ${money(day.opening_cash)}</div>
         </div></div>
-        <button class="btn" data-action="x-report">${icon('receipt', 15)} X report (status)</button>
-        <button class="btn" data-action="cash">${icon('cash', 15)} Cash in / out</button>
-        <button class="btn danger" data-action="close-day">${icon('lock', 15)} Close register</button>
+        <button class="btn" data-action="x-report">${icon('receipt', 15)} ${esc(t('X report (status)'))}</button>
+        <button class="btn" data-action="cash">${icon('cash', 15)} ${esc(t('Cash in / out'))}</button>
+        <button class="btn danger" data-action="close-day">${icon('lock', 15)} ${esc(t('Close register'))}</button>
       </div>
-      <div class="card"><div class="card-head"><h2>Today at a glance</h2><div class="right"><button class="btn sm" data-action="day-refresh">${icon('refresh', 14)} Refresh</button></div></div>
+      <div class="card"><div class="card-head"><h2>${esc(t('Today at a glance'))}</h2><div class="right"><button class="btn sm" data-action="day-refresh">${icon('refresh', 14)} ${esc(
+        t('Refresh')
+      )}</button></div></div>
         <div class="card-body" id="day-live">${dayLive()}</div>
       </div>`;
     },
@@ -1145,26 +1196,26 @@
 
   function dayLive() {
     const s = A.state.daySummary;
-    if (!s) return '<div class="muted">Loading…</div>';
+    if (!s) return `<div class="muted">${esc(t('Loading…'))}</div>`;
     return `<div class="stat-strip">
-      <div class="stat"><div class="sl">Sales</div><div class="sv">${money(s.sales_total)}</div></div>
-      <div class="stat"><div class="sl">Refunds</div><div class="sv" style="color:var(--bad)">${money(Math.abs(s.refunds_total))}</div></div>
-      <div class="stat"><div class="sl">Net</div><div class="sv" style="color:var(--good)">${money(s.net_total)}</div></div>
-      <div class="stat"><div class="sl">Transactions</div><div class="sv">${s.sales_count}</div></div>
-      <div class="stat"><div class="sl">Discounts</div><div class="sv">${money(s.discount_total)}</div></div>
-      <div class="stat"><div class="sl">Cash expected</div><div class="sv">${money(s.cash_expected)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Sales'))}</div><div class="sv">${money(s.sales_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Refunds'))}</div><div class="sv" style="color:var(--bad)">${money(Math.abs(s.refunds_total))}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Net'))}</div><div class="sv" style="color:var(--good)">${money(s.net_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Transactions'))}</div><div class="sv">${s.sales_count}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Discounts'))}</div><div class="sv">${money(s.discount_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Cash expected'))}</div><div class="sv">${money(s.cash_expected)}</div></div>
     </div>
     <div class="grid" style="grid-template-columns:1fr 1fr">
-      <div class="card"><div class="card-head"><h2>Tender breakdown</h2></div><div class="card-body">
+      <div class="card"><div class="card-head"><h2>${esc(t('Tender breakdown'))}</h2></div><div class="card-body">
         ${s.tenders
           .map(
             (t) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid #eff2f7"><span class="row gap8"><span class="badge gray">${esc(
               t.name || '—'
             )}</span></span><span class="strong mono">${money(t.net)}</span></div>`
           )
-          .join('') || '<p class="muted small">No payments yet.</p>'}
+          .join('') || `<p class="muted small">${esc(t('No payments yet.'))}</p>`}
       </div></div>
-      <div class="card"><div class="card-head"><h2>Top items today</h2></div><div class="card-body">
+      <div class="card"><div class="card-head"><h2>${esc(t('Top items today'))}</h2></div><div class="card-body">
         ${s.items
           .slice(0, 6)
           .map(
@@ -1172,7 +1223,7 @@
               i.qty_sold
             )}</span></span><span class="strong mono">${money(i.sales_total)}</span></div>`
           )
-          .join('') || '<p class="muted small">No items sold yet.</p>'}
+          .join('') || `<p class="muted small">${esc(t('No items sold yet.'))}</p>`}
       </div></div>
     </div>`;
   }
@@ -1245,7 +1296,7 @@
   A.action('z-print', async () => {
     const z = A.state.lastZ;
     if (!z) return;
-    const lines = (z.tenders || []).map((t) => `<div class="r-line"><span>${esc(t.name)}</span><span>${(t.net / 100).toLocaleString('id-ID')}</span></div>`).join('');
+    const lines = (z.tenders || []).map((t) => `<div class="r-line"><span>${esc(t.name)}</span><span>${(t.net / 100).toLocaleString(locale())}</span></div>`).join('');
     const html = `<!doctype html><html><head><meta charset="utf-8"><style>
       @page{size:80mm auto;margin:4mm} body{font-family:Consolas,monospace;font-size:11.5px;width:72mm;margin:0;padding:6px 4px}
       .r-center{text-align:center}.r-line{display:flex;justify-content:space-between}.muted{color:#555}hr{border:0;border-top:1px dashed #888;margin:7px 0}
@@ -1253,16 +1304,16 @@
     </style></head><body>
       <div class="r-center"><h2>${esc(A.state.company.name)}</h2><div>${esc(z.number)}</div><div>${esc(fmtDate(z.closed_at, true))}</div></div>
       <hr/>
-      <div class="r-line"><span>Opening cash</span><span>${(z.opening_cash / 100).toLocaleString('id-ID')}</span></div>
-      <div class="r-line"><span>Cash in</span><span>${(z.cash_in / 100).toLocaleString('id-ID')}</span></div>
-      <div class="r-line"><span>Cash out</span><span>${(z.cash_out / 100).toLocaleString('id-ID')}</span></div>
+      <div class="r-line"><span>Opening cash</span><span>${(z.opening_cash / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Cash in</span><span>${(z.cash_in / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Cash out</span><span>${(z.cash_out / 100).toLocaleString(locale())}</span></div>
       <div class="r-line"><span>Sales</span><span>${(z.sales_count)}</span></div>
-      <div class="r-line"><span>Discounts</span><span>${(z.discount_total / 100).toLocaleString('id-ID')}</span></div>
-      <div class="r-line"><span>Tax</span><span>${(z.tax_total / 100).toLocaleString('id-ID')}</span></div>
-      <div class="r-line total"><span>NET SALES</span><span>${(z.total / 100).toLocaleString('id-ID')}</span></div>
+      <div class="r-line"><span>Discounts</span><span>${(z.discount_total / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Tax</span><span>${(z.tax_total / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line total"><span>NET SALES</span><span>${(z.total / 100).toLocaleString(locale())}</span></div>
       <hr/>${lines}
       <hr/>
-      <div class="r-line total"><span>CASH EXPECTED</span><span>${(z.cash_expected / 100).toLocaleString('id-ID')}</span></div>
+      <div class="r-line total"><span>CASH EXPECTED</span><span>${(z.cash_expected / 100).toLocaleString(locale())}</span></div>
       <hr/><div class="r-center muted">Powered by Aroklon</div>
     </body></html>`;
     await SH.print(html, true);
@@ -1271,7 +1322,7 @@
   /* ----------------------------------------------------------- dashboard */
 
   A.screens.dashboard = {
-    meta: { title: 'Dashboard', sub: 'How the store is doing' },
+    meta: { title: t('Dashboard'), sub: t('How the store is doing') },
     render() {
       const d = A.state.dashboard;
       if (!d) return `<div class="card"><div class="card-body muted">Loading dashboard…</div></div>`;
@@ -1288,10 +1339,18 @@
         })
         .join(',');
       return `<div class="kpis">
-        <div class="kpi"><div class="label">${icon('cash', 14)} Today's sales</div><div class="value">${money(today.sales_total)}</div><div class="meta">${today.sales_count} transactions</div></div>
-        <div class="kpi"><div class="label">${icon('trend', 14)} Net of refunds</div><div class="value">${money(today.net_total)}</div><div class="meta">${today.returns_count} returns</div></div>
-        <div class="kpi"><div class="label">${icon('stock', 14)} Stock value</div><div class="value">${money(d.stock_value)}</div><div class="meta">${d.product_count} products · ${d.doc_count} documents</div></div>
-        <div class="kpi"><div class="label">${icon('customers', 14)} Customers</div><div class="value">${d.customer_count}</div><div class="meta">${d.low.length} low-stock items</div></div>
+        <div class="kpi"><div class="label">${icon('cash', 14)} ${esc(t("Today's sales"))}</div><div class="value">${money(today.sales_total)}</div><div class="meta">${esc(
+          t('{n} transactions', { n: today.sales_count })
+        )}</div></div>
+        <div class="kpi"><div class="label">${icon('trend', 14)} ${esc(t('Net of refunds'))}</div><div class="value">${money(today.net_total)}</div><div class="meta">${esc(
+          t('{n} returns', { n: today.returns_count })
+        )}</div></div>
+        <div class="kpi"><div class="label">${icon('stock', 14)} ${esc(t('Stock value'))}</div><div class="value">${money(d.stock_value)}</div><div class="meta">${esc(
+          t('{products} products · {documents} documents', { products: d.product_count, documents: d.doc_count })
+        )}</div></div>
+        <div class="kpi"><div class="label">${icon('customers', 14)} ${esc(t('Customers'))}</div><div class="value">${d.customer_count}</div><div class="meta">${esc(
+          t('{n} low-stock items', { n: d.low.length })
+        )}</div></div>
       </div>
 
       <div class="grid mt16" style="grid-template-columns:1.5fr 1fr">
@@ -1302,7 +1361,7 @@
                 .map(
                   (w) => `<div class="chart-bar">
                     <div class="bar" style="height:${Math.max((w.total / max) * 100, 2)}%"><span>${moneyShort(w.total)}</span></div>
-                    <div class="lbl">${esc(new Date(w.date + 'T12:00:00').toLocaleDateString('id-ID', { weekday: 'short' }))}</div>
+                    <div class="lbl">${esc(new Date(w.date + 'T12:00:00').toLocaleDateString(locale(), { weekday: 'short' }))}</div>
                   </div>`
                 )
                 .join('')}
@@ -1333,12 +1392,12 @@
         <div class="card"><div class="card-head"><h2>Best sellers today</h2></div><div class="card-body">
           ${d.top
             .map(
-              (t, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid #eff2f7">
-                <span class="row gap12"><span class="badge info">${i + 1}</span><span class="strong">${esc(t.name)}</span></span>
-                <span class="small muted">${U.qty(t.qty)} sold · <span class="mono">${money(t.total)}</span></span>
+              (item, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid #eff2f7">
+                <span class="row gap12"><span class="badge info">${i + 1}</span><span class="strong">${esc(item.name)}</span></span>
+                <span class="small muted">${esc(t('{qty} sold', { qty: U.qty(item.qty) }))} · <span class="mono">${money(item.total)}</span></span>
               </div>`
             )
-            .join('') || '<p class="muted small">No sales today yet.</p>'}
+            .join('') || `<p class="muted small">${esc(t('No sales today yet.'))}</p>`}
         </div></div>
         <div class="card"><div class="card-head"><h2>Low stock</h2><div class="right"><button class="btn sm" data-action="nav" data-route="stock">Open stock</button></div></div><div class="card-body">
           ${d.low
@@ -1362,7 +1421,7 @@
   /* ------------------------------------------------------------ products */
 
   A.screens.products = {
-    meta: { title: 'Products', sub: 'Your catalogue' },
+    meta: { title: t('Products'), sub: t('Your catalogue') },
     render() {
       const groups = A.state.groups || [];
       const products = A.state.products || [];
@@ -1670,11 +1729,11 @@
   /* --------------------------------------------------------------- stock */
 
   A.screens.stock = {
-    meta: { title: 'Stock', sub: 'Quantities on hand' },
+    meta: { title: t('Stock'), sub: t('Quantities on hand') },
     render() {
       const stock = A.state.stock || [];
       return `<div class="card">
-        <div class="card-head"><div class="row gap8"><h2>Quantities on hand</h2><span class="badge gray">${stock.length} items</span></div>
+        <div class="card-head"><div class="row gap8"><h2>${esc(t('Quantities on hand'))}</h2><span class="badge gray">${esc(t('{n} items', { n: stock.length }))}</span></div>
           <div class="right"><button class="btn sm" data-action="stock-refresh">${icon('refresh', 14)} Refresh</button></div>
         </div>
         <div class="table-wrap">

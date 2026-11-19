@@ -389,7 +389,7 @@ function seed() {
 
   if (count('register') === 0) {
     run(`INSERT INTO register (name, code, printer, drawer, is_primary) VALUES (?,?,?,?,?)`, [
-      'Front Counter',
+      'Kasir Depan',
       'REG-01',
       '',
       1,
@@ -418,7 +418,7 @@ function seed() {
 
   if (count('payment_type') === 0) {
     run(`INSERT INTO payment_type (name, kind, color, icon, active, is_default, sort_order) VALUES (?,?,?,?,?,?,?)`, [
-      'Cash',
+      'Kas',
       'cash',
       '#10b981',
       'cash',
@@ -427,7 +427,7 @@ function seed() {
       1,
     ]);
     run(`INSERT INTO payment_type (name, kind, color, icon, active, is_default, sort_order) VALUES (?,?,?,?,?,?,?)`, [
-      'Card',
+      'Kartu',
       'card',
       '#6366f1',
       'card',
@@ -477,36 +477,36 @@ function seed() {
 
   if (count('product_group') === 0) {
     run(`INSERT INTO product_group (name, parent_id, color, sort_order) VALUES (?,?,?,?)`, [
-      'General',
+      'Umum',
       null,
       '#6366f1',
       1,
     ]);
     run(`INSERT INTO product_group (name, parent_id, color, sort_order) VALUES (?,?,?,?)`, [
-      'Drinks',
-      get(`SELECT id FROM product_group WHERE name='General'`).id,
+      'Minuman',
+      get(`SELECT id FROM product_group WHERE name='Umum'`).id,
       '#0ea5e9',
       2,
     ]);
     run(`INSERT INTO product_group (name, parent_id, color, sort_order) VALUES (?,?,?,?)`, [
-      'Snacks',
-      get(`SELECT id FROM product_group WHERE name='General'`).id,
+      'Camilan',
+      get(`SELECT id FROM product_group WHERE name='Umum'`).id,
       '#f59e0b',
       3,
     ]);
   }
 
   if (count('product') === 0) {
-    const groupId = get(`SELECT id FROM product_group WHERE name='Drinks'`).id;
-    const snackId = get(`SELECT id FROM product_group WHERE name='Snacks'`).id;
+    const groupId = get(`SELECT id FROM product_group WHERE name='Minuman'`).id;
+    const snackId = get(`SELECT id FROM product_group WHERE name='Camilan'`).id;
     const samples = [
-      ['Mineral Water 600ml', '1000000000001', 'Drinks', 3000, 5000, 12, groupId],
-      ['Cola Can 330ml', '1000000000002', 'Drinks', 4500, 7000, 24, groupId],
-      ['Iced Tea Bottle', '1000000000003', 'Drinks', 5000, 8000, 18, groupId],
-      ['Potato Chips', '1000000000004', 'Snacks', 6000, 10000, 9, snackId],
-      ['Chocolate Bar', '1000000000005', 'Snacks', 7000, 12000, 6, snackId],
-      ['Instant Noodles', '1000000000006', 'Snacks', 3500, 5500, 30, snackId],
-      ['Garbage Bag 20L', '1000000000007', 'General', 8000, 15000, 2, get(`SELECT id FROM product_group WHERE name='General'`).id],
+      ['Mineral Water 600ml', '1000000000001', 'Minuman', 3000, 5000, 12, groupId],
+      ['Cola Can 330ml', '1000000000002', 'Minuman', 4500, 7000, 24, groupId],
+      ['Iced Tea Bottle', '1000000000003', 'Minuman', 5000, 8000, 18, groupId],
+      ['Potato Chips', '1000000000004', 'Camilan', 6000, 10000, 9, snackId],
+      ['Chocolate Bar', '1000000000005', 'Camilan', 7000, 12000, 6, snackId],
+      ['Instant Noodles', '1000000000006', 'Camilan', 3500, 5500, 30, snackId],
+      ['Garbage Bag 20L', '1000000000007', 'Umum', 8000, 15000, 2, get(`SELECT id FROM product_group WHERE name='Umum'`).id],
     ];
     for (let i = 0; i < samples.length; i++) {
       const [name, code, , cost, price, qty, gid] = samples[i];
@@ -530,7 +530,7 @@ function seed() {
   if (count('customer') === 0) {
     run(`INSERT INTO customer (type, name, company, email, phone, active) VALUES (?,?,?,?,?,1)`, [
       'customer',
-      'Walk-in Customer',
+      'Pelanggan Umum',
       '',
       '',
       '',
