@@ -141,7 +141,7 @@ that case download the new full base.
 ```
 dist/Aroklon-win32-x64/Aroklon.exe
 dist/Aroklon-win32-x64.zip
-dist/releases/app-1.0.3.asar
+dist/releases/app-1.0.4.asar
 dist/releases/latest.json
 ```
 

@@ -20,7 +20,7 @@ const ResEdit = require('resedit');
 const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const APP_NAME = 'Aroklon';
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const ELECTRON_VERSION = '45.3.4';
 
 function findElectronZip() {
@@ -239,7 +239,7 @@ try {
   fs.writeFileSync(path.join(outDir, 'Update-Aroklon.ps1'), updaterPs1);
   fs.writeFileSync(
     path.join(outDir, 'Update-Aroklon.bat'),
-    `@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Update-Aroklon.ps1"\r\npause\r\n`
+    `@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Update-Aroklon.ps1"\r\nif errorlevel 1 pause\r\n`
   );
 
   const zipPath = path.join(DIST, `Aroklon-win32-x64.zip`);

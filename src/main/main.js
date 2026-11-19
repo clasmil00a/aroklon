@@ -685,23 +685,26 @@ ipcMain.handle('app:applyUpdate', async () => {
     const bat = path.join(updatesDir, 'apply-update.bat');
     const script = [
       '@echo off',
-      'setlocal',
+      'setlocal enabledelayedexpansion',
       `set "APP=${appDir}"`,
       `set "NEW=${finalPath}"`,
-      ':waitloop',
-      'tasklist /FI "IMAGENAME eq Aroklon.exe" | find /I "Aroklon.exe" >nul',
-      'if not errorlevel 1 (',
-      '  timeout /t 1 /nobreak >nul',
-      '  goto waitloop',
-      ')',
-      'copy /Y "%NEW%" "%APP%\\resources\\app.asar"',
-      'if errorlevel 1 (',
-      '  echo Gagal menyalin app.asar. & pause',
-      '  exit /b 1',
-      ')',
+      'powershell -NoProfile -Command "$d=(Get-Date).AddSeconds(30); while((Get-Process -Name Aroklon -ErrorAction SilentlyContinue) -and (Get-Date) -lt $d){Start-Sleep -Milliseconds 300}" >nul 2>&1',
+      'set /a tries=0',
+      ':retry',
+      'copy /Y "%NEW%" "%APP%\\resources\\app.asar" >nul',
+      'if not errorlevel 1 goto done',
+      'set /a tries+=1',
+      'if !tries! GEQ 20 goto fail',
+      'ping -n 2 127.0.0.1 >nul',
+      'goto retry',
+      ':done',
       'del "%NEW%"',
       'start "" "%APP%\\Aroklon.exe"',
       'del "%~f0"',
+      'exit /b 0',
+      ':fail',
+      'echo Gagal menyalin app.asar. & pause',
+      'exit /b 1',
       '',
     ].join('\r\n');
     fs.writeFileSync(bat, script);
@@ -711,7 +714,11 @@ ipcMain.handle('app:applyUpdate', async () => {
         resolve({ ok: false, error: 'Gagal menjalankan updater: ' + err.message });
       });
       child.once('spawn', () => {
+        try { db.persist(); } catch (e) {}
         setTimeout(() => app.quit(), 450);
+        setTimeout(() => {
+          try { app.exit(0); } catch (e) {}
+        }, 2500);
         resolve({ ok: true });
       });
     });
