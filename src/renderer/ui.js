@@ -307,7 +307,6 @@
       params: {},
       company: { symbol: 'Rp', currency: 'IDR', name: 'Aroklon Store' },
       settings: {},
-      day: { register_open: false, business_date: '' },
       products: [],
       groups: [],
       customers: [],
@@ -578,7 +577,7 @@
               <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>${esc(t('My company'))}</span></button>
             </div>
           </details>
-          <button class="cmb-btn ${route === 'day' ? 'active' : ''}" data-action="nav" data-route="day">${icon('day', 15)}<span>${esc(t('Register'))}</span></button>
+
           <button class="cmb-btn ${route === 'settings' ? 'active' : ''}" data-action="nav" data-route="settings">${icon('settings', 15)}<span>${esc(
             t('Settings')
           )}</span></button>
@@ -640,7 +639,7 @@
 
     _statusbar() {
       const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
-      const d = this.state.day && this.state.day.business_date ? new Date(this.state.day.business_date + 'T12:00:00') : new Date();
+      const d = new Date();
       const dateStr = isNaN(d.getTime())
         ? ''
         : d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
@@ -670,13 +669,12 @@
     },
 
     async reloadReference() {
-      const [users, paymentTypes, taxRates, registers, countries, day, company, meta] = await Promise.all([
+      const [users, paymentTypes, taxRates, registers, countries, company, meta] = await Promise.all([
         this.api('listUsers'),
         this.api('listPaymentTypes'),
         this.api('listTaxRates'),
         this.api('listRegisters'),
         this.api('listCountries'),
-        this.api('getDayState'),
         this.api('getCompany'),
         window.api.meta(),
       ]);
@@ -685,7 +683,6 @@
       this.state.taxRates = taxRates;
       this.state.registers = registers;
       this.state.countries = countries;
-      this.state.day = day;
       this.state.company = company;
       this.state.meta = meta;
     },
@@ -721,7 +718,6 @@
           items: [
             { route: 'sales', label: 'Sales', icon: 'sales' },
             { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-            { route: 'day', label: 'Register', icon: 'day' },
           ],
         },
         {
@@ -788,23 +784,16 @@
     },
 
     _topbar(meta) {
-      const c = this.state.company || {};
-      const day = this.state.day || {};
       const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
-      const d = day.business_date ? new Date(day.business_date + 'T12:00:00') : new Date();
-      const dateStr = isNaN(d.getTime())
-        ? day.business_date
-        : d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+      const d = new Date();
+      const dateStr = d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
       return `<header class="topbar">
         <div>
           <h1>${esc(meta.title || 'Aroklon')}</h1>
           ${meta.sub ? `<div class="sub">${esc(meta.sub)}</div>` : ''}
         </div>
         <div class="topbar-right">
-          <span class="chip ${day.register_open ? '' : 'closed'}" data-action="nav" data-route="day" style="cursor:pointer">
-            <span class="dot"></span>${esc(t(day.register_open ? 'Register open' : 'Register closed'))}
-          </span>
-          <span class="chip">${icon('store', 14)} ${esc(reg.name || 'Register')}</span>
+          <span class="chip">${icon('store', 14)} ${esc(reg.name || t('Register'))}</span>
           <span class="chip">${icon('day', 14)} ${esc(dateStr)}</span>
           <button class="btn sm icon-only" data-action="toggle-mode" title="${document.documentElement.dataset.mode === 'dark' ? t('Light') : t('Dark')}">${icon(
             document.documentElement.dataset.mode === 'dark' ? 'day' : 'moon',
@@ -813,7 +802,6 @@
           <button class="btn sm" data-action="toggle-theme" title="${t('Theme')}">${icon('settings', 14)} ${t(
             this.state.theme === 'classic' ? 'Modern' : 'Classic'
           )}</button>
-          <button class="btn sm" data-action="cash">${icon('cash', 15)} ${esc(t('Cash in / out'))}</button>
         </div>
       </header>`;
     },
@@ -850,7 +838,7 @@
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">${esc(t('Aroklon 1.0.4 · Local database · No account required'))}</div>
+          <div class="login-foot">${esc(t('Aroklon 1.0.5 · Local database · No account required'))}</div>
         </div>
         <div class="login-panel">
           <div class="login-card">

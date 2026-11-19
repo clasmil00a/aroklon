@@ -6,9 +6,8 @@ software: its own name, interface, copy, icons and code. It is not affiliated
 with, derived from, or endorsed by any other POS product.
 
 Aroklon turns a normal Windows PC into a working till: sell by barcode, SKU or
-name, take cash/card/split payments, print a receipt, track stock, and close the
-day with a Z report. Everything runs locally — no account, no cloud, no
-subscription.
+name, take cash/card/split payments, print a receipt, and track stock. Everything
+runs locally — no account, no cloud, no subscription.
 
 ## What it does
 
@@ -27,9 +26,7 @@ subscription.
 - **Documents** — purchase, stock return, inventory count, loss & damage,
   proforma; searchable document list.
 - **Reports** — sales by day, product sales, payment mix, tax, customer sales,
-  stock valuation, low stock, Z-report history; print or export CSV.
-- **Register** — open/close business day with opening float, cash in/out, X
-  report and Z report.
+  stock valuation and low stock; print or export CSV.
 - **Users** — PIN sign-in with access levels (Owner / Manager / Cashier).
 - **Themes** — Modern (sidebar) and Classic (top menu bar + Management tree) layout, each with **Dark** (default), **Light** or **System** colour mode.
 - **Languages** — Bahasa Indonesia (default) and English, switchable at login or in Settings.
@@ -55,10 +52,7 @@ subscription.
 The app seeds a small demo catalogue so you can try it immediately.
 
 1. Sign in (Owner / `1234`).
-2. Open the **Register** screen from the left sidebar (or the Register chip in
-   the top bar) and enter an opening cash float. Sales are blocked until the
-   register is open.
-3. Go to **Sales** and start ringing.
+2. Go to **Sales** and start ringing. There is no open/close register step.
 
 | User | PIN |
 | --- | --- |
@@ -141,7 +135,7 @@ that case download the new full base.
 ```
 dist/Aroklon-win32-x64/Aroklon.exe
 dist/Aroklon-win32-x64.zip
-dist/releases/app-1.0.4.asar
+dist/releases/app-1.0.5.asar
 dist/releases/latest.json
 ```
 

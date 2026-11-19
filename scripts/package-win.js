@@ -20,7 +20,7 @@ const ResEdit = require('resedit');
 const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const APP_NAME = 'Aroklon';
-const VERSION = '1.0.4';
+const VERSION = '1.0.5';
 const ELECTRON_VERSION = '45.3.4';
 
 function findElectronZip() {
@@ -198,9 +198,7 @@ function makeZip(zipPath, folder, cwd) {
       `Login pertama kali:\n` +
       `  Owner   - PIN 1234\n` +
       `  Cashier - PIN 1111\n\n` +
-      `Sebelum jualan pertama: klik menu Register di kiri atas\n` +
-      `(atau chip Register di bar atas), isi uang awal (opening cash),\n` +
-      `lalu klik Open register.\n\n` +
+      `Langsung bisa jualan setelah login. Tidak perlu buka/tutup register.\n\n` +
       `Data disimpan otomatis di folder pengguna Windows (SQLite).\n` +
       `Backup tersedia di menu Settings > Data.\n\n` +
       `Update aplikasi: Settings > Data > Check for updates.\n` +

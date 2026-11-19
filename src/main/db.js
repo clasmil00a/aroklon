@@ -1206,9 +1206,6 @@ function effectiveRate(rates) {
 function computeSale(input) {
   const items = input.items || [];
   if (!items.length) throw new Error('Add at least one product to the sale');
-  if (getSetting('register_open') !== '1') {
-    throw new Error('Register is closed. Open the register before selling.');
-  }
 
   const allowNegative = getSetting('allow_negative_stock') === '1';
   const productCache = new Map();

@@ -22,10 +22,10 @@ Users and access levels,users,must,yes,yes,can only manage <= own level
 Payment types management,settings,must,yes,yes,
 Tax rates management,settings,must,yes,yes,multiple taxes per product
 Company details for receipts,settings,must,yes,yes,
-Cash in / cash out,cash,must,yes,yes,with reason
-End of day (Z report),cash,must,yes,yes,blocks on open sales
-X report (status without closing),cash,must,yes,yes,
-Open / close business day,cash,must,yes,yes,starting cash
+Cash in / cash out,cash,must,yes,skip,removed in Aroklon 1.0.5
+End of day (Z report),cash,must,yes,skip,removed in Aroklon 1.0.5
+X report (status without closing),cash,must,yes,skip,removed in Aroklon 1.0.5
+Open / close business day,cash,must,yes,skip,removed in Aroklon 1.0.5
 Purchase document (stock in),documents,should,yes,yes,
 Inventory count with expected vs counted,documents,should,yes,yes,
 Loss and damage document,documents,should,yes,yes,

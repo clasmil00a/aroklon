@@ -149,9 +149,7 @@
   /* ---------------------------------------------------------------- menu */
 
   window.api.onMenu((action) => {
-    if (action === 'day') A.go('day');
-    else if (action === 'cash') A.actions['cash'] && A.actions['cash']();
-    else if (action === 'sales') A.go('sales');
+    if (action === 'sales') A.go('sales');
     else if (action === 'shortcuts') {
       A.toast('F2 discount · F3 search · F4 quantity · F8 hold · F10 payment · F12 quick pay · Del remove', 'good', 7000);
     } else if (action === 'check-update') {
@@ -170,13 +168,12 @@
 
   A.init = async function () {
     try {
-      const [meta, users, company, settings, day, paymentTypes, taxRates, registers, groups, products, customers, allCustomers, accessLevels] =
+      const [meta, users, company, settings, paymentTypes, taxRates, registers, groups, products, customers, allCustomers, accessLevels] =
         await Promise.all([
           window.api.meta(),
           A.api('listUsers'),
           A.api('getCompany'),
           A.api('getSettings'),
-          A.api('getDayState'),
           A.api('listPaymentTypes'),
           A.api('listTaxRates'),
           A.api('listRegisters'),
@@ -192,7 +189,6 @@
         users,
         company,
         settings,
-        day,
         paymentTypes,
         taxRates,
         registers,

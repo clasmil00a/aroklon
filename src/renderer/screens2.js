@@ -24,11 +24,6 @@
     A.state.dashboard = await A.api('dashboard');
   });
 
-  A.loader('day', async () => {
-    A.state.day = await A.api('getDayState');
-    if (A.state.day.register_open) A.state.daySummary = await A.api('xReport');
-  });
-
   A.loader('documents', async () => {
     A.state.documents = await A.api('listDocuments', A.state.docFilters || {});
   });
@@ -499,7 +494,6 @@
     { id: 'customer_sales', name: 'Customer sales', desc: 'Spend by customer' },
     { id: 'stock_valuation', name: 'Stock valuation', desc: 'On hand × average cost' },
     { id: 'low_stock', name: 'Low stock', desc: 'Items at or below alert level' },
-    { id: 'z_reports', name: 'Z report history', desc: 'Closed business days' },
   ];
 
   A.state.reportId = A.state.reportId || 'sales_summary';
@@ -1103,25 +1097,6 @@
     A.toast('Discount applied');
   });
 
-  A.action('form:cash-move', async (form) => {
-    const fd = new FormData(form);
-    const kind = String(fd.get('kind'));
-    const amount = U.num(fd.get('amount'));
-    const reason = String(fd.get('reason') || '').trim();
-    const res = await A.api('addCash', [
-      kind,
-      amount,
-      reason,
-      A.state.user.id,
-      (A.state.registers || []).find((r) => r.is_primary)?.id,
-    ]);
-    if (!res.ok) throw new Error(res.error);
-    A.closeModal();
-    A.state.cashMoves = await A.api('listCashMovements', []);
-    A.toast(kind === 'in' ? 'Cash added to drawer' : 'Cash removed from drawer');
-    if (A.state.route === 'day') A.render();
-  });
-
   A.action('form:do-refund', async (form) => {
     const fd = new FormData(form);
     const docId = Number(fd.get('doc_id'));
@@ -1150,26 +1125,6 @@
         <button type="button" class="btn primary" data-action="receipt-print">${icon('print', 15)} Print</button></div>`
     );
   }
-
-  A.action('form:open-day', async (form) => {
-    const fd = new FormData(form);
-    const cash = U.num(fd.get('opening_cash'));
-    const date = String(fd.get('business_date') || U.todayKey());
-    const reg = fd.get('register_id') ? Number(fd.get('register_id')) : undefined;
-    if (reg) {
-      const cur = (A.state.registers || []).find((r) => r.id === reg);
-      if (cur) {
-        await A.api('saveRegister', { id: cur.id, name: cur.name, code: cur.code, printer: cur.printer, drawer: cur.drawer, is_primary: true });
-      }
-    }
-    const res = await A.api('openDay', [cash, A.state.user.id, date]);
-    if (!res.ok) throw new Error(res.error);
-    A.state.day = await A.api('getDayState');
-    A.state.daySummary = await A.api('xReport');
-    A.state.registers = await A.api('listRegisters');
-    A.toast('Register opened. Have a good day!');
-    A.go('day');
-  });
 
   A.action('form:save-company', async (form) => {
     const fd = new FormData(form);

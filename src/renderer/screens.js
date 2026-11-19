@@ -622,10 +622,6 @@
   });
 
   A.action('pos-customer', () => openCustomerPicker());
-  A.action('go-day', () => {
-    A.closeModal();
-    A.go('day');
-  });
   A.action('pos-discount', () => openDiscount());
   A.action('pos-item-discount', () => openDiscount(true));
   A.action('pos-pay', () => startPayment());
@@ -759,15 +755,6 @@
   function startPayment() {
     const calc = cartCalc();
     if (!calc.total) return A.toast('Add items first', 'warn');
-    if (!(A.state.day || {}).register_open) {
-      A.modal(
-        `<div class="modal-head"><div><h2>Register is closed</h2><div class="sub">Open the register before taking payment</div></div></div>
-        <div class="modal-body"><p class="small muted">A business day must be open before you can sell. Enter the opening cash float on the Register screen.</p></div>
-        <div class="modal-foot"><button type="button" class="btn" data-modal-cancel>Cancel</button>
-        <button type="button" class="btn primary" data-action="go-day">${icon('day', 15)} Open register</button></div>`
-      );
-      return;
-    }
     const cash = (A.state.paymentTypes || []).find((p) => p.kind === 'cash') || (A.state.paymentTypes || [])[0];
     A.state.pay = {
       tender_id: cash ? cash.id : null,
@@ -1102,222 +1089,6 @@
   }
 
   /* ---------------------------------------------------------------- cash */
-
-  function openCash() {
-    const moves = A.state.cashMoves || [];
-    A.modal(
-      `<form data-form="cash-move">
-        ${SH.modalHead(t('Cash in / out'))}
-        <div class="modal-body">
-          <div class="form-grid">
-            ${SH.field(t('Direction'), SH.select('kind', [
-              { value: 'in', label: t('Cash in (add to drawer)') },
-              { value: 'out', label: t('Cash out (remove from drawer)') },
-            ], 'in'))}
-            ${SH.field(t('Amount'), SH.input('amount', '', { type: 'number', step: '0.01', min: '0', placeholder: '0', required: true }))}
-            ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('e.g. change fund, supplier payment'), required: true }), { span: 2 })}
-          </div>
-          <div class="divider"></div>
-          <div class="label mb8">${esc(t('Open entries'))}</div>
-          ${
-            moves.length
-              ? `<div style="max-height:200px;overflow:auto">${moves
-                  .map(
-                    (m) => `<div class="split-row"><span>${esc(m.reason)}</span><span class="strong" style="color:${
-                      m.kind === 'in' ? 'var(--good)' : 'var(--bad)'
-                    }">${m.kind === 'in' ? '+' : '-'}${money(m.amount)}</span></div>`
-                  )
-                  .join('')}</div>`
-              : `<p class="small muted">${esc(t('No open cash movements.'))}</p>`
-          }
-        </div>
-        ${SH.modalFoot(t('Save entry'))}
-      </form>`,
-      { size: '' }
-    );
-  }
-
-  A.action('cash', () => {
-    A.api('listCashMovements', [])
-      .then((m) => {
-        A.state.cashMoves = m;
-        openCash();
-      })
-      .catch((e) => A.toast(e.message, 'bad'));
-  });
-
-  /* ---------------------------------------------------------------- day */
-
-  A.screens.day = {
-    meta: { title: t('Register'), sub: t('Open and close the business day') },
-    render() {
-      const day = A.state.day || {};
-      if (!day.register_open) {
-        return `<div class="card" style="max-width:720px;margin:8vh auto">
-          <div class="card-head"><div style="width:40px;height:40px;border-radius:11px;background:var(--primary-50);color:var(--primary);display:grid;place-items:center">${icon(
-            'day',
-            22
-          )}</div><div><h2>${esc(t('Open the register'))}</h2><div class="sub muted small">${esc(
-            t('Enter the starting cash in the drawer to begin a business day')
-          )}</div></div></div>
-          <form data-form="open-day">
-            <div class="card-body">
-              <div class="form-grid">
-                ${SH.field(t('Opening cash (float)'), SH.input('opening_cash', '0', { type: 'number', step: '0.01', min: '0', required: true }), { span: 2, hint: t('The cash you are putting into the drawer at the start of the day.') })}
-                ${SH.field(t('Business date'), SH.input('business_date', day.business_date || U.todayKey(), { type: 'date', required: true }))}
-                ${SH.field(t('Register'), SH.select('register_id', (A.state.registers || []).map((r) => ({ value: r.id, label: r.name })), (A.state.registers || []).find((r) => r.is_primary)?.id))}
-              </div>
-              <div class="row mt20"><span class="spacer"></span><button class="btn primary lg" type="submit">${icon('day', 17)} ${esc(
-                t('Open register')
-              )}</button></div>
-            </div>
-          </form>
-        </div>`;
-      }
-
-      const summary = day.summary || null;
-      return `<div class="row wrap mb16">
-        <div class="card" style="flex:1;min-width:240px"><div class="card-body">
-          <div class="label">${esc(t('Register is open'))}</div>
-          <div style="font-size:20px;font-weight:800;margin-top:4px">${esc(day.business_date || '')}</div>
-          <div class="small muted">${esc(t('Opened'))} ${day.opened_at ? esc(fmtDate(day.opened_at, true)) : '—'} · ${esc(t('Float'))} ${money(day.opening_cash)}</div>
-        </div></div>
-        <button class="btn" data-action="x-report">${icon('receipt', 15)} ${esc(t('X report (status)'))}</button>
-        <button class="btn" data-action="cash">${icon('cash', 15)} ${esc(t('Cash in / out'))}</button>
-        <button class="btn danger" data-action="close-day">${icon('lock', 15)} ${esc(t('Close register'))}</button>
-      </div>
-      <div class="card"><div class="card-head"><h2>${esc(t('Today at a glance'))}</h2><div class="right"><button class="btn sm" data-action="day-refresh">${icon('refresh', 14)} ${esc(
-        t('Refresh')
-      )}</button></div></div>
-        <div class="card-body" id="day-live">${dayLive()}</div>
-      </div>`;
-    },
-  };
-
-  function dayLive() {
-    const s = A.state.daySummary;
-    if (!s) return `<div class="muted">${esc(t('Loading…'))}</div>`;
-    return `<div class="stat-strip">
-      <div class="stat"><div class="sl">${esc(t('Sales'))}</div><div class="sv">${money(s.sales_total)}</div></div>
-      <div class="stat"><div class="sl">${esc(t('Refunds'))}</div><div class="sv" style="color:var(--bad)">${money(Math.abs(s.refunds_total))}</div></div>
-      <div class="stat"><div class="sl">${esc(t('Net'))}</div><div class="sv" style="color:var(--good)">${money(s.net_total)}</div></div>
-      <div class="stat"><div class="sl">${esc(t('Transactions'))}</div><div class="sv">${s.sales_count}</div></div>
-      <div class="stat"><div class="sl">${esc(t('Discounts'))}</div><div class="sv">${money(s.discount_total)}</div></div>
-      <div class="stat"><div class="sl">${esc(t('Cash expected'))}</div><div class="sv">${money(s.cash_expected)}</div></div>
-    </div>
-    <div class="grid" style="grid-template-columns:1fr 1fr">
-      <div class="card"><div class="card-head"><h2>${esc(t('Tender breakdown'))}</h2></div><div class="card-body">
-        ${s.tenders
-          .map(
-            (t) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid #eff2f7"><span class="row gap8"><span class="badge gray">${esc(
-              t.name || '—'
-            )}</span></span><span class="strong mono">${money(t.net)}</span></div>`
-          )
-          .join('') || `<p class="muted small">${esc(t('No payments yet.'))}</p>`}
-      </div></div>
-      <div class="card"><div class="card-head"><h2>${esc(t('Top items today'))}</h2></div><div class="card-body">
-        ${s.items
-          .slice(0, 6)
-          .map(
-            (i) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid #eff2f7"><span>${esc(i.name)} <span class="small muted">× ${U.qty(
-              i.qty_sold
-            )}</span></span><span class="strong mono">${money(i.sales_total)}</span></div>`
-          )
-          .join('') || `<p class="muted small">${esc(t('No items sold yet.'))}</p>`}
-      </div></div>
-    </div>`;
-  }
-
-  A.action('day-refresh', async () => {
-    A.state.day = await A.api('getDayState');
-    A.state.daySummary = await A.api('xReport');
-    A.render();
-  });
-
-  A.action('x-report', async () => {
-    const s = await A.tryApi('xReport', {}, 'Could not build X report');
-    if (!s) return;
-    const html = reportHtml('X report — status', [['Date', s.date], ['Sales', money(s.sales_total)], ['Refunds', money(s.refunds_total)], ['Net', money(s.net_total)], ['Transactions', s.sales_count], ['Cash expected', money(s.cash_expected)]], '');
-    await window.api.preview(html);
-  });
-
-  A.action('close-day', async () => {
-    const ok = await A.confirm({
-      title: 'Close the register?',
-      sub: 'This will print a Z report and lock the business day.',
-      message: '<p class="small">Make sure all open sales are paid and the cash drawer is counted. This action finalises today’s totals.</p>',
-      confirmLabel: 'Close register',
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      const res = await A.api('closeDay', { userId: A.state.user.id });
-      if (!res.ok) return A.toast(res.error, 'bad', 4500);
-      A.state.lastZ = res.zreport;
-      A.state.day = await A.api('getDayState');
-      A.render();
-      showZReport(res.zreport);
-      A.toast('Register closed. Z report ready.');
-    } catch (e) {
-      A.toast(e.message, 'bad', 4500);
-    }
-  });
-
-  function showZReport(z) {
-    A.modal(
-      `<div class="modal-head"><div><h2>Z report ${esc(z.number)}</h2><div class="sub">Closed ${esc(fmtDate(z.closed_at, true))}</div></div>
-        <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div></div>
-      <div class="modal-body">
-        <div class="receipt-preview" style="display:block;background:var(--surface-2)">
-          <div class="card" style="max-width:560px;margin:0 auto"><div class="card-body">
-            <div class="stat-strip">
-              <div class="stat"><div class="sl">Net sales</div><div class="sv">${money(z.total)}</div></div>
-              <div class="stat"><div class="sl">Transactions</div><div class="sv">${z.sales_count}</div></div>
-              <div class="stat"><div class="sl">Cash expected</div><div class="sv">${money(z.cash_expected)}</div></div>
-              <div class="stat"><div class="sl">Discounts</div><div class="sv">${money(z.discount_total)}</div></div>
-            </div>
-            <div class="label mb8">Tenders</div>
-            ${(z.tenders || [])
-              .map(
-                (t) => `<div class="row between" style="padding:5px 0"><span>${esc(t.name || '—')}</span><span class="strong mono">${money(t.net)}</span></div>`
-              )
-              .join('')}
-          </div></div>
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button type="button" class="btn" data-modal-cancel>Close</button>
-        <button type="button" class="btn primary" data-action="z-print">${icon('print', 15)} Print Z report</button>
-      </div>`,
-      { size: '' }
-    );
-  }
-
-  A.action('z-print', async () => {
-    const z = A.state.lastZ;
-    if (!z) return;
-    const lines = (z.tenders || []).map((t) => `<div class="r-line"><span>${esc(t.name)}</span><span>${(t.net / 100).toLocaleString(locale())}</span></div>`).join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-      @page{size:80mm auto;margin:4mm} body{font-family:Consolas,monospace;font-size:11.5px;width:72mm;margin:0;padding:6px 4px}
-      .r-center{text-align:center}.r-line{display:flex;justify-content:space-between}.muted{color:#555}hr{border:0;border-top:1px dashed #888;margin:7px 0}
-      .total{font-weight:700;font-size:13px}
-    </style></head><body>
-      <div class="r-center"><h2>${esc(A.state.company.name)}</h2><div>${esc(z.number)}</div><div>${esc(fmtDate(z.closed_at, true))}</div></div>
-      <hr/>
-      <div class="r-line"><span>Opening cash</span><span>${(z.opening_cash / 100).toLocaleString(locale())}</span></div>
-      <div class="r-line"><span>Cash in</span><span>${(z.cash_in / 100).toLocaleString(locale())}</span></div>
-      <div class="r-line"><span>Cash out</span><span>${(z.cash_out / 100).toLocaleString(locale())}</span></div>
-      <div class="r-line"><span>Sales</span><span>${(z.sales_count)}</span></div>
-      <div class="r-line"><span>Discounts</span><span>${(z.discount_total / 100).toLocaleString(locale())}</span></div>
-      <div class="r-line"><span>Tax</span><span>${(z.tax_total / 100).toLocaleString(locale())}</span></div>
-      <div class="r-line total"><span>NET SALES</span><span>${(z.total / 100).toLocaleString(locale())}</span></div>
-      <hr/>${lines}
-      <hr/>
-      <div class="r-line total"><span>CASH EXPECTED</span><span>${(z.cash_expected / 100).toLocaleString(locale())}</span></div>
-      <hr/><div class="r-center muted">Powered by Aroklon</div>
-    </body></html>`;
-    await SH.print(html, true);
-  });
 
   /* ----------------------------------------------------------- dashboard */
 
@@ -1908,7 +1679,6 @@
 
   async function quickPay() {
     if (!A.state.cart.items.length) return A.toast('Add items first', 'warn');
-    if (!(A.state.day || {}).register_open) return A.toast('Open the register before selling', 'warn');
     const cash = (A.state.paymentTypes || []).find((p) => p.kind === 'cash' && p.active) || (A.state.paymentTypes || []).find((p) => p.active);
     if (!cash) return A.toast('No active payment type', 'bad');
     const calc = cartCalc();

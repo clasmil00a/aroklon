@@ -108,13 +108,9 @@ function createWindow() {
             }
             for (let i = 0; i < 80 && !A.state.user; i++) await s(50);
             if (!A.state.user) await A.login(A.state.users[0].id, '1234');
-            if (!A.state.day.register_open) {
-              await A.api('openDay', [0, A.state.user.id, A.state.day.business_date]);
-              A.state.day = await A.api('getDayState');
-            }
             A.state.settings.ask_qty = '0';
             await s(400);
-            return { ok: true, products: A.state.products.length, open: A.state.day.register_open, pin: A.state.pin };
+            return { ok: true, products: A.state.products.length, pin: A.state.pin };
           })()`,
           'login'
         );
@@ -261,7 +257,7 @@ function createWindow() {
             const s = (ms) => new Promise((r) => setTimeout(r, ms));
             const A = window.App;
             const res = {};
-            for (const r of ['sales','dashboard','products','stock','documents','customers','reports','users','settings','day','promotions']) {
+            for (const r of ['sales','dashboard','products','stock','documents','customers','reports','users','settings','promotions']) {
               A.go(r);
               await s(450);
               res[r] = document.body.innerText.replace(/\\s+/g, ' ').slice(0, 700);
@@ -325,15 +321,10 @@ function createWindow() {
               A.closeModal();
             } catch (e) { res.userErr = e.message; }
             try {
-              const ids = ['sales_summary','product_sales','payment_types','tax_summary','customer_sales','stock_valuation','low_stock','z_reports'];
+              const ids = ['sales_summary','product_sales','payment_types','tax_summary','customer_sales','stock_valuation','low_stock'];
               res.reports = {};
               for (const id of ids) { const rows = await A.api('report', [id, A.state.reportFilters]); res.reports[id] = Array.isArray(rows) ? rows.length : 0; }
             } catch (e) { res.reportErr = e.message; }
-            try {
-              A.go('day'); await s(350);
-              res.dayLive = !!document.querySelector('#day-live') || !!document.querySelector('form[data-form="open-day"]');
-              res.registerOpen = !!(A.state.day && A.state.day.register_open);
-            } catch (e) { res.dayErr = e.message; }
             return res;
           })()`,
           'probes'
@@ -363,26 +354,6 @@ function createWindow() {
             return res;
           })()`,
           'flow-discount'
-        );
-
-        out.flowCash = await js(
-          `(async () => {
-            const s = (ms) => new Promise((r) => setTimeout(r, ms));
-            const A = window.App; const res = {};
-            try {
-              A.actions['cash']({}, null, {}); await s(600);
-              const f = document.querySelector('form[data-form="cash-move"]');
-              res.form = !!f;
-              if (f) {
-                f.querySelector('input[name="amount"]').value = '50000';
-                f.querySelector('input[name="reason"]').value = 'Test float';
-                f.requestSubmit(); await s(600);
-              }
-              res.moves = (await A.api('listCashMovements', [])).length;
-            } catch (e) { res.err = e.message; }
-            return res;
-          })()`,
-          'flow-cash'
         );
 
         out.flowDoc = await js(
@@ -478,14 +449,6 @@ function buildMenu() {
         { role: 'zoomOut' },
         { type: 'separator' },
         { role: 'togglefullscreen' },
-      ],
-    },
-    {
-      label: 'Register',
-      submenu: [
-        { label: 'Open / close day', click: () => mainWindow && mainWindow.webContents.send('menu', 'day') },
-        { label: 'Cash in / out', click: () => mainWindow && mainWindow.webContents.send('menu', 'cash') },
-        { label: 'New sale', click: () => mainWindow && mainWindow.webContents.send('menu', 'sales') },
       ],
     },
     {
