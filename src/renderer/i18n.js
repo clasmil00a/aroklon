@@ -628,6 +628,8 @@
     '{customer} has a preset {value}{suffix} discount. Remove the customer to add another.':
       '{customer} punya diskon preset {value}{suffix}. Hapus pelanggan untuk menambah diskon lain.',
     'How the store is doing': 'Bagaimana kondisi toko',
+    'Reports that add up': 'Laporan yang transparan',
+    'Sales, tax and stock reports': 'Laporan penjualan, pajak, dan stok',
     'Your catalogue': 'Katalog Anda',
     'Purchases, counts and stock movements': 'Pembelian, hitungan, dan mutasi stok',
     'Contacts, suppliers and loyalty': 'Kontak, pemasok, dan loyalitas',

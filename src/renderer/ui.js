@@ -813,7 +813,7 @@
       const feats = [
         ['sales', 'Ring sales in seconds', 'Barcode, SKU or name search'],
         ['stock', 'Stock that stays honest', 'Every sale and return moves it'],
-        ['reports', 'Close the day cleanly', 'Z reports, cash and tax totals'],
+        ['reports', 'Reports that add up', 'Sales, tax and stock reports'],
       ];
       return `<div class="login">
         <div class="login-art">
