@@ -874,7 +874,7 @@
               <div class="row wrap gap8">
                 <div>
                   <div class="strong">Updates</div>
-                  <div class="small muted">Aroklon v${esc((A.state.meta && A.state.meta.version) || '1.0.0')} · app-only patch, bukan download runtime penuh.</div>
+                  <div class="small muted">Aroklon v${esc((A.state.meta && A.state.meta.version) || '1.0.0')}${(A.state.meta && A.state.meta.channel === 'tes') ? ` · <span class="tag-warn">tes ${esc(A.state.meta.build || '')}</span>` : ''} · app-only patch, bukan download runtime penuh.</div>
                 </div>
                 <span class="spacer"></span>
                 <button class="btn" data-action="check-update">${icon('refresh', 15)} Check for updates</button>
@@ -1293,16 +1293,17 @@
       if (!res.ok) throw new Error(res.error || 'Check failed');
       A.state.update = res;
       if (res.available) {
+        const shown = res.channel === 'tes' && res.latestTag ? res.latestTag : `v${res.latest}`;
         if (status)
           status.innerHTML =
-            `Update <b>v${esc(res.latest)}</b> tersedia (${(Number(res.size || 0) / 1048576).toFixed(2)} MB). ` +
+            `Update <b>${esc(shown)}</b> tersedia (${(Number(res.size || 0) / 1048576).toFixed(2)} MB). ` +
             `<button class="btn sm primary" data-action="apply-update">Download &amp; restart</button>`;
-        A.toast(`Update v${res.latest} tersedia`, 'good');
+        A.toast(`Update ${shown} tersedia`, 'good');
       } else if (!res.compatible) {
         if (status) status.textContent = 'Update butuh runtime Electron baru. Download installer penuh.';
         A.toast('Update butuh versi runtime baru', 'warn');
       } else {
-        if (status) status.textContent = `Sudah versi terbaru (v${esc(res.current)}).`;
+        if (status) status.textContent = `Sudah versi terbaru (${esc(res.current)}).`;
         A.toast('Aroklon sudah versi terbaru', 'good');
       }
     } catch (e) {

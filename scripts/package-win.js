@@ -19,8 +19,15 @@ const ResEdit = require('resedit');
 
 const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
-const APP_NAME = 'Aroklon';
-const VERSION = '1.0.5';
+const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+const APP_NAME = PKG.productName || 'Aroklon';
+const VERSION = PKG.version;
+const CHANNEL = PKG.updateChannel || 'main';
+const IS_TEST = CHANNEL === 'tes';
+// Stable builds share the version number; test builds append -tes.N so the
+// in-app updater can tell them apart.
+const BUILD_TAG = process.env.BUILD_TAG || (IS_TEST ? `${PKG.buildTag || `v${VERSION}-tes.1`}` : `v${VERSION}`);
+const OUT_NAME = IS_TEST ? `${APP_NAME}-tes-win32-x64` : `${APP_NAME}-win32-x64`;
 const ELECTRON_VERSION = '45.3.4';
 
 function findElectronZip() {
@@ -48,6 +55,7 @@ function stageApp() {
   delete pkg.devDependencies;
   delete pkg.scripts;
   pkg.version = VERSION;
+  pkg.buildTag = BUILD_TAG;
   fs.writeFileSync(path.join(stage, 'package.json'), JSON.stringify(pkg, null, 2));
   return stage;
 }
@@ -117,7 +125,7 @@ function makeZip(zipPath, folder, cwd) {
 
 (async () => {
   fs.mkdirSync(DIST, { recursive: true });
-  const outDir = path.join(DIST, `${APP_NAME}-win32-x64`);
+  const outDir = path.join(DIST, OUT_NAME);
   if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -158,7 +166,8 @@ function makeZip(zipPath, folder, cwd) {
   } catch (e) {}
   const manifest = {
     version: VERSION,
-    tag: `v${VERSION}`,
+    tag: BUILD_TAG,
+    channel: CHANNEL,
     asar: patchName,
     sha256,
     electron: electronMajor,
@@ -193,8 +202,12 @@ function makeZip(zipPath, folder, cwd) {
   // Friendly readme next to the exe
   fs.writeFileSync(
     path.join(outDir, 'Baca dulu.txt'),
-    `Aroklon ${VERSION} - Point of Sale untuk Windows\n\n` +
+    `Aroklon ${VERSION}${IS_TEST ? ` tes (${BUILD_TAG})` : ''} - Point of Sale untuk Windows\n\n` +
       `Jalankan Aroklon.exe. Tidak perlu instalasi.\n\n` +
+      (IS_TEST
+        ? `Ini build tes. Update diambil dari rilis prerelease GitHub (${BUILD_TAG}).\n` +
+          `Data build tes disimpan terpisah di %APPDATA%\\Aroklon-tes.\n\n`
+        : '') +
       `Login pertama kali:\n` +
       `  Owner   - PIN 1234\n` +
       `  Cashier - PIN 1111\n\n` +
@@ -210,10 +223,17 @@ function makeZip(zipPath, folder, cwd) {
   // Standalone updater (fallback when the in-app updater cannot run)
   const updaterPs1 = `$ErrorActionPreference = 'Stop'
 $repo = 'clasmil00a/aroklon'
+$channel = '${CHANNEL}'
 $appDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 try {
   $headers = @{ 'User-Agent' = 'Aroklon-Updater'; 'Accept' = 'application/vnd.github+json' }
-  $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
+  if ($channel -eq 'tes') {
+    $list = Invoke-RestMethod "https://api.github.com/repos/$repo/releases?per_page=20" -Headers $headers
+    $release = $list | Where-Object { $_.prerelease -eq $true -and -not $_.draft } | Select-Object -First 1
+    if (-not $release) { throw 'Belum ada rilis tes (prerelease) di GitHub' }
+  } else {
+    $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
+  }
   $metaAsset = $release.assets | Where-Object { $_.name -eq 'latest.json' } | Select-Object -First 1
   if (-not $metaAsset) { throw 'latest.json tidak ditemukan' }
   $meta = Invoke-RestMethod $metaAsset.browser_download_url -Headers $headers
@@ -223,12 +243,13 @@ try {
   Invoke-WebRequest $asarAsset.browser_download_url -OutFile $tmp -UseBasicParsing -Headers $headers
   $hash = (Get-FileHash $tmp -Algorithm SHA256).Hash.ToLower()
   if ($hash -ne $meta.sha256) { throw 'SHA-256 tidak cocok. Update dibatalkan.' }
-  taskkill /IM Aroklon.exe /F 2>$null | Out-Null
+  $exe = Join-Path $appDir 'Aroklon.exe'
+  Get-Process -Name Aroklon -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe } | Stop-Process -Force
   Start-Sleep -Seconds 2
   Copy-Item $tmp (Join-Path $appDir 'resources\\app.asar') -Force
   Remove-Item $tmp -Force
-  Start-Process (Join-Path $appDir 'Aroklon.exe')
-  Write-Host "Update v$($meta.version) berhasil. Aroklon dibuka ulang."
+  Start-Process $exe
+  Write-Host "Update $($meta.tag) berhasil. Aroklon dibuka ulang."
 } catch {
   Write-Host "Update gagal: $($_.Exception.Message)"
   Read-Host 'Tekan Enter untuk keluar'
@@ -240,7 +261,7 @@ try {
     `@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Update-Aroklon.ps1"\r\nif errorlevel 1 pause\r\n`
   );
 
-  const zipPath = path.join(DIST, `Aroklon-win32-x64.zip`);
+  const zipPath = path.join(DIST, `${OUT_NAME}.zip`);
   if (fs.existsSync(zipPath)) fs.rmSync(zipPath);
   console.log('Zipping…');
   makeZip(zipPath, path.basename(outDir), DIST);

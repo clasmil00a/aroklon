@@ -394,6 +394,8 @@ textarea.input { resize: vertical; min-height: 74px; }
 .spacer { flex: 1; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
+.tag-warn { color: #b45309; font-weight: 600; }
+html[data-mode="dark"] .tag-warn { color: #fbbf24; }
 .strong { font-weight: 700; }
 .mono { font-variant-numeric: tabular-nums; }
 .right { text-align: right; }

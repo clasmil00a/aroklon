@@ -7,6 +7,23 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const db = require('./db');
 
+/* -------------------------------------------------------------- channels */
+
+// Two apps ship from this codebase: the stable build reads the newest normal
+// release, the test build reads the newest prerelease. Both keep the Aroklon
+// name, so the test build also gets its own data folder to avoid sharing a
+// database with the stable app.
+const PKG = require('../../package.json');
+const CHANNEL = PKG.updateChannel || 'main';
+const IS_TEST = CHANNEL === 'tes';
+const BUILD_TAG = PKG.buildTag || `v${PKG.version}`;
+
+if (IS_TEST) {
+  const dataDir = path.join(app.getPath('appData'), 'Aroklon-tes');
+  app.setPath('userData', dataDir);
+  app.setPath('crashDumps', path.join(dataDir, 'Crashpad'));
+}
+
 let mainWindow = null;
 let printWindow = null;
 const gotLock = app.requestSingleInstanceLock();
@@ -543,13 +560,17 @@ ipcMain.handle('app:invoke', async (_e, action, payload) => {
   }
 });
 
-ipcMain.handle('app:meta', () => db.meta());
+ipcMain.handle('app:meta', () => ({ ...db.meta(), channel: CHANNEL, build: BUILD_TAG }));
 
 /* ------------------------------------------------------------- updates */
 
 const REPO = 'clasmil00a/aroklon';
-const RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 const UPDATE_HEADERS = { 'User-Agent': 'Aroklon-Updater', Accept: 'application/vnd.github+json' };
+// The stable build tracks the newest normal release; the test build tracks the
+// newest prerelease. GitHub's "latest" endpoint skips prereleases, so the test
+// channel has to list releases and pick the first prerelease itself.
+const RELEASE_LIST_API = `https://api.github.com/repos/${REPO}/releases?per_page=20`;
+const RELEASE_LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 
 function compareVersions(a, b) {
   const pa = String(a || '0').split('.').map((n) => parseInt(n, 10) || 0);
@@ -568,8 +589,31 @@ async function fetchJson(url) {
   return res.json();
 }
 
+// v1.0.5-tes.3 -> { base: [1,0,5], build: 3 }; "v1.0.5" -> { base:[1,0,5], build: 0 }
+function parseTestTag(tag) {
+  const m = /^v?(\d+(?:\.\d+)*)(?:-tes\.(\d+))?/i.exec(String(tag || ''));
+  if (!m) return null;
+  return { base: m[1].split('.').map((n) => parseInt(n, 10) || 0), build: m[2] ? parseInt(m[2], 10) : 0 };
+}
+
+function compareTestTags(a, b) {
+  const pa = parseTestTag(a);
+  const pb = parseTestTag(b);
+  if (!pa || !pb) return 0;
+  const base = compareVersions(pa.base.join('.'), pb.base.join('.'));
+  if (base !== 0) return base;
+  return pa.build === pb.build ? 0 : pa.build > pb.build ? 1 : -1;
+}
+
 async function getLatestMeta() {
-  const rel = await fetchJson(RELEASE_API);
+  let rel;
+  if (IS_TEST) {
+    const list = await fetchJson(RELEASE_LIST_API);
+    rel = (Array.isArray(list) ? list : []).find((r) => r && r.prerelease === true && r.draft !== true);
+    if (!rel) throw new Error('Belum ada rilis tes (prerelease) di GitHub');
+  } else {
+    rel = await fetchJson(RELEASE_LATEST_API);
+  }
   const metaAsset = (rel.assets || []).find((a) => a.name === 'latest.json');
   if (!metaAsset) throw new Error('latest.json tidak ditemukan di rilis terbaru');
   const meta = await fetchJson(metaAsset.browser_download_url);
@@ -578,10 +622,25 @@ async function getLatestMeta() {
   return {
     ...meta,
     tag: rel.tag_name,
+    prerelease: rel.prerelease === true,
     body: rel.body || '',
     asarUrl: asarAsset.browser_download_url,
     size: asarAsset.size,
   };
+}
+
+// Stable: compare the app version. Test: compare prerelease tags, because test
+// builds intentionally reuse the stable version number.
+function isNewerRelease(meta) {
+  if (IS_TEST) {
+    if (!meta.tag || meta.tag === BUILD_TAG) return false;
+    return compareTestTags(meta.tag, BUILD_TAG) > 0;
+  }
+  return compareVersions(meta.version, app.getVersion()) > 0;
+}
+
+function currentVersionLabel() {
+  return IS_TEST && BUILD_TAG !== `v${app.getVersion()}` ? `${app.getVersion()} (${BUILD_TAG})` : app.getVersion();
 }
 
 async function downloadFile(url, dest) {
@@ -600,10 +659,12 @@ ipcMain.handle('app:checkUpdate', async () => {
     const compatible = String(meta.electron || '').split('.')[0] === electronMajor;
     return {
       ok: true,
-      current,
+      channel: CHANNEL,
+      current: currentVersionLabel(),
+      currentTag: IS_TEST ? BUILD_TAG : `v${app.getVersion()}`,
       latest: meta.version,
-      tag: meta.tag,
-      available: compareVersions(meta.version, current) > 0,
+      latestTag: meta.tag,
+      available: isNewerRelease(meta),
       compatible,
       size: meta.size,
       notes: meta.body,
@@ -616,10 +677,8 @@ ipcMain.handle('app:checkUpdate', async () => {
 ipcMain.handle('app:applyUpdate', async () => {
   try {
     const meta = await getLatestMeta();
-    const current = app.getVersion();
-    const electronMajor = String(process.versions.electron).split('.')[0];
-    if (compareVersions(meta.version, current) <= 0) return { ok: false, error: 'Sudah versi terbaru' };
-    if (String(meta.electron || '').split('.')[0] !== electronMajor)
+    if (!isNewerRelease(meta)) return { ok: false, error: 'Sudah versi terbaru' };
+    if (String(meta.electron || '').split('.')[0] !== String(process.versions.electron).split('.')[0])
       return { ok: false, error: 'Patch ini butuh runtime Electron yang berbeda' };
 
     const appDir = path.dirname(app.getPath('exe'));
@@ -651,7 +710,7 @@ ipcMain.handle('app:applyUpdate', async () => {
       'setlocal enabledelayedexpansion',
       `set "APP=${appDir}"`,
       `set "NEW=${finalPath}"`,
-      'powershell -NoProfile -Command "$d=(Get-Date).AddSeconds(30); while((Get-Process -Name Aroklon -ErrorAction SilentlyContinue) -and (Get-Date) -lt $d){Start-Sleep -Milliseconds 300}" >nul 2>&1',
+      'powershell -NoProfile -Command "$p=Join-Path $env:APP \'Aroklon.exe\'; $d=(Get-Date).AddSeconds(30); while((Get-Process -Name Aroklon -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $p }) -and (Get-Date) -lt $d){Start-Sleep -Milliseconds 300}" >nul 2>&1',
       'set /a tries=0',
       ':retry',
       'copy /Y "%NEW%" "%APP%\\resources\\app.asar" >nul',
