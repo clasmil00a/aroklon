@@ -971,7 +971,9 @@
                     .join('')}
                 </div>
                 <button class="btn danger" data-action="data-reset">${icon('warning', 15)} Reset all data</button>
-                <p class="hint mt8">Deletes every product, sale and setting, then restores the sample catalogue.</p>
+                <p class="hint mt8">${esc(
+                  t('Deletes all products, stock, customers, sales and reports. Users, tax rates, payment types and company details are kept.')
+                )}</p>
               </div></div>
             </div>
           </div>
@@ -1178,13 +1180,17 @@
     const ok = await A.confirm({
       title: 'Reset all data?',
       sub: 'This cannot be undone.',
-      message: '<p class="small">Every product, customer, sale and setting will be deleted and the sample catalogue restored. Back up first.</p>',
+      message: '<p class="small">All products, stock, customers, sales and reports will be deleted. Users, tax rates, payment types and company details are kept. This cannot be undone — back up first.</p>',
       confirmLabel: 'Reset everything',
       danger: true,
     });
     if (!ok) return;
     const res = await A.tryApi('factoryReset', {}, 'Reset failed');
     if (res && res.ok) {
+      A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      A.state.selectedLine = null;
+      A.state.pay = null;
+      try { localStorage.removeItem('aroklon.held'); } catch (e) {}
       await A.reloadReference();
       await A.reloadCatalog();
       A.state.settings = await A.api('getSettings');

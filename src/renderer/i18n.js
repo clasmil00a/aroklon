@@ -430,6 +430,8 @@
     'Reset all data': 'Reset semua data',
     'Deletes every product, sale and setting, then restores the sample catalogue.':
       'Menghapus semua produk, penjualan, dan pengaturan, lalu mengembalikan katalog contoh.',
+    'Deletes all products, stock, customers, sales and reports. Users, tax rates, payment types and company details are kept.':
+      'Menghapus semua produk, stok, pelanggan, penjualan, dan laporan. Pengguna, tarif pajak, jenis pembayaran, dan detail perusahaan tetap disimpan.',
     'Backup complete': 'Cadangan selesai',
     'Backup failed': 'Cadangan gagal',
     'Database restored': 'Database dipulihkan',
@@ -449,6 +451,14 @@
     'Start import': 'Mulai impor',
     'Close Aronium before importing so the database file is not locked.':
       'Tutup Aronium sebelum impor agar file database tidak terkunci.',
+    'Database recovered': 'Database dipulihkan',
+    'The previous database file was not valid': 'File database sebelumnya tidak valid',
+    'Aroklon moved that file aside and started again.':
+      'Aroklon memindahkan file tersebut ke tempat lain dan memulai ulang.',
+    'Your data was restored from the backup made before the failed restore.':
+      'Data Anda dipulihkan dari cadangan yang dibuat sebelum pemulihan yang gagal.',
+    'If you have a backup, use Settings → Data → Restore to load it.':
+      'Jika punya cadangan, gunakan Settings → Data → Restore untuk memuatnya.',
     'Skipped (already existed)': 'Dilewati (sudah ada)',
     'Import complete': 'Impor selesai',
     'Company details updated.': 'Detail perusahaan diperbarui.',

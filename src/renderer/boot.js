@@ -7,7 +7,7 @@
 (function () {
   const A = window.App;
   const U = window.U;
-  const { esc, icon } = U;
+  const { esc, icon, t } = U;
 
   window.__lastError = null;
   window.addEventListener('error', (e) => {
@@ -198,6 +198,29 @@
         allCustomers,
         accessLevels,
       });
+
+      if (meta && meta.recovery) {
+        const rec = meta.recovery;
+        const base = (p) => String(p || '').split(/[\\/]/).pop();
+        setTimeout(() => {
+          A.modal(
+            `<div class="modal-head">
+              <div><h2>${esc(t('Database recovered'))}</h2><div class="sub">${esc(t('The previous database file was not valid'))}</div></div>
+              <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div>
+            </div>
+            <div class="modal-body">
+              <p class="small">${esc(t('Aroklon moved that file aside and started again.'))}</p>
+              <div class="hint mono mt8">${esc(base(rec.path))}</div>
+              ${
+                rec.restoredFrom
+                  ? `<p class="small mt12">${esc(t('Your data was restored from the backup made before the failed restore.'))}<br /><span class="mono">${esc(base(rec.restoredFrom))}</span></p>`
+                  : `<p class="small mt12">${esc(t('If you have a backup, use Settings → Data → Restore to load it.'))}</p>`
+              }
+            </div>
+            <div class="modal-foot"><button type="button" class="btn primary" data-modal-cancel>${esc(t('OK'))}</button></div>`
+          );
+        }, 300);
+      }
 
       try {
         const last = localStorage.getItem('aroklon.user');

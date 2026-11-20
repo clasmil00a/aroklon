@@ -11,6 +11,7 @@ let db = null;
 let dbPath = null;
 let saveTimer = null;
 let txDepth = 0;
+let lastRecovery = null;
 
 /* ------------------------------------------------------------------ utils */
 
@@ -323,15 +324,131 @@ function migrate() {
   );
 }
 
+/* ------------------------------------------------------- database checks */
+
+function sqliteColumnNames(src, table) {
+  const stmt = src.prepare(`SELECT * FROM "${String(table).replace(/"/g, '""')}" LIMIT 0`);
+  const names = stmt.getColumnNames().map((n) => String(n).toLowerCase());
+  stmt.free();
+  return names;
+}
+
+function schemaIsAroklon(src) {
+  try {
+    if (!sqliteTable(src, 'setting') || !sqliteTable(src, 'user') || !sqliteTable(src, 'product')) return false;
+    const productCols = sqliteColumnNames(src, 'product');
+    if (!productCols.includes('unit') || !productCols.includes('price_incl_tax') || !productCols.includes('price_change_allowed')) {
+      return false;
+    }
+    const userCols = sqliteColumnNames(src, 'user');
+    if (!userCols.includes('pin') || !userCols.includes('access_level_id')) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function isAroklonBuffer(buffer) {
+  let probe;
+  try {
+    probe = new SQL.Database(buffer);
+  } catch (e) {
+    return false;
+  }
+  const ok = schemaIsAroklon(probe);
+  try {
+    probe.close();
+  } catch (e) {}
+  return ok;
+}
+
+// Checks a file before it is allowed to replace the live database.
+function inspectDatabaseFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return { ok: false, kind: 'missing', error: 'File not found' };
+  let src;
+  try {
+    src = new SQL.Database(fs.readFileSync(filePath));
+  } catch (e) {
+    return { ok: false, kind: 'unknown', error: 'Cannot read the file as a SQLite database.' };
+  }
+  try {
+    const productCols = sqliteTable(src, 'product') ? sqliteColumnNames(src, 'product') : [];
+    const looksAronium =
+      productCols.includes('measurementunit') || sqliteTable(src, 'vatrate') || sqliteTable(src, 'documenttype');
+    if (looksAronium) {
+      return {
+        ok: false,
+        kind: 'aronium',
+        error: 'This is an Aronium database. Use Settings → Data → Import Aronium database instead.',
+      };
+    }
+    if (schemaIsAroklon(src)) return { ok: true, kind: 'aroklon' };
+    return {
+      ok: false,
+      kind: 'unknown',
+      error: 'This file is not an Aroklon database. Choose a backup created by Aroklon (Settings → Data → Backup now).',
+    };
+  } catch (e) {
+    return { ok: false, kind: 'unknown', error: 'Cannot read the database file: ' + (e.message || String(e)) };
+  } finally {
+    try {
+      src.close();
+    } catch (e) {}
+  }
+}
+
 /* --------------------------------------------------------------- lifecycle */
 
 async function init(userDataDir) {
   SQL = await initSqlJs({ locateFile: (f) => path.join(WASM_DIR, f) });
   dbPath = path.join(userDataDir, 'aroklon.db');
   let buffer = null;
+
   if (fs.existsSync(dbPath)) {
     buffer = fs.readFileSync(dbPath);
+    // A file that is not an Aroklon database (for example an Aronium pos.db
+    // chosen by mistake) would make every query fail. Move it aside and try
+    // the newest backup made before a restore.
+    if (!isAroklonBuffer(buffer)) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const quarantine = path.join(userDataDir, `aroklon-invalid-${stamp}.db`);
+      try {
+        fs.renameSync(dbPath, quarantine);
+      } catch (e) {
+        throw new Error('The database file is not valid and could not be moved aside: ' + (e.message || String(e)));
+      }
+      buffer = null;
+      lastRecovery = { path: quarantine, restoredFrom: null };
+
+      let backups = [];
+      try {
+        backups = fs
+          .readdirSync(userDataDir)
+          .filter((f) => /^aroklon-before-restore-.*\.db$/.test(f))
+          .sort()
+          .reverse();
+      } catch (e) {}
+      for (const name of backups) {
+        const candidate = path.join(userDataDir, name);
+        let alt = null;
+        try {
+          alt = fs.readFileSync(candidate);
+        } catch (e) {
+          continue;
+        }
+        if (!isAroklonBuffer(alt)) continue;
+        try {
+          fs.copyFileSync(candidate, dbPath);
+        } catch (e) {
+          continue;
+        }
+        buffer = alt;
+        lastRecovery = { path: quarantine, restoredFrom: candidate };
+        break;
+      }
+    }
   }
+
   db = buffer ? new SQL.Database(buffer) : new SQL.Database();
   db.run(SCHEMA);
   migrate();
@@ -397,6 +514,9 @@ function tx(fn) {
 
 function seed() {
   const count = (t) => Number(get(`SELECT COUNT(*) AS c FROM ${t}`).c);
+  // A reset asks for an empty database; do not put the demo catalogue back
+  // on the next start.
+  const withSamples = getSetting('sample_data') !== '0';
 
   if (count('company') === 0) {
     run(
@@ -513,7 +633,7 @@ function seed() {
     }
   }
 
-  if (count('product_group') === 0) {
+  if (withSamples && count('product_group') === 0) {
     run(`INSERT INTO product_group (name, parent_id, color, sort_order) VALUES (?,?,?,?)`, [
       'Umum',
       null,
@@ -534,7 +654,7 @@ function seed() {
     ]);
   }
 
-  if (count('product') === 0) {
+  if (withSamples && count('product') === 0) {
     const groupId = get(`SELECT id FROM product_group WHERE name='Minuman'`).id;
     const snackId = get(`SELECT id FROM product_group WHERE name='Camilan'`).id;
     const samples = [
@@ -565,7 +685,7 @@ function seed() {
     }
   }
 
-  if (count('customer') === 0) {
+  if (withSamples && count('customer') === 0) {
     run(`INSERT INTO customer (type, name, company, email, phone, active) VALUES (?,?,?,?,?,1)`, [
       'customer',
       'Pelanggan Umum',
@@ -2254,18 +2374,45 @@ function backup(destPath) {
 }
 
 function restore(srcPath) {
-  if (!fs.existsSync(srcPath)) return { ok: false, error: 'File not found' };
+  const check = inspectDatabaseFile(srcPath);
+  if (!check.ok) return { ok: false, error: check.error, kind: check.kind };
   const buf = fs.readFileSync(srcPath);
   db = new SQL.Database(buf);
+  db.run(SCHEMA);
+  migrate();
   persist();
   return { ok: true };
 }
 
 function factoryReset() {
-  const fresh = new SQL.Database();
-  fresh.run(SCHEMA);
-  db = fresh;
-  seed();
+  // Clear business data but keep the app usable: users, settings, company,
+  // tax rates, payment types and registers stay.
+  tx(() => {
+    for (const table of [
+      'document_item',
+      'payment',
+      'document',
+      'stock_movement',
+      'stock_item',
+      'product_unit',
+      'product_tax',
+      'product_comment',
+      'barcode',
+      'product',
+      'loyalty_card',
+      'customer',
+      'product_group',
+      'zreport',
+      'cash_movement',
+      'number_seq',
+    ]) {
+      run(`DELETE FROM ${table}`);
+    }
+    run(
+      `INSERT INTO setting (key, value) VALUES ('sample_data', '0')
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    );
+  });
   persist();
   return { ok: true };
 }
@@ -2273,8 +2420,11 @@ function factoryReset() {
 /* ------------------------------------------------------------------ stats */
 
 function meta() {
+  const recovery = lastRecovery;
+  lastRecovery = null;
   return {
     db_path: dbPath,
+    recovery,
     counts: {
       products: num(get(`SELECT COUNT(*) AS c FROM product`).c),
       documents: num(get(`SELECT COUNT(*) AS c FROM document`).c),

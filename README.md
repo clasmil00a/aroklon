@@ -117,8 +117,15 @@ build/           icon source + generated icon.ico/png
 ## Data & backup
 
 All data lives in a single SQLite file. **Settings → Data** can back it up,
-restore it, open the folder, or reset everything. Back up before moving the app
-to another PC.
+restore it, open the folder, or clear business data (products, stock,
+customers, sales and reports) while keeping users, tax rates, payment types and
+company details. Restore only accepts Aroklon backups; an Aronium `pos.db` is
+rejected with a hint to use **Import Aronium database** instead. Back up before
+moving the app to another PC.
+
+If an invalid file ever becomes the live database, Aroklon moves it aside on the
+next start (for example `aroklon-invalid-<date>.db`) and restores the newest
+`aroklon-before-restore-<date>.db` backup when one exists.
 
 ## Import from Aronium
 

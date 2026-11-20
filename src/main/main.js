@@ -128,7 +128,12 @@ function createWindow() {
             if (!A.state.user) await A.login(A.state.users[0].id, '1234');
             A.state.settings.ask_qty = '0';
             await s(400);
-            return { ok: true, products: A.state.products.length, pin: A.state.pin };
+            return {
+              ok: true,
+              products: A.state.products.length,
+              pin: A.state.pin,
+              modal: (document.getElementById('modal-root') || {}).innerText || '',
+            };
           })()`,
           'login'
         );
@@ -563,6 +568,36 @@ function createWindow() {
           })()`,
           'flow-customer'
         );
+
+        if (process.env.AROKLON_RESET_TEST) {
+          out.flowReset = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                await A.api('saveProduct', { name: 'Reset Probe', code: 'RST1', unit: 'pcs', price: 1, active: true });
+                await A.reloadCatalog(); await s(200);
+                res.added = (await A.api('listProducts', {})).length;
+                A.go('settings'); A.state.settingsTab = 'data'; await s(450);
+                res.button = !!document.querySelector('[data-action="data-reset"]');
+                const btn = document.querySelector('[data-action="data-reset"]');
+                if (btn) btn.click();
+                await s(350);
+                const ok = document.querySelector('[data-modal-ok]');
+                res.confirm = !!ok;
+                if (ok) ok.click();
+                await s(1500);
+                const after = await A.api('listProducts', {});
+                res.after = after.length;
+                res.probe = after.some((p) => p.name === 'Reset Probe');
+                res.route = A.state.route;
+                res.toast = (document.querySelector('.toast') || {}).textContent || '';
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-reset'
+          );
+        }
       } catch (e) {
         out.error = e.message;
         console.log('smoke error', e.message);
@@ -628,7 +663,7 @@ function buildMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Aroklon',
-              message: 'Aroklon 1.0.0',
+              message: `Aroklon ${app.getVersion()}`,
               detail:
                 'Offline point of sale for Windows.\n\nData is stored locally at:\n' +
                 db.meta().db_path +
@@ -680,7 +715,11 @@ async function doRestore() {
   try {
     const safe = path.join(app.getPath('userData'), `aroklon-before-restore-${Date.now()}.db`);
     db.backup(safe);
-    db.restore(res.filePaths[0]);
+    const restored = db.restore(res.filePaths[0]);
+    if (!restored.ok) {
+      dialog.showErrorBox('Restore failed', restored.error || 'The selected file is not a valid Aroklon database.');
+      return;
+    }
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       message: 'Database restored',
