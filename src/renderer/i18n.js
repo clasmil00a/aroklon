@@ -58,7 +58,7 @@
 
     /* login */
     'Your counter,': 'Kasir Anda,',
-    'under control.': 'kepalang tangan.',
+    'under control.': 'dalam kendali.',
     'An offline point of sale for Windows. Sell, track stock and close the day — no internet, no subscription, your data stays on this PC.':
       'Aplikasi kasir offline untuk Windows. Jual, lacak stok, dan tutup hari — tanpa internet, tanpa langganan, data tetap di PC ini.',
     'Ring sales in seconds': 'Jual dalam hitungan detik',
@@ -68,7 +68,7 @@
     'Close the day cleanly': 'Tutup hari dengan rapi',
     'Z reports, cash and tax totals': 'Laporan Z, kas, dan total pajak',
     'Aroklon 1.0.5 · Local database · No account required':
-      'Aroklon 1.0.4 · Database lokal · Tanpa akun',
+      'Aroklon 1.0.5 · Database lokal · Tanpa akun',
     'First run: Owner · PIN 1234 | Cashier · PIN 1111':
       'Pertama kali: Owner · PIN 1234 | Kasir · PIN 1111',
 
@@ -433,6 +433,26 @@
     'Backup complete': 'Cadangan selesai',
     'Backup failed': 'Cadangan gagal',
     'Database restored': 'Database dipulihkan',
+    'Import from Aronium': 'Impor dari Aronium',
+    'Import Aronium database': 'Impor database Aronium',
+    'Copy products, stock, customers, taxes and settings from an Aronium Lite database (pos.db). Aronium Pro uses SQL Server and is not supported.':
+      'Salin produk, stok, pelanggan, pajak, dan pengaturan dari database Aronium Lite (pos.db). Aronium Pro memakai SQL Server dan tidak didukung.',
+    'Choose what to copy into Aroklon': 'Pilih apa yang ingin disalin ke Aroklon',
+    'Database file': 'File database',
+    'Products, groups, barcodes, taxes and stock': 'Produk, grup, barcode, pajak, dan stok',
+    'Customers, suppliers and loyalty cards': 'Pelanggan, pemasok, dan kartu loyalitas',
+    'Payment types': 'Jenis pembayaran',
+    'Company details (only when Aroklon is still blank)': 'Detail perusahaan (hanya jika Aroklon masih kosong)',
+    'Replace the current catalogue instead of merging': 'Ganti katalog saat ini, bukan gabungkan',
+    'A merge keeps what you already have and skips duplicates. Replace clears products, customers, taxes and stock first, and only works while there are no sales.':
+      'Mode gabung mempertahankan data yang ada dan melewati duplikat. Mode ganti menghapus produk, pelanggan, pajak, dan stok terlebih dahulu, dan hanya bisa dipakai jika belum ada penjualan.',
+    'Start import': 'Mulai impor',
+    'Close Aronium before importing so the database file is not locked.':
+      'Tutup Aronium sebelum impor agar file database tidak terkunci.',
+    'Skipped (already existed)': 'Dilewati (sudah ada)',
+    'Import complete': 'Impor selesai',
+    'Company details updated.': 'Detail perusahaan diperbarui.',
+    Done: 'Selesai',
     'Data reset': 'Data direset',
     'Updates': 'Pembaruan',
     'Check for updates': 'Periksa pembaruan',

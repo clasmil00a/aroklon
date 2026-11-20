@@ -112,6 +112,7 @@ function createWindow() {
       try {
         await sleep(800);
         await shot('01-login');
+        out.loginText = await js('document.body.innerText', 'login-text');
         await js(
           `(async () => {
             const s = (ms) => new Promise(r => setTimeout(r, ms));
@@ -513,6 +514,36 @@ function createWindow() {
           'flow-doc'
         );
 
+        if (process.env.AROKLON_ARONIUM_DB) {
+          out.flowAronium = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                A.go('settings'); A.state.settingsTab = 'data'; await s(350);
+                res.button = !!document.querySelector('[data-action="aronium-import"]');
+                const out = await A.api('importAronium', [
+                  ${JSON.stringify(process.env.AROKLON_ARONIUM_DB)},
+                  { products: true, customers: true, paymentTypes: true, company: true, replace: false },
+                ]);
+                res.ok = out.ok;
+                res.error = out.error;
+                res.summary = out.summary;
+                await A.reloadCatalog();
+                await A.reloadReference();
+                A.render(); await s(250);
+                res.products = (A.state.products || []).length;
+                res.customers = (A.state.customers || []).length;
+                res.taxes = (A.state.taxRates || []).length;
+                res.tenders = (A.state.paymentTypes || []).length;
+                res.company = (A.state.company || {}).name;
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-aronium'
+          );
+        }
+
         out.flowCustomer = await js(
           `(async () => {
             const s = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -863,6 +894,19 @@ ipcMain.handle('app:applyUpdate', async () => {
 
 ipcMain.handle('app:backup', () => doBackup());
 ipcMain.handle('app:restore', () => doRestore());
+
+ipcMain.handle('app:pick-aronium', async () => {
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Aronium database (pos.db)',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Aronium database', extensions: ['db', 'sqlite', 'sqlite3'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  });
+  if (res.canceled || !res.filePaths[0]) return { ok: false };
+  return { ok: true, path: res.filePaths[0] };
+});
 
 ipcMain.handle('app:print', async (_e, html, opts = {}) => {
   if (!html) return { ok: false, error: 'Nothing to print' };

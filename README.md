@@ -36,6 +36,7 @@ runs locally — no account, no cloud, no subscription.
 - **Receipts** — white paper with dark text in every colour mode.
 - **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
 - **Data** — local SQLite file, backup/restore, reset.
+- **Migration** — import products, stock, customers, taxes and settings from an Aronium Lite database (`pos.db`).
 
 ### Keyboard shortcuts (till)
 
@@ -118,6 +119,24 @@ build/           icon source + generated icon.ico/png
 All data lives in a single SQLite file. **Settings → Data** can back it up,
 restore it, open the folder, or reset everything. Back up before moving the app
 to another PC.
+
+## Import from Aronium
+
+**Settings → Data → Import Aronium database** copies an Aronium **Lite**
+database (`pos.db`, SQLite) into Aroklon:
+
+- products, groups, barcodes, tax rates and stock on hand
+- customers, suppliers and loyalty cards
+- payment types and, when Aroklon is still blank, company details
+
+Choose **merge** (keeps existing records, skips duplicates) or **replace**
+(clears the catalogue first; only possible while there are no sales). Close
+Aronium before importing so the file is not locked.
+
+Aronium **Pro** stores data on Microsoft SQL Server, so its database cannot be
+read by this importer. Export products and customers from Aronium Pro as CSV
+instead. Sales history is not imported — the importer sets current stock on
+hand, so old documents are not replayed.
 
 ## Updates (small patches)
 

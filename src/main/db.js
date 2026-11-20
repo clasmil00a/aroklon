@@ -2285,6 +2285,490 @@ function meta() {
   };
 }
 
+/* ------------------------------------------------------- Aronium import */
+
+function sqliteTable(src, name) {
+  const stmt = src.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND lower(name)=?`);
+  stmt.bind([String(name).toLowerCase()]);
+  let found = false;
+  try {
+    while (stmt.step()) {
+      found = true;
+      break;
+    }
+  } finally {
+    stmt.free();
+  }
+  return found;
+}
+
+function sqliteRows(src, table) {
+  const stmt = src.prepare(`SELECT * FROM "${String(table).replace(/"/g, '""')}"`);
+  const out = [];
+  try {
+    while (stmt.step()) out.push(stmt.getAsObject());
+  } finally {
+    stmt.free();
+  }
+  return out;
+}
+
+function importBlob(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const s = value.trim();
+    return /^(data:|https?:\/\/)/i.test(s) ? s : null;
+  }
+  const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+  if (!bytes.length) return null;
+  let mime = 'image/png';
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) mime = 'image/jpeg';
+  else if (bytes[0] === 0x47 && bytes[1] === 0x49) mime = 'image/gif';
+  else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57) mime = 'image/webp';
+  return `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+}
+
+function importColor(value) {
+  const s = String(value == null ? '' : value).trim();
+  if (/^#[0-9a-f]{3,8}$/i.test(s)) return s;
+  const named = {
+    transparent: '#e2e8f0',
+    red: '#fee2e2',
+    green: '#dcfce7',
+    blue: '#dbeafe',
+    yellow: '#fef3c7',
+    orange: '#ffedd5',
+    purple: '#ede9fe',
+    gray: '#e2e8f0',
+    grey: '#e2e8f0',
+  };
+  return named[s.toLowerCase()] || '#e2e8f0';
+}
+
+function importAddress(row) {
+  return [row.StreetName, row.BuildingNumber, row.City, row.PostalCode]
+    .map((v) => String(v == null ? '' : v).trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+// Reads an Aronium Lite database (pos.db, SQLite) and copies the catalogue,
+// stock and contacts into Aroklon. Aronium Pro stores data in SQL Server and
+// cannot be read by this importer.
+function importAronium(filePath, options = {}) {
+  const opts = {
+    products: options.products !== false,
+    customers: options.customers !== false,
+    paymentTypes: options.paymentTypes !== false,
+    company: options.company !== false,
+    replace: options.replace === true,
+  };
+  const summary = {
+    groups: 0,
+    taxes: 0,
+    products: 0,
+    products_skipped: 0,
+    customers: 0,
+    customers_skipped: 0,
+    loyalty: 0,
+    payment_types: 0,
+    stock: 0,
+    company: false,
+    replaced: false,
+    warnings: [],
+  };
+
+  let src;
+  try {
+    src = new SQL.Database(fs.readFileSync(filePath));
+  } catch (e) {
+    return { ok: false, error: 'Could not read the database file: ' + (e.message || String(e)) };
+  }
+
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    try {
+      src.close();
+    } catch (e) {}
+  };
+
+  try {
+    if (!sqliteTable(src, 'Product') || !sqliteTable(src, 'ProductGroup')) {
+      return {
+        ok: false,
+        error:
+          'This is not an Aronium Lite database. Aronium Pro stores data on SQL Server and cannot be imported directly.',
+      };
+    }
+
+    const groupIdMap = {};
+    const taxIdMap = {};
+    const productIdMap = {};
+    const customerIdMap = {};
+
+    tx(() => {
+      /* optional clean slate: only safe when no sales history exists */
+      if (opts.replace) {
+        const docCount = num((get(`SELECT COUNT(*) AS c FROM document`) || {}).c);
+        if (docCount > 0) {
+          throw new Error('The database already has sales documents, so the catalogue cannot be replaced. Use merge instead.');
+        }
+        for (const table of [
+          'document_item',
+          'payment',
+          'product_tax',
+          'barcode',
+          'product_comment',
+          'stock_movement',
+          'stock_item',
+          'product',
+          'loyalty_card',
+          'customer',
+          'product_group',
+          'tax_rate',
+        ]) {
+          run(`DELETE FROM ${table}`);
+        }
+        summary.replaced = true;
+      }
+
+      /* groups */
+      if (opts.products) {
+        const groups = sqliteRows(src, 'ProductGroup');
+        const sorted = groups.slice().sort((a, b) => {
+          const pa = a.ParentGroupId == null ? 0 : 1;
+          const pb = b.ParentGroupId == null ? 0 : 1;
+          if (pa !== pb) return pa - pb;
+          return num(a.Rank) - num(b.Rank) || String(a.Name || '').localeCompare(String(b.Name || ''));
+        });
+        sorted.forEach((g, i) => {
+          const parentNew = g.ParentGroupId == null ? null : groupIdMap[g.ParentGroupId] || null;
+          const existing = all(`SELECT id FROM product_group WHERE lower(name)=lower(?)`, [String(g.Name || '')]).find(
+            (r) => (r.parent_id == null ? null : r.parent_id) === (parentNew == null ? null : parentNew)
+          );
+          if (existing) {
+            groupIdMap[g.Id] = existing.id;
+            return;
+          }
+          run(`INSERT INTO product_group (name, parent_id, color, sort_order) VALUES (?,?,?,?)`, [
+            String(g.Name || 'Group'),
+            parentNew,
+            importColor(g.Color),
+            i,
+          ]);
+          groupIdMap[g.Id] = get(`SELECT last_insert_rowid() AS id`).id;
+          summary.groups++;
+        });
+      }
+
+      /* taxes */
+      if (opts.products && sqliteTable(src, 'Tax')) {
+        for (const t of sqliteRows(src, 'Tax')) {
+          if (!t.Name) continue;
+          if (num(t.IsFixed)) {
+            summary.warnings.push(`Tax "${t.Name}" is a fixed-amount tax and was skipped.`);
+            continue;
+          }
+          let existing = get(`SELECT id FROM tax_rate WHERE lower(name)=lower(?)`, [String(t.Name)]);
+          if (!existing) {
+            run(`INSERT INTO tax_rate (name, percent, compound, active, is_default) VALUES (?,?,?,?,0)`, [
+              String(t.Name),
+              num(t.Rate),
+              0,
+              t.IsEnabled ? 1 : 0,
+            ]);
+            existing = get(`SELECT last_insert_rowid() AS id`);
+            summary.taxes++;
+          }
+          taxIdMap[t.Id] = existing.id;
+        }
+      }
+
+      /* products */
+      if (opts.products) {
+        const existingProducts = all(`SELECT id, name, code FROM product`);
+        const byCode = new Map();
+        const byName = new Map();
+        for (const p of existingProducts) {
+          if (p.code) byCode.set(String(p.code).toLowerCase(), p.id);
+          if (!byName.has(String(p.name).toLowerCase())) byName.set(String(p.name).toLowerCase(), p.id);
+        }
+        const existingBarcodes = new Map();
+        for (const b of all(`SELECT product_id, value FROM barcode`)) {
+          existingBarcodes.set(String(b.value).toLowerCase(), b.product_id);
+        }
+
+        const barcodesByProduct = {};
+        if (sqliteTable(src, 'Barcode')) {
+          for (const b of sqliteRows(src, 'Barcode')) {
+            (barcodesByProduct[b.ProductId] = barcodesByProduct[b.ProductId] || []).push(String(b.Value || ''));
+          }
+        }
+        const taxByProduct = {};
+        if (sqliteTable(src, 'ProductTax')) {
+          for (const pt of sqliteRows(src, 'ProductTax')) {
+            (taxByProduct[pt.ProductId] = taxByProduct[pt.ProductId] || []).push(pt.TaxId);
+          }
+        }
+        const commentsByProduct = {};
+        if (sqliteTable(src, 'ProductComment')) {
+          for (const c of sqliteRows(src, 'ProductComment')) {
+            (commentsByProduct[c.ProductId] = commentsByProduct[c.ProductId] || []).push(String(c.Comment || ''));
+          }
+        }
+
+        let sortIndex = num((get(`SELECT COUNT(*) AS c FROM product`) || {}).c);
+        const products = sqliteRows(src, 'Product').sort(
+          (a, b) => num(a.Rank) - num(b.Rank) || num(a.Id) - num(b.Id)
+        );
+        for (const p of products) {
+          const name = String(p.Name || '').trim();
+          if (!name) continue;
+          const code = String(p.Code || '').trim() || (p.PLU != null ? String(p.PLU) : '');
+          const bars = (barcodesByProduct[p.Id] || []).map((v) => String(v || '').trim()).filter(Boolean);
+
+          let existingId = null;
+          if (code && byCode.has(code.toLowerCase())) existingId = byCode.get(code.toLowerCase());
+          if (!existingId && byName.has(name.toLowerCase())) existingId = byName.get(name.toLowerCase());
+          if (!existingId) {
+            for (const b of bars) {
+              if (existingBarcodes.has(b.toLowerCase())) {
+                existingId = existingBarcodes.get(b.toLowerCase());
+                break;
+              }
+            }
+          }
+
+          if (existingId) {
+            productIdMap[p.Id] = existingId;
+            summary.products_skipped++;
+            for (const b of bars) {
+              if (!existingBarcodes.has(b.toLowerCase())) {
+                run(`INSERT INTO barcode (product_id, value) VALUES (?,?)`, [existingId, b]);
+                existingBarcodes.set(b.toLowerCase(), existingId);
+              }
+            }
+            continue;
+          }
+
+          const groupId = p.ProductGroupId == null ? null : groupIdMap[p.ProductGroupId] || null;
+          const unit = String(p.MeasurementUnit || 'pcs').trim() || 'pcs';
+          const price = cents(p.Price);
+          const cost = cents(p.Cost);
+          run(
+            `INSERT INTO product (name, code, unit, group_id, active, is_service, cost, price,
+              price_incl_tax, price_change_allowed, default_qty, age_restricted, color, image,
+              description, low_stock, sort_order)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+              name,
+              code || null,
+              unit,
+              groupId,
+              p.IsEnabled ? 1 : 0,
+              p.IsService ? 1 : 0,
+              cost,
+              price,
+              p.IsTaxInclusivePrice ? 1 : 0,
+              p.IsPriceChangeAllowed ? 1 : 0,
+              p.IsUsingDefaultQuantity ? 1 : 0,
+              num(p.AgeRestriction) > 0 ? 1 : 0,
+              importColor(p.Color),
+              p.Image ? importBlob(p.Image) : null,
+              String(p.Description || ''),
+              0,
+              sortIndex++,
+            ]
+          );
+          const newId = get(`SELECT last_insert_rowid() AS id`).id;
+          productIdMap[p.Id] = newId;
+          summary.products++;
+          byName.set(name.toLowerCase(), newId);
+          if (code) byCode.set(code.toLowerCase(), newId);
+
+          const values = bars.length ? bars : code ? [code] : [];
+          for (const b of values) {
+            run(`INSERT INTO barcode (product_id, value) VALUES (?,?)`, [newId, b]);
+            existingBarcodes.set(b.toLowerCase(), newId);
+          }
+          const taxIds = (taxByProduct[p.Id] || []).map((id) => taxIdMap[id]).filter(Boolean);
+          taxIds.forEach((taxId, i) => {
+            run(`INSERT INTO product_tax (product_id, tax_rate_id, sort_order) VALUES (?,?,?)`, [newId, taxId, i + 1]);
+          });
+          (commentsByProduct[p.Id] || []).forEach((text, i) => {
+            const clean = String(text || '').trim();
+            if (clean) run(`INSERT INTO product_comment (product_id, text, sort_order) VALUES (?,?,?)`, [newId, clean, i + 1]);
+          });
+          run(`INSERT INTO stock_item (product_id, quantity, avg_cost) VALUES (?,?,0)`, [newId, 0]);
+        }
+
+        /* stock on hand */
+        if (sqliteTable(src, 'Stock')) {
+          const qtyByProduct = {};
+          for (const s of sqliteRows(src, 'Stock')) {
+            const pid = productIdMap[s.ProductId];
+            if (!pid) continue;
+            qtyByProduct[pid] = num(qtyByProduct[pid]) + num(s.Quantity);
+          }
+          for (const key of Object.keys(qtyByProduct)) {
+            const pid = Number(key);
+            const qty = qtyByProduct[key];
+            const prod = get(`SELECT cost FROM product WHERE id=?`, [pid]) || {};
+            run(`UPDATE stock_item SET quantity=?, avg_cost=? WHERE product_id=?`, [qty, num(prod.cost), pid]);
+            if (qty !== 0) {
+              run(
+                `INSERT INTO stock_movement (product_id, document_id, movement, quantity, unit_cost, occurred_at)
+                 VALUES (?,?,?,?,?,?)`,
+                [pid, null, 'import', qty, num(prod.cost), nowIso()]
+              );
+            }
+            summary.stock++;
+          }
+        }
+      }
+
+      /* customers & suppliers */
+      if (opts.customers && sqliteTable(src, 'Customer')) {
+        const existingCustomers = all(`SELECT id, name, phone, email FROM customer`);
+        const findCustomer = (name, phone, email) => {
+          const n = String(name || '').toLowerCase();
+          const byName = existingCustomers.find((c) => String(c.name || '').toLowerCase() === n);
+          if (byName) return byName.id;
+          if (phone) {
+            const byPhone = existingCustomers.find((c) => c.phone && String(c.phone) === String(phone));
+            if (byPhone) return byPhone.id;
+          }
+          if (email) {
+            const byEmail = existingCustomers.find((c) => c.email && String(c.email).toLowerCase() === String(email).toLowerCase());
+            if (byEmail) return byEmail.id;
+          }
+          return null;
+        };
+        const cardsByCustomer = {};
+        if (sqliteTable(src, 'LoyaltyCard')) {
+          for (const lc of sqliteRows(src, 'LoyaltyCard')) {
+            (cardsByCustomer[lc.CustomerId] = cardsByCustomer[lc.CustomerId] || []).push(String(lc.CardNumber || ''));
+          }
+        }
+
+        for (const c of sqliteRows(src, 'Customer')) {
+          const name = String(c.Name || c.Code || '').trim();
+          if (!name) continue;
+          const phone = String(c.PhoneNumber || '');
+          const email = String(c.Email || '');
+          const type = num(c.IsSupplier) && !num(c.IsCustomer) ? 'supplier' : 'customer';
+          let existingId = findCustomer(name, phone, email);
+          if (existingId) {
+            customerIdMap[c.Id] = existingId;
+            summary.customers_skipped++;
+          } else {
+            run(
+              `INSERT INTO customer (type, name, company, email, phone, address, country_id, tax_id, notes,
+                active, discount_type, discount_value, balance) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              [
+                type,
+                name,
+                '',
+                email,
+                phone,
+                importAddress(c),
+                null,
+                String(c.TaxNumber || ''),
+                '',
+                c.IsEnabled ? 1 : 0,
+                null,
+                0,
+                0,
+              ]
+            );
+            existingId = get(`SELECT last_insert_rowid() AS id`).id;
+            existingCustomers.push({ id: existingId, name, phone, email });
+            customerIdMap[c.Id] = existingId;
+            summary.customers++;
+          }
+        }
+
+        for (const oldId of Object.keys(customerIdMap)) {
+          const newId = customerIdMap[oldId];
+          for (const card of cardsByCustomer[oldId] || []) {
+            const value = String(card || '').trim();
+            if (!value) continue;
+            const dup = get(`SELECT id FROM loyalty_card WHERE number=?`, [value]);
+            if (!dup) {
+              run(`INSERT INTO loyalty_card (customer_id, number, active) VALUES (?,?,1)`, [newId, value]);
+              summary.loyalty++;
+            }
+          }
+        }
+      }
+
+      /* payment types */
+      if (opts.paymentTypes && sqliteTable(src, 'PaymentType')) {
+        const byName = new Map();
+        for (const pt of all(`SELECT id, name FROM payment_type`)) byName.set(String(pt.name).toLowerCase(), pt.id);
+        let maxSort = num((get(`SELECT MAX(sort_order) AS m FROM payment_type`) || {}).m);
+        const rows = sqliteRows(src, 'PaymentType').sort((a, b) => num(a.Ordinal) - num(b.Ordinal));
+        for (const pt of rows) {
+          const name = String(pt.Name || '').trim();
+          if (!name || byName.has(name.toLowerCase())) continue;
+          const kind = /cash/i.test(name) ? 'cash' : /card|debit|credit/i.test(name) ? 'card' : 'other';
+          run(
+            `INSERT INTO payment_type (name, kind, color, icon, active, is_default, sort_order)
+             VALUES (?,?,?,?,?,?,?)`,
+            [name, kind, kind === 'cash' ? '#047857' : '#4f46e5', null, pt.IsEnabled ? 1 : 0, 0, ++maxSort]
+          );
+          byName.set(name.toLowerCase(), get(`SELECT last_insert_rowid() AS id`).id);
+          summary.payment_types++;
+        }
+        if (!get(`SELECT id FROM payment_type WHERE is_default=1`)) {
+          const cash = get(`SELECT id FROM payment_type WHERE kind='cash' AND active=1 ORDER BY id LIMIT 1`);
+          if (cash) run(`UPDATE payment_type SET is_default=1 WHERE id=?`, [cash.id]);
+        }
+      }
+
+      /* company */
+      if (opts.company && sqliteTable(src, 'Company')) {
+        const row = sqliteRows(src, 'Company')[0];
+        const current = getCompany() || {};
+        const isPlaceholder = !current.name || current.name === 'Aroklon' || current.name === 'Aroklon Store';
+        if (row && isPlaceholder) {
+          const address = importAddress(row) || String(row.Address || '');
+          saveCompany({
+            ...current,
+            name: String(row.Name || current.name || 'Aroklon'),
+            address,
+            phone: String(row.PhoneNumber || current.phone || ''),
+            email: String(row.Email || current.email || ''),
+            tax_id: String(row.TaxNumber || current.tax_id || ''),
+            logo: row.Logo ? importBlob(row.Logo) : current.logo || null,
+            receipt_header: current.receipt_header || '',
+            receipt_footer: current.receipt_footer || '',
+            currency: current.currency || 'IDR',
+            symbol: current.symbol || 'Rp',
+            timezone: current.timezone || '',
+          });
+          summary.company = true;
+        }
+      }
+    });
+
+    if (summary.products_skipped) {
+      summary.warnings.push(`${summary.products_skipped} product(s) already existed and were skipped.`);
+    }
+    if (summary.replaced) {
+      summary.warnings.push('The existing catalogue, customers, taxes and stock were replaced.');
+    }
+    persist();
+    return { ok: true, summary };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e), summary };
+  } finally {
+    close();
+  }
+}
+
 module.exports = {
   init,
   persist,
@@ -2339,6 +2823,7 @@ module.exports = {
   listZReports,
   dashboard,
   report,
+  importAronium,
   backup,
   restore,
   factoryReset,

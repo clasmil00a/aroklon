@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   meta: () => ipcRenderer.invoke('app:meta'),
   backup: () => ipcRenderer.invoke('app:backup'),
   restore: () => ipcRenderer.invoke('app:restore'),
+  pickAronium: () => ipcRenderer.invoke('app:pick-aronium'),
   print: (html, opts) => ipcRenderer.invoke('app:print', html, opts),
   preview: (html) => ipcRenderer.invoke('app:preview', html),
   openDataDir: () => ipcRenderer.invoke('app:open-data-dir'),

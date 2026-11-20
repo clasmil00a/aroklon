@@ -940,6 +940,18 @@
               </div>
               <div id="update-status" class="small muted mt8"></div>
             </div></div>
+            <div class="card mb16"><div class="card-body">
+              <div class="row wrap gap8">
+                <div>
+                  <div class="strong">${esc(t('Import from Aronium'))}</div>
+                  <div class="small muted">${esc(
+                    t('Copy products, stock, customers, taxes and settings from an Aronium Lite database (pos.db). Aronium Pro uses SQL Server and is not supported.')
+                  )}</div>
+                </div>
+                <span class="spacer"></span>
+                <button class="btn" data-action="aronium-import">${icon('upload', 15)} ${esc(t('Import Aronium database'))}</button>
+              </div>
+            </div></div>
             <div class="grid" style="grid-template-columns:1fr 1fr;max-width:900px">
               <div class="card"><div class="card-body">
                 <div class="strong mb8">Backup & restore</div>
@@ -1077,6 +1089,91 @@
   A.action('data-backup', () => window.api.backup());
   A.action('data-restore', () => window.api.restore());
   A.action('data-folder', () => window.api.openDataDir());
+
+  A.action('aronium-import', async () => {
+    const picked = await window.api.pickAronium();
+    if (!picked || !picked.ok || !picked.path) return;
+    A.modal(
+      `<form data-form="aronium-import">
+        <input type="hidden" name="path" value="${attr(picked.path)}" />
+        ${SH.modalHead(t('Import from Aronium'), t('Choose what to copy into Aroklon'))}
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="span2">
+              <div class="label mb8">${esc(t('Database file'))}</div>
+              <div class="small mono" style="word-break:break-all">${esc(picked.path)}</div>
+            </div>
+            <div class="span2 row wrap gap12">
+              ${SH.checkbox('products', t('Products, groups, barcodes, taxes and stock'), true)}
+              ${SH.checkbox('customers', t('Customers, suppliers and loyalty cards'), true)}
+              ${SH.checkbox('paymentTypes', t('Payment types'), true)}
+              ${SH.checkbox('company', t('Company details (only when Aroklon is still blank)'), true)}
+              ${SH.checkbox('replace', t('Replace the current catalogue instead of merging'), false)}
+            </div>
+            <div class="span2">
+              <p class="hint">${esc(
+                t('A merge keeps what you already have and skips duplicates. Replace clears products, customers, taxes and stock first, and only works while there are no sales.')
+              )}<br />${esc(t('Close Aronium before importing so the database file is not locked.'))}</p>
+            </div>
+          </div>
+        </div>
+        ${SH.modalFoot(t('Start import'))}
+      </form>`,
+      { size: 'wide' }
+    );
+  });
+
+  A.action('form:aronium-import', async (form) => {
+    const fd = new FormData(form);
+    const res = await A.api('importAronium', [
+      String(fd.get('path') || ''),
+      {
+        products: fd.get('products') === '1',
+        customers: fd.get('customers') === '1',
+        paymentTypes: fd.get('paymentTypes') === '1',
+        company: fd.get('company') === '1',
+        replace: fd.get('replace') === '1',
+      },
+    ]);
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Import failed');
+    A.closeModal();
+    await A.reloadCatalog();
+    await A.reloadReference();
+    A.render();
+    const s = res.summary || {};
+    const rows = [
+      [t('Products'), s.products || 0],
+      [t('Skipped (already existed)'), s.products_skipped || 0],
+      [t('Groups'), s.groups || 0],
+      [t('Tax rates'), s.taxes || 0],
+      [t('Customers & suppliers'), s.customers || 0],
+      [t('Loyalty cards'), s.loyalty || 0],
+      [t('Payment types'), s.payment_types || 0],
+      [t('Stock records'), s.stock || 0],
+    ];
+    A.modal(
+      `<div class="modal-head">
+        <div><h2>${esc(t('Import complete'))}</h2><div class="sub">${esc(pickedName(fd.get('path')))}</div></div>
+        <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div>
+      </div>
+      <div class="modal-body">
+        ${miniTable([t('Imported'), ''], rows)}
+        ${(s.warnings || []).length ? `<div class="hint mt12">${s.warnings.map((w) => esc(w)).join('<br />')}</div>` : ''}
+        ${s.company ? `<div class="hint mt8">${esc(t('Company details updated.'))}</div>` : ''}
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-cancel>Close</button>
+        <button type="button" class="btn primary" data-action="aronium-done">${esc(t('Done'))}</button>
+      </div>`
+    );
+    A.toast(t('Import complete'), 'good');
+  });
+
+  function pickedName(p) {
+    return String(p || '').split(/[\\/]/).pop() || '';
+  }
+
+  A.action('aronium-done', () => A.closeModal());
   A.action('data-reset', async () => {
     const ok = await A.confirm({
       title: 'Reset all data?',
