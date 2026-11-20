@@ -1004,7 +1004,7 @@ function listProducts(opts = {}) {
      LEFT JOIN stock_item s ON s.product_id=p.id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
      ORDER BY p.sort_order, p.name`;
-  return all(sql, params).map(hydrateProduct);
+  return hydrateProducts(all(sql, params));
 }
 
 /* ----------------------------------------------------------- product units */
@@ -1074,6 +1074,99 @@ function hydrateProduct(p) {
   p.units = unitList(p);
   p.default_unit = (p.units.find((u) => u.is_default) || {}).name || p.unit;
   return p;
+}
+
+// Bulk version for lists. Thousands of products would otherwise mean thousands
+// of small queries; this loads related rows in four statements.
+function hydrateProducts(rows) {
+  if (!rows || !rows.length) return rows || [];
+  const ids = rows.map((r) => r.id);
+  // Chunk the IN lists: SQLite limits the number of bound parameters.
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += 400) chunks.push(ids.slice(i, i + 400));
+  const barcodeRows = [];
+  const unitRows = [];
+  const taxRows = [];
+  const commentRows = [];
+  for (const part of chunks) {
+    const ph = part.map(() => '?').join(',');
+    barcodeRows.push(
+      ...all(
+        `SELECT id, product_id, value, unit_id FROM barcode WHERE product_id IN (${ph}) ORDER BY product_id, id`,
+        part
+      )
+    );
+    unitRows.push(
+      ...all(
+        `SELECT * FROM product_unit WHERE product_id IN (${ph}) ORDER BY product_id, sort_order, factor`,
+        part
+      )
+    );
+    taxRows.push(
+      ...all(
+        `SELECT pt.product_id, t.* FROM product_tax pt JOIN tax_rate t ON t.id=pt.tax_rate_id
+         WHERE pt.product_id IN (${ph}) ORDER BY pt.product_id, pt.sort_order`,
+        part
+      )
+    );
+    commentRows.push(
+      ...all(
+        `SELECT * FROM product_comment WHERE product_id IN (${ph}) ORDER BY product_id, sort_order`,
+        part
+      )
+    );
+  }
+
+  const unitName = new Map();
+  for (const u of unitRows) unitName.set(u.id, u.name);
+
+  const byProduct = { barcodes: {}, barcode_rows: {}, units: {}, taxes: {}, comments: {} };
+  for (const b of barcodeRows) {
+    (byProduct.barcodes[b.product_id] = byProduct.barcodes[b.product_id] || []).push(b.value);
+    (byProduct.barcode_rows[b.product_id] = byProduct.barcode_rows[b.product_id] || []).push({
+      value: b.value,
+      unit: b.unit_id ? unitName.get(b.unit_id) || '' : '',
+    });
+  }
+  for (const u of unitRows) {
+    (byProduct.units[u.product_id] = byProduct.units[u.product_id] || []).push({
+      id: u.id,
+      name: u.name,
+      factor: num(u.factor, 1),
+      price: u.price == null ? null : num(u.price),
+      is_default: !!u.is_default,
+      sort_order: u.sort_order,
+    });
+  }
+  for (const t of taxRows) {
+    (byProduct.taxes[t.product_id] = byProduct.taxes[t.product_id] || []).push(t);
+  }
+  for (const c of commentRows) {
+    (byProduct.comments[c.product_id] = byProduct.comments[c.product_id] || []).push(c);
+  }
+
+  return rows.map((r) => {
+    const units = (byProduct.units[r.id] || []).slice();
+    units.push({
+      id: null,
+      name: r.unit || 'pcs',
+      factor: 1,
+      price: null,
+      is_default: !units.some((u) => u.is_default),
+      sort_order: 0,
+      base: true,
+    });
+    return {
+      ...r,
+      barcodes: byProduct.barcodes[r.id] || [],
+      barcode_rows: byProduct.barcode_rows[r.id] || [],
+      taxes: byProduct.taxes[r.id] || [],
+      comments: byProduct.comments[r.id] || [],
+      units,
+      default_unit: (units.find((u) => u.is_default) || {}).name || r.unit,
+      stock: { quantity: num(r.quantity), avg_cost: num(r.avg_cost) },
+    };
+  });
 }
 
 function getProduct(id) {

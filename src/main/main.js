@@ -569,6 +569,58 @@ function createWindow() {
           'flow-customer'
         );
 
+        if (process.env.AROKLON_CATALOGUE_TEST) {
+          out.flowCatalogue = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                const saved = await A.api('saveProduct', {
+                  name: 'Gula Test', code: 'GULA1', unit: 'kg', price: 19000, cost: 12000,
+                  active: true, tax_rate_ids: [],
+                  units: [], barcodes: [],
+                });
+                await A.reloadCatalog(); await s(250);
+
+                A.actions['product-edit']({ id: String(saved.id) });
+                await s(300);
+                const splitBtn = document.querySelector('[data-action="unit-split"]');
+                res.splitButton = !!splitBtn;
+                if (splitBtn) { splitBtn.click(); await s(250); }
+                res.rows = [...document.querySelectorAll('.unit-row')].map((r) => [
+                  r.querySelector('.unit-name').value,
+                  r.querySelector('.unit-factor').value,
+                ]);
+                const form = document.querySelector('form[data-form="save-product"]');
+                if (form) { form.requestSubmit(); await s(700); }
+                const full = await A.api('getProduct', saved.id);
+                res.savedUnits = (full.units || []).map((u) => [u.name, u.factor, u.price]);
+
+                A.go('products'); await s(400);
+                const pi = document.getElementById('product-search');
+                if (pi) {
+                  pi.value = 'Gula';
+                  pi.dispatchEvent(new Event('input', { bubbles: true }));
+                  await s(300);
+                }
+                res.productRows = [...document.querySelectorAll('table.data tbody tr')].map((tr) => tr.innerText.replace(/\s+/g, ' ').trim());
+                res.productBadge = (document.querySelector('.card-head .badge') || {}).textContent || '';
+
+                A.go('stock'); await s(500);
+                const si = document.getElementById('stock-search');
+                if (si) {
+                  si.value = 'Gula';
+                  si.dispatchEvent(new Event('input', { bubbles: true }));
+                  await s(300);
+                }
+                res.stockRows = [...document.querySelectorAll('table.data tbody tr')].map((tr) => tr.innerText.replace(/\s+/g, ' ').trim());
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-catalogue'
+          );
+        }
+
         if (process.env.AROKLON_RESET_TEST) {
           out.flowReset = await js(
             `(async () => {

@@ -72,6 +72,43 @@
 
   SH.badge = (text, kind = 'gray') => `<span class="badge ${kind}">${text}</span>`;
 
+  /* --------------------------------------------------------- list paging */
+
+  const PAGE_SIZE = 100;
+
+  function pageSlice(list, page) {
+    const total = list.length;
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const current = Math.min(Math.max(1, Number(page) || 1), pages);
+    const start = (current - 1) * PAGE_SIZE;
+    return { rows: list.slice(start, start + PAGE_SIZE), page: current, pages, start, total };
+  }
+
+  function pageBar(info, action, label) {
+    if (info.total <= PAGE_SIZE) return '';
+    return `<div class="row between wrap gap8 mt8 small muted">
+      <span>${esc(label)} ${info.start + 1}–${Math.min(info.start + PAGE_SIZE, info.total)} / ${info.total}</span>
+      <div class="row gap8">
+        <button class="btn sm" data-action="${action}" data-page="${info.page - 1}" ${info.page <= 1 ? 'disabled' : ''}>${esc(
+          t('Prev')
+        )}</button>
+        <span class="mono">${info.page} / ${info.pages}</span>
+        <button class="btn sm" data-action="${action}" data-page="${info.page + 1}" ${
+          info.page >= info.pages ? 'disabled' : ''
+        }>${esc(t('Next'))}</button>
+      </div>
+    </div>`;
+  }
+
+  function matchesSearch(p, q) {
+    if (!q) return true;
+    return [p.name, p.code, p.unit, p.group_name, ...(p.barcodes || [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(q);
+  }
+
   SH.docTypeLabel = (type) =>
     t(
       {
@@ -333,6 +370,8 @@
       const disc = activeDiscount();
       const customer = (A.state.customers || []).find((c) => String(c.id) === String(cart.customer_id));
       const products = filteredProducts();
+      const MAX_TILES = 200;
+      const shownProducts = products.length > MAX_TILES ? products.slice(0, MAX_TILES) : products;
       const groups = A.state.groups || [];
       const held = localStorage.getItem('aroklon.held');
 
@@ -373,7 +412,17 @@
           <div class="catalog-body">
             ${
               products.length
-                ? `<div class="product-grid" id="product-grid">${products.map(tileHtml).join('')}</div>`
+                ? `<div class="product-grid" id="product-grid">${shownProducts.map(tileHtml).join('')}</div>
+                   ${
+                     products.length > shownProducts.length
+                       ? `<div class="hint" style="padding:8px 12px">${esc(
+                           t('Showing the first {n} of {total}. Search to narrow the list.', {
+                             n: shownProducts.length,
+                             total: products.length,
+                           })
+                         )}</div>`
+                       : ''
+                   }`
                 : SH.empty({
                     icon: 'search',
                     title: t('No products found'),
@@ -1371,7 +1420,11 @@
       const groups = A.state.groups || [];
       const products = A.state.products || [];
       const gid = A.state.productGroup;
-      const list = gid ? products.filter((p) => String(p.group_id) === String(gid)) : products;
+      const q = String(A.state.productSearch || '').trim().toLowerCase();
+      let list = gid ? products.filter((p) => String(p.group_id) === String(gid)) : products.slice();
+      if (q) list = list.filter((p) => matchesSearch(p, q));
+      const info = pageSlice(list, A.state.productPage);
+      const listLength = list.length;
       return `<div class="split-2">
         <div class="card" style="flex:0 0 230px;display:flex;flex-direction:column">
           <div class="card-head"><h2>Groups</h2><div class="right"><button class="icon-btn" data-action="group-new" title="New group">${icon('plus', 16)}</button></div></div>
@@ -1388,17 +1441,23 @@
           </div>
         </div>
         <div class="card" style="flex:1;min-width:0;display:flex;flex-direction:column">
-          <div class="card-head"><div class="row gap8"><h2>${gid ? esc((groups.find((g) => String(g.id) === String(gid)) || {}).name || 'Products') : 'All products'}</h2><span class="badge gray">${list.length}</span></div>
+          <div class="card-head"><div class="row gap8"><h2>${gid ? esc((groups.find((g) => String(g.id) === String(gid)) || {}).name || 'Products') : 'All products'}</h2><span class="badge gray">${listLength}</span></div>
             <div class="right">
               <button class="btn sm" data-action="products-refresh">${icon('refresh', 14)} Refresh</button>
               <button class="btn primary sm" data-action="product-new">${icon('plus', 15)} New product</button>
             </div>
           </div>
+          <div class="row gap8" style="padding:8px 12px;border-bottom:1px solid var(--line)">
+            <div class="search-box" style="flex:1">${icon('search', 16)}<input id="product-search" class="input" data-input="product-search" placeholder="${esc(
+              t('Search name, code or barcode…')
+            )}" value="${attr(A.state.productSearch || '')}" autocomplete="off" /></div>
+            ${q ? `<button class="btn sm" data-action="product-search-clear">${esc(t('Clear'))}</button>` : ''}
+          </div>
           <div class="table-wrap" style="flex:1">
             ${
-              list.length
+              info.rows.length
                 ? `<table class="data"><thead><tr><th>Product</th><th>Code</th><th>Group</th><th class="num">Cost</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr></thead><tbody>
-                  ${list
+                  ${info.rows
                     .map(
                       (p) => `<tr>
                         <td><div class="row gap8"><span style="width:26px;height:26px;border-radius:7px;background:${attr(p.color || '#e2e8f0')};display:inline-block"></span><div><div class="strong">${esc(
@@ -1418,8 +1477,8 @@
                       </tr>`
                     )
                     .join('')}
-                  </tbody></table>`
-                : SH.empty({ icon: 'products', title: 'No products', text: 'Create your first product.', action: `<button class="btn primary" data-action="product-new">${icon('plus', 15)} New product</button>` })
+                  </tbody></table>${pageBar(info, 'product-page', 'Products')}`
+                : SH.empty({ icon: 'products', title: 'No products', text: q ? 'Nothing matches this search.' : 'Create your first product.', action: `<button class="btn primary" data-action="product-new">${icon('plus', 15)} New product</button>` })
             }
           </div>
         </div>
@@ -1429,6 +1488,37 @@
 
   A.action('product-group', (ds) => {
     A.state.productGroup = ds.id ? Number(ds.id) : null;
+    A.state.productPage = 1;
+    A.render();
+  });
+
+  A.action('input:product-search', (ds, el) => {
+    const caret = el.selectionStart;
+    A.state.productSearch = el.value;
+    A.state.productPage = 1;
+    A.render();
+    const next = document.getElementById('product-search');
+    if (next) {
+      next.focus();
+      try { next.setSelectionRange(caret, caret); } catch (e) {}
+    }
+  });
+
+  A.action('product-search-clear', () => {
+    A.state.productSearch = '';
+    A.state.productPage = 1;
+    A.render();
+    const el = document.getElementById('product-search');
+    if (el) el.focus();
+  });
+
+  A.action('product-search-focus', () => {
+    const el = document.getElementById('product-search');
+    if (el) { el.focus(); el.select(); }
+  });
+
+  A.action('product-page', (ds) => {
+    A.state.productPage = Number(ds.page) || 1;
     A.render();
   });
 
@@ -1479,19 +1569,34 @@
     );
   }
 
-  function unitRowHtml(u) {
+  function splitPresets(base) {
+    const b = String(base || '').toLowerCase().trim();
+    if (b === 'kg' || b === 'kilogram') return [['500 gr', 0.5], ['250 gr', 0.25], ['100 gr', 0.1]];
+    if (b === 'l' || b === 'liter' || b === 'ltr') return [['500 ml', 0.5], ['250 ml', 0.25]];
+    return [];
+  }
+
+  function splitButtonLabel(base) {
+    const b = String(base || '').toLowerCase().trim();
+    return b === 'kg' || b === 'kilogram' ? '500 gr & 250 gr' : '500 ml & 250 ml';
+  }
+
+  function unitRowHtml(u, baseUnit) {
     const price = u.price == null || u.price === '' ? '' : u.price / 100;
-    return `<div class="row gap8 unit-row mt8" style="align-items:flex-end;flex-wrap:wrap">
+    const factor = u.factor != null ? u.factor : 1;
+    const base = baseUnit || 'pcs';
+    return `<div class="row gap8 unit-row mt8" style="align-items:flex-end;flex-wrap:wrap" data-base="${attr(base)}">
       <div class="field" style="min-width:130px">
         <label class="small muted">${esc(t('Unit'))}</label>
-        <input class="input unit-name" value="${attr(u.name || '')}" placeholder="${attr(t('e.g. box'))}" />
+        <input class="input unit-name" data-input="unit-name" value="${attr(u.name || '')}" placeholder="${attr(t('e.g. box'))}" />
       </div>
-      <div class="field" style="min-width:130px">
-        <label class="small muted">${esc(t('Base units per unit'))}</label>
-        <input class="input unit-factor" type="number" step="0.001" min="0" value="${attr(u.factor != null ? u.factor : 1)}" />
+      <div class="field" style="min-width:150px">
+        <label class="small muted">1 <span class="unit-name-label">${esc(u.name || t('unit'))}</span> = … ${esc(base)}</label>
+        <input class="input unit-factor" type="number" step="0.001" min="0" value="${attr(factor)}" data-input="unit-factor" />
+        <div class="hint unit-preview">${factor > 0 ? `= ${U.qty(factor)} ${esc(base)}` : ''}</div>
       </div>
       <div class="field" style="min-width:120px">
-        <label class="small muted">${esc(t('Price'))}</label>
+        <label class="small muted">${esc(t('Price'))} / ${esc(u.name || t('unit'))}</label>
         <input class="input unit-price" type="number" step="0.01" min="0" value="${attr(price)}" placeholder="${attr(t('Auto'))}" />
       </div>
       <label class="row gap8 small" style="padding-bottom:8px">
@@ -1538,7 +1643,7 @@
 
     const unitRows = (p.units || [])
       .filter((u) => !u.base)
-      .map(unitRowHtml)
+      .map((u) => unitRowHtml(u, p.unit || 'pcs'))
       .join('');
 
     A.modal(
@@ -1550,7 +1655,7 @@
         <div class="tabs">
           <button type="button" class="tab active" data-action="tab" data-target="pt-details">Details</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-price">Price & tax</button>
-          <button type="button" class="tab" data-action="tab" data-target="pt-units">Units &amp; prices</button>
+          <button type="button" class="tab" data-action="tab" data-target="pt-units">${esc(t('Units & prices'))}</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-barcodes">Barcodes</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-comments">Comments</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-look">Image & colour</button>
@@ -1591,13 +1696,18 @@
           <div data-tab-panel="pt-units" style="display:none">
             <div class="row between wrap gap8">
               <div>
-                <div class="label">Additional units</div>
-                <div class="hint">The base unit <b>${esc(p.unit || 'pcs')}</b> keeps the stock. Extra units convert to it, e.g. 1 dus = 12 botol.</div>
+                <div class="label">${esc(t('Additional units & price tiers'))}</div>
+                <div class="hint">The base unit <b>${esc(p.unit || 'pcs')}</b> keeps the stock. Extra units convert to it, e.g. 1 dus = 12 pcs, 1 kg = 1000 gr.</div>
               </div>
-              <button type="button" class="btn sm" data-action="unit-add">${icon('plus', 14)} Add unit</button>
+              <div class="row gap8">
+                ${splitPresets(p.unit).length ? `<button type="button" class="btn sm" data-action="unit-split">${icon('plus', 14)} ${esc(
+                  t('Add')
+                )} ${esc(splitButtonLabel(p.unit))}</button>` : ''}
+                <button type="button" class="btn sm" data-action="unit-add">${icon('plus', 14)} Add unit</button>
+              </div>
             </div>
             <div id="unit-rows">${unitRows || `<div class="small muted mt8">No extra units. This product sells only in ${esc(p.unit || 'pcs')}.</div>`}</div>
-            <p class="hint mt8">Leave the price blank to calculate it from the base price × factor. Tick Default to add that unit straight away and skip the unit picker.</p>
+            <p class="hint mt8">Isi faktor = berapa satuan dasar dalam 1 satuan ini. Contoh jika satuan dasar <b>Kg</b>: <b>1 kg = 1000 gr</b>, jadi isi <b>0.001</b> untuk gr, <b>0.5</b> untuk 500 gr, <b>0.25</b> untuk 250 gr. Harga kosong = harga dasar × faktor. Centang Default untuk menjual satuan itu langsung saat produk ditempel.</p>
           </div>
 
           <div data-tab-panel="pt-barcodes" style="display:none">
@@ -1667,15 +1777,59 @@
     div.querySelector('input').focus();
   });
 
+  function unitBaseName() {
+    const form = document.querySelector('form[data-form="save-product"]');
+    const input = form ? form.querySelector('input[name="unit"]') : null;
+    return (input && input.value.trim()) || 'pcs';
+  }
+
   A.action('unit-add', () => {
     const wrap = document.getElementById('unit-rows');
     if (!wrap) return;
     const empty = wrap.querySelector('.small.muted');
     if (empty) empty.remove();
-    wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name: '', factor: 1, price: null, is_default: false }));
+    wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name: '', factor: 1, price: null, is_default: false }, unitBaseName()));
     const rows = wrap.querySelectorAll('.unit-row');
     const last = rows[rows.length - 1];
     if (last) last.querySelector('.unit-name').focus();
+  });
+
+  A.action('unit-split', () => {
+    const wrap = document.getElementById('unit-rows');
+    if (!wrap) return;
+    const base = unitBaseName();
+    const presets = splitPresets(base);
+    if (!presets.length) return;
+    const empty = wrap.querySelector('.small.muted');
+    if (empty) empty.remove();
+    let added = 0;
+    for (const [name, factor] of presets) {
+      const exists = [...wrap.querySelectorAll('.unit-name')].some(
+        (i) => i.value.trim().toLowerCase() === name.toLowerCase()
+      );
+      if (exists) continue;
+      wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name, factor, price: null, is_default: false }, base));
+      added++;
+    }
+    A.toast(added ? `${added} ${t('units added')}` : 'Satuan itu sudah ada', added ? 'good' : 'warn');
+    const rows = wrap.querySelectorAll('.unit-row');
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector('.unit-name').focus();
+  });
+
+  A.action('input:unit-factor', (ds, el) => {
+    const row = el.closest('.unit-row');
+    if (!row) return;
+    const out = row.querySelector('.unit-preview');
+    if (!out) return;
+    const f = U.num(el.value, 0);
+    out.textContent = f > 0 ? `= ${U.qty(f)} ${row.dataset.base || ''}` : '';
+  });
+
+  A.action('input:unit-name', (ds, el) => {
+    const row = el.closest('.unit-row');
+    const label = row && row.querySelector('.unit-name-label');
+    if (label) label.textContent = el.value.trim() || 'unit';
   });
 
   A.action('unit-remove', (ds, el) => {
@@ -1746,18 +1900,30 @@
     meta: { title: t('Stock'), sub: t('Quantities on hand') },
     render() {
       const stock = A.state.stock || [];
+      const q = String(A.state.stockSearch || '').trim().toLowerCase();
+      let list = stock.slice();
+      if (q) list = list.filter((s) => [s.name, s.code, s.unit, s.group_name].filter(Boolean).join(' ').toLowerCase().includes(q));
+      if (A.state.stockLowOnly) list = list.filter((s) => !s.is_service && s.low_stock > 0 && s.quantity <= s.low_stock);
+      const info = pageSlice(list, A.state.stockPage);
       return `<div class="card">
-        <div class="card-head"><div class="row gap8"><h2>${esc(t('Quantities on hand'))}</h2><span class="badge gray">${esc(t('{n} items', { n: stock.length }))}</span></div>
+        <div class="card-head"><div class="row gap8"><h2>${esc(t('Quantities on hand'))}</h2><span class="badge gray">${esc(t('{n} items', { n: info.total }))}</span></div>
           <div class="right"><button class="btn sm" data-action="stock-refresh">${icon('refresh', 14)} Refresh</button></div>
+        </div>
+        <div class="row gap8 wrap" style="padding:8px 12px;border-bottom:1px solid var(--line)">
+          <div class="search-box" style="flex:1;min-width:180px">${icon('search', 16)}<input id="stock-search" class="input" data-input="stock-search" placeholder="${esc(
+            t('Search name, code or barcode…')
+          )}" value="${attr(A.state.stockSearch || '')}" autocomplete="off" /></div>
+          <button class="chip-filter ${A.state.stockLowOnly ? 'active' : ''}" data-action="stock-low">${esc(t('Low stock only'))}</button>
+          ${q ? `<button class="btn sm" data-action="stock-search-clear">${esc(t('Clear'))}</button>` : ''}
         </div>
         <div class="table-wrap">
           ${
-            stock.length
+            info.rows.length
               ? `<table class="data"><thead><tr><th>Product</th><th>Group</th><th class="num">On hand</th><th class="num">Avg cost</th><th class="num">Value</th><th>Status</th><th></th></tr></thead><tbody>
-                ${stock
+                ${info.rows
                   .map(
                     (s) => `<tr>
-                      <td><div class="strong">${esc(s.name)}</div><div class="small muted mono">${esc(s.code || '')}</div></td>
+                      <td><div class="strong">${esc(s.name)}</div><div class="small muted mono">${esc(s.code || '')}${s.unit ? ' · ' + esc(s.unit) : ''}</div></td>
                       <td><span class="badge gray">${esc(s.group_name || '—')}</span></td>
                       <td class="num mono strong">${U.qty(s.quantity)}</td>
                       <td class="num mono">${money(s.avg_cost)}</td>
@@ -1772,8 +1938,8 @@
                     </tr>`
                   )
                   .join('')}
-              </tbody></table>`
-              : SH.empty({ icon: 'stock', title: 'No stock records', text: 'Add products to start tracking stock.' })
+              </tbody></table>${pageBar(info, 'stock-page', 'Stock')}`
+              : SH.empty({ icon: 'stock', title: q || A.state.stockLowOnly ? 'No matching stock' : 'No stock records', text: q || A.state.stockLowOnly ? 'Try another search or filter.' : 'Add products to start tracking stock.' })
           }
         </div>
       </div>`;
@@ -1782,6 +1948,38 @@
 
   A.action('stock-refresh', async () => {
     A.state.stock = await A.api('listStock', {});
+    A.state.stockPage = 1;
+    A.render();
+  });
+
+  A.action('input:stock-search', (ds, el) => {
+    const caret = el.selectionStart;
+    A.state.stockSearch = el.value;
+    A.state.stockPage = 1;
+    A.render();
+    const next = document.getElementById('stock-search');
+    if (next) {
+      next.focus();
+      try { next.setSelectionRange(caret, caret); } catch (e) {}
+    }
+  });
+
+  A.action('stock-search-clear', () => {
+    A.state.stockSearch = '';
+    A.state.stockPage = 1;
+    A.render();
+    const el = document.getElementById('stock-search');
+    if (el) el.focus();
+  });
+
+  A.action('stock-low', () => {
+    A.state.stockLowOnly = !A.state.stockLowOnly;
+    A.state.stockPage = 1;
+    A.render();
+  });
+
+  A.action('stock-page', (ds) => {
+    A.state.stockPage = Number(ds.page) || 1;
     A.render();
   });
 
