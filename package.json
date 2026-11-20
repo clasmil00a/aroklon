@@ -3,7 +3,7 @@
   "productName": "Aroklon",
   "version": "1.0.5",
   "updateChannel": "tes",
-  "buildTag": "v1.0.5-tes.1",
+  "buildTag": "v1.0.5-tes.2",
   "description": "Aroklon - offline Windows point of sale",
   "main": "src/main/main.js",
   "author": "Aroklon",
