@@ -134,7 +134,8 @@ CREATE TABLE IF NOT EXISTS product (
 CREATE TABLE IF NOT EXISTS barcode (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_id INTEGER NOT NULL,
-  value TEXT NOT NULL
+  value TEXT NOT NULL,
+  unit_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS product_comment (
@@ -148,6 +149,18 @@ CREATE TABLE IF NOT EXISTS product_tax (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_id INTEGER NOT NULL,
   tax_rate_id INTEGER NOT NULL,
+  sort_order INTEGER DEFAULT 0
+);
+
+-- Additional selling units for a product. The product's own unit stays the
+-- base unit (factor 1); rows here are conversions such as box, kg or litre.
+CREATE TABLE IF NOT EXISTS product_unit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  factor REAL NOT NULL DEFAULT 1,
+  price INTEGER,
+  is_default INTEGER DEFAULT 0,
   sort_order INTEGER DEFAULT 0
 );
 
@@ -205,6 +218,8 @@ CREATE TABLE IF NOT EXISTS document_item (
   sku_snapshot TEXT,
   quantity REAL NOT NULL DEFAULT 1,
   unit_price INTEGER DEFAULT 0,
+  unit_snapshot TEXT,
+  unit_factor REAL DEFAULT 1,
   cost INTEGER DEFAULT 0,
   discount_type TEXT,
   discount_value REAL DEFAULT 0,
@@ -284,7 +299,29 @@ CREATE INDEX IF NOT EXISTS idx_item_doc ON document_item(document_id);
 CREATE INDEX IF NOT EXISTS idx_pay_doc ON payment(document_id);
 CREATE INDEX IF NOT EXISTS idx_barcode_value ON barcode(value);
 CREATE INDEX IF NOT EXISTS idx_stock_movement ON stock_movement(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_unit ON product_unit(product_id);
 `;
+
+/* -------------------------------------------------------------- migrations */
+
+function addColumn(table, column, decl) {
+  const cols = all(`PRAGMA table_info(${table})`).map((c) => c.name);
+  if (!cols.includes(column)) run(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+}
+
+// Older databases predate multi-unit support. Add the new columns and stamp
+// existing lines with the base unit so reports and refunds keep working.
+function migrate() {
+  addColumn('barcode', 'unit_id', 'INTEGER');
+  addColumn('document_item', 'unit_snapshot', 'TEXT');
+  addColumn('document_item', 'unit_factor', 'REAL DEFAULT 1');
+  run(`UPDATE document_item SET unit_factor = 1 WHERE unit_factor IS NULL`);
+  run(
+    `UPDATE document_item SET unit_snapshot = COALESCE(
+       (SELECT p.unit FROM product p WHERE p.id = document_item.product_id), '')
+     WHERE unit_snapshot IS NULL`
+  );
+}
 
 /* --------------------------------------------------------------- lifecycle */
 
@@ -297,6 +334,7 @@ async function init(userDataDir) {
   }
   db = buffer ? new SQL.Database(buffer) : new SQL.Database();
   db.run(SCHEMA);
+  migrate();
   seed();
   persist();
 }
@@ -849,6 +887,56 @@ function listProducts(opts = {}) {
   return all(sql, params).map(hydrateProduct);
 }
 
+/* ----------------------------------------------------------- product units */
+
+// product.unit is the base unit (factor 1). product_unit rows are extra units
+// such as box or kg, each with a conversion factor and an optional own price.
+function listUnitRows(productId) {
+  return all(`SELECT * FROM product_unit WHERE product_id=? ORDER BY sort_order, factor, name`, [productId]);
+}
+
+function unitList(p) {
+  const rows = listUnitRows(p.id).map((u) => ({
+    id: u.id,
+    name: u.name,
+    factor: num(u.factor, 1),
+    price: u.price == null ? null : num(u.price),
+    is_default: !!u.is_default,
+    sort_order: u.sort_order,
+  }));
+  rows.push({
+    id: null,
+    name: p.unit || 'pcs',
+    factor: 1,
+    price: null,
+    is_default: !rows.some((u) => u.is_default),
+    sort_order: 0,
+    base: true,
+  });
+  return rows;
+}
+
+function resolveUnit(p, name) {
+  const rows = unitList(p);
+  const base = rows[rows.length - 1];
+  if (name == null || String(name).trim() === '') {
+    return rows.find((u) => u.is_default) || base;
+  }
+  const key = String(name).trim().toLowerCase();
+  return rows.find((u) => String(u.name).trim().toLowerCase() === key) || base;
+}
+
+function unitPriceFor(p, unit) {
+  const u = unit || resolveUnit(p, null);
+  if (u.price != null) return Math.round(num(u.price));
+  return Math.round(num(p.price) * num(u.factor, 1));
+}
+
+function unitFactor(p, name) {
+  const f = num(resolveUnit(p, name).factor, 1);
+  return f > 0 ? f : 1;
+}
+
 function hydrateProduct(p) {
   if (!p) return p;
   p.barcodes = all(`SELECT value FROM barcode WHERE product_id=?`, [p.id]).map((b) => b.value);
@@ -857,7 +945,14 @@ function hydrateProduct(p) {
     [p.id]
   );
   p.comments = all(`SELECT * FROM product_comment WHERE product_id=? ORDER BY sort_order`, [p.id]);
+  p.barcode_rows = all(
+    `SELECT b.value, COALESCE(u.name, '') AS unit FROM barcode b
+     LEFT JOIN product_unit u ON u.id = b.unit_id WHERE b.product_id=? ORDER BY b.id`,
+    [p.id]
+  );
   p.stock = get(`SELECT * FROM stock_item WHERE product_id=?`, [p.id]) || { quantity: 0, avg_cost: 0 };
+  p.units = unitList(p);
+  p.default_unit = (p.units.find((u) => u.is_default) || {}).name || p.unit;
   return p;
 }
 
@@ -867,10 +962,18 @@ function getProduct(id) {
 
 function getProductByBarcode(code) {
   const byBarcode = get(
-    `SELECT p.* FROM product p JOIN barcode b ON b.product_id=p.id WHERE b.value=? LIMIT 1`,
+    `SELECT p.*, b.unit_id AS barcode_unit_id FROM product p JOIN barcode b ON b.product_id=p.id WHERE b.value=? LIMIT 1`,
     [String(code)]
   );
-  if (byBarcode) return hydrateProduct(byBarcode);
+  if (byBarcode) {
+    const unitId = byBarcode.barcode_unit_id;
+    delete byBarcode.barcode_unit_id;
+    const p = hydrateProduct(byBarcode);
+    p.barcode_unit = unitId
+      ? (get(`SELECT name FROM product_unit WHERE id=?`, [unitId]) || {}).name || null
+      : null;
+    return p;
+  }
   return hydrateProduct(get(`SELECT * FROM product WHERE code=? LIMIT 1`, [String(code)]));
 }
 
@@ -899,6 +1002,29 @@ function saveProduct(p) {
     low_stock: num(p.low_stock),
     sort_order: num(p.sort_order),
   };
+
+  const baseName = String(values.unit || 'pcs').trim().toLowerCase();
+  const unitRows = [];
+  const unitNames = new Set();
+  let defaultTaken = false;
+  for (const raw of p.units || []) {
+    const name = String(raw.name || '').trim();
+    if (!name) continue;
+    const factor = num(raw.factor, 1);
+    if (!(factor > 0)) return { ok: false, error: `Unit "${name}" needs a factor greater than zero` };
+    if (name.toLowerCase() === baseName) return { ok: false, error: `Unit "${name}" is already the base unit` };
+    const key = name.toLowerCase();
+    if (unitNames.has(key)) return { ok: false, error: `Unit "${name}" is listed twice` };
+    unitNames.add(key);
+    let price = null;
+    if (raw.price != null && String(raw.price).trim() !== '') {
+      price = cents(raw.price);
+      if (price < 0) return { ok: false, error: `Price for "${name}" cannot be negative` };
+    }
+    const isDefault = !!raw.is_default && !defaultTaken ? 1 : 0;
+    if (isDefault) defaultTaken = 1;
+    unitRows.push({ name, factor, price, is_default: isDefault, sort_order: unitRows.length + 1 });
+  }
 
   let id = p.id;
   if (id) {
@@ -956,15 +1082,46 @@ function saveProduct(p) {
     id = get(`SELECT last_insert_rowid() AS id`).id;
   }
 
-  // barcodes
-  const wanted = (p.barcodes || []).map((b) => String(b).trim()).filter(Boolean);
-  if (!wanted.length && values.code) wanted.push(values.code);
-  const existing = all(`SELECT value FROM barcode WHERE product_id=?`, [id]).map((b) => b.value);
-  for (const b of wanted) {
-    if (!existing.includes(b)) run(`INSERT INTO barcode (product_id, value) VALUES (?,?)`, [id, b]);
+  // units
+  run(`DELETE FROM product_unit WHERE product_id=?`, [id]);
+  const unitIdByName = {};
+  for (const u of unitRows) {
+    run(`INSERT INTO product_unit (product_id, name, factor, price, is_default, sort_order) VALUES (?,?,?,?,?,?)`, [
+      id,
+      u.name,
+      u.factor,
+      u.price,
+      u.is_default,
+      u.sort_order,
+    ]);
+    unitIdByName[u.name.toLowerCase()] = get(`SELECT last_insert_rowid() AS id`).id;
   }
-  for (const b of existing) {
-    if (!wanted.includes(b)) run(`DELETE FROM barcode WHERE product_id=? AND value=?`, [id, b]);
+
+  // barcodes (optionally tied to one unit)
+  const wanted = [];
+  for (const b of p.barcodes || []) {
+    if (typeof b === 'string') {
+      const v = b.trim();
+      if (v) wanted.push({ value: v, unit: '' });
+    } else if (b && String(b.value == null ? '' : b.value).trim()) {
+      wanted.push({ value: String(b.value).trim(), unit: b.unit ? String(b.unit).trim().toLowerCase() : '' });
+    }
+  }
+  if (!wanted.length && values.code) wanted.push({ value: values.code, unit: '' });
+  const bars = wanted.map((b) => {
+    let unit_id = null;
+    if (b.unit && b.unit !== baseName) unit_id = unitIdByName[b.unit] || null;
+    return { value: b.value, unit_id };
+  });
+  const existing = all(`SELECT id, value, unit_id FROM barcode WHERE product_id=?`, [id]);
+  for (const e of existing) {
+    const w = bars.find((x) => x.value === e.value);
+    if (!w) run(`DELETE FROM barcode WHERE id=?`, [e.id]);
+    else if (num(w.unit_id) !== num(e.unit_id)) run(`UPDATE barcode SET unit_id=? WHERE id=?`, [w.unit_id, e.id]);
+  }
+  for (const w of bars) {
+    if (!existing.some((e) => e.value === w.value))
+      run(`INSERT INTO barcode (product_id, value, unit_id) VALUES (?,?,?)`, [id, w.value, w.unit_id]);
   }
 
   // taxes
@@ -991,6 +1148,7 @@ function deleteProduct(id) {
   if (used.c > 0) return { ok: false, error: 'Product appears in documents and cannot be deleted. Deactivate it.' };
   tx(() => {
     run(`DELETE FROM product_tax WHERE product_id=?`, [id]);
+    run(`DELETE FROM product_unit WHERE product_id=?`, [id]);
     run(`DELETE FROM barcode WHERE product_id=?`, [id]);
     run(`DELETE FROM product_comment WHERE product_id=?`, [id]);
     run(`DELETE FROM stock_item WHERE product_id=?`, [id]);
@@ -1233,14 +1391,22 @@ function computeSale(input) {
     const qty = num(it.quantity, 1);
     if (qty <= 0) throw new Error(`Invalid quantity for ${p.name}`);
 
-    if (!p.is_service && !allowNegative && p.stock.quantity < qty) {
-      throw new Error(`Not enough stock for ${p.name} (on hand: ${p.stock.quantity})`);
+    const unit = resolveUnit(p, it.unit);
+    const factor = unitFactor(p, unit.name);
+    const baseQty = qty * factor;
+
+    if (!p.is_service && !allowNegative && num(p.stock.quantity) + 1e-9 < baseQty) {
+      throw new Error(`Not enough stock for ${p.name} (on hand: ${p.stock.quantity} ${p.unit})`);
     }
 
-    let unitPrice = p.price;
-    if (it.unit_price != null && p.price_change_allowed) unitPrice = cents(it.unit_price);
-    else if (it.unit_price != null && !p.price_change_allowed) {
-      throw new Error(`Price cannot be changed for ${p.name}`);
+    let unitPrice = unitPriceFor(p, unit);
+    if (it.unit_price != null) {
+      const override = cents(it.unit_price);
+      // The till always sends the catalogue price, so only a real change counts.
+      if (override !== unitPrice) {
+        if (!p.price_change_allowed) throw new Error(`Price cannot be changed for ${p.name}`);
+        unitPrice = override;
+      }
     }
 
     const gross = Math.round(qty * unitPrice);
@@ -1258,6 +1424,8 @@ function computeSale(input) {
       name_snapshot: p.name,
       sku_snapshot: p.code,
       quantity: qty,
+      unit_snapshot: unit.name,
+      unit_factor: factor,
       unit_price: unitPrice,
       cost: p.cost,
       discount_type: it.discount_type || null,
@@ -1406,8 +1574,9 @@ function createSale(input) {
     for (const l of calc.lines) {
       run(
         `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
-          unit_price, cost, discount_type, discount_value, discount_total, tax_total, total, voided, sort_order)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
+          unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
+          tax_total, total, voided, sort_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
         [
           docId,
           l.product_id,
@@ -1415,6 +1584,8 @@ function createSale(input) {
           l.sku_snapshot,
           l.quantity,
           l.unit_price,
+          l.unit_snapshot,
+          l.unit_factor,
           l.cost,
           l.discount_type,
           l.discount_value,
@@ -1426,7 +1597,7 @@ function createSale(input) {
       );
 
       if (!l.is_service) {
-        applyStock(l.product_id, -l.quantity, l.cost, docId, 'out');
+        applyStock(l.product_id, -l.quantity * l.unit_factor, l.cost, docId, 'out');
       }
     }
 
@@ -1554,7 +1725,7 @@ function refundSale(documentId, opts = {}) {
       total += it.total;
       if (!it.product_id) continue;
       const p = get(`SELECT is_service FROM product WHERE id=?`, [it.product_id]);
-      if (p && !p.is_service) applyStock(it.product_id, it.quantity, it.cost, null, 'in');
+      if (p && !p.is_service) applyStock(it.product_id, it.quantity * num(it.unit_factor, 1), it.cost, null, 'in');
     }
 
     const number = nextNumber('R');
@@ -1590,8 +1761,9 @@ function refundSale(documentId, opts = {}) {
     for (const it of items) {
       run(
         `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
-          unit_price, cost, discount_type, discount_value, discount_total, tax_total, total, voided, sort_order)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
+          unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
+          tax_total, total, voided, sort_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
         [
           docId,
           it.product_id,
@@ -1599,6 +1771,8 @@ function refundSale(documentId, opts = {}) {
           it.sku_snapshot,
           it.quantity,
           it.unit_price,
+          it.unit_snapshot,
+          num(it.unit_factor, 1),
           it.cost,
           it.discount_type,
           it.discount_value,
@@ -1659,11 +1833,17 @@ function createDocument(payload) {
       const p = getProduct(it.product_id);
       if (!p) throw new Error(`Product ${it.product_id} not found`);
       const qty = num(it.quantity, 1);
-      const unit = it.unit_price != null ? cents(it.unit_price) : p.cost;
-      const gross = Math.round(qty * (type === 'proforma' ? p.price : unit));
+      if (qty <= 0) throw new Error(`Invalid quantity for ${p.name}`);
+      const unit = resolveUnit(p, it.unit);
+      const factor = unitFactor(p, unit.name);
+      const baseQty = qty * factor;
+      // Proforma sells at the unit price; other documents default to cost per base unit.
+      const defaultPrice = type === 'proforma' ? unitPriceFor(p, unit) : Math.round(num(p.cost) * factor);
+      const price = it.unit_price != null ? cents(it.unit_price) : defaultPrice;
+      const gross = Math.round(qty * price);
       subtotal += gross;
       total += gross;
-      prepared.push({ p, qty, unit: type === 'proforma' ? p.price : unit, gross });
+      prepared.push({ p, qty, baseQty, unit, factor, unitPrice: price, gross });
     }
 
     const number = nextNumber(def.prefix);
@@ -1696,19 +1876,21 @@ function createDocument(payload) {
     const docId = get(`SELECT last_insert_rowid() AS id`).id;
 
     for (let i = 0; i < prepared.length; i++) {
-      const { p, qty, unit, gross } = prepared[i];
+      const { p, qty, baseQty, unit, factor, unitPrice, gross } = prepared[i];
       run(
         `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
-          unit_price, cost, discount_type, discount_value, discount_total, tax_total, total, voided, sort_order)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
-        [docId, p.id, p.name, p.code, qty, unit, p.cost, null, 0, 0, 0, gross, i + 1]
+          unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
+          tax_total, total, voided, sort_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
+        [docId, p.id, p.name, p.code, qty, unitPrice, unit.name, factor, p.cost, null, 0, 0, 0, gross, i + 1]
       );
 
-      if (def.stock === 'in') applyStock(p.id, qty, unit, docId, 'in');
-      else if (def.stock === 'out') applyStock(p.id, -qty, unit, docId, 'out');
+      // Stock is tracked in base units, so cost has to be per base unit too.
+      if (def.stock === 'in') applyStock(p.id, baseQty, Math.round(unitPrice / factor), docId, 'in');
+      else if (def.stock === 'out') applyStock(p.id, -baseQty, Math.round(unitPrice / factor), docId, 'out');
       else if (def.stock === 'set') {
         const before = get(`SELECT quantity FROM stock_item WHERE product_id=?`, [p.id]);
-        const delta = qty - num(before ? before.quantity : 0);
+        const delta = baseQty - num(before ? before.quantity : 0);
         applyStock(p.id, delta, p.cost, docId, 'adjust');
       }
     }
@@ -1816,8 +1998,8 @@ function daySummary(date) {
 
   const items = all(
     `SELECT di.name_snapshot AS name,
-        SUM(CASE WHEN d.type='sale' THEN di.quantity ELSE 0 END) AS qty_sold,
-        SUM(CASE WHEN d.type='refund' THEN di.quantity ELSE 0 END) AS qty_returned,
+        SUM(CASE WHEN d.type='sale' THEN di.quantity * COALESCE(di.unit_factor,1) ELSE 0 END) AS qty_sold,
+        SUM(CASE WHEN d.type='refund' THEN di.quantity * COALESCE(di.unit_factor,1) ELSE 0 END) AS qty_returned,
         SUM(CASE WHEN d.type='sale' THEN di.total ELSE 0 END) AS sales_total,
         SUM(CASE WHEN d.type='refund' THEN di.total ELSE 0 END) AS refund_total
      FROM document_item di JOIN document d ON d.id=di.document_id
@@ -1934,7 +2116,7 @@ function dashboard() {
   }
 
   const top = all(
-    `SELECT di.name_snapshot AS name, SUM(di.quantity) AS qty, SUM(di.total) AS total
+    `SELECT di.name_snapshot AS name, SUM(di.quantity * COALESCE(di.unit_factor,1)) AS qty, SUM(di.total) AS total
      FROM document_item di JOIN document d ON d.id=di.document_id
      WHERE d.type='sale' AND d.doc_date LIKE ?
      GROUP BY di.product_id, di.name_snapshot ORDER BY qty DESC LIMIT 5`,
@@ -1987,10 +2169,10 @@ function report(name, filters = {}) {
   if (name === 'product_sales') {
     return all(
       `SELECT di.name_snapshot AS name, di.sku_snapshot AS sku,
-          SUM(CASE WHEN d.type='sale' THEN di.quantity ELSE 0 END) AS qty_sold,
-          SUM(CASE WHEN d.type='refund' THEN di.quantity ELSE 0 END) AS qty_returned,
+          SUM(CASE WHEN d.type='sale' THEN di.quantity * COALESCE(di.unit_factor,1) ELSE 0 END) AS qty_sold,
+          SUM(CASE WHEN d.type='refund' THEN di.quantity * COALESCE(di.unit_factor,1) ELSE 0 END) AS qty_returned,
           SUM(di.total) AS net_total,
-          SUM(di.quantity * di.cost) AS cost_total
+          SUM(di.quantity * COALESCE(di.unit_factor,1) * di.cost) AS cost_total
        FROM document_item di JOIN document d ON d.id=di.document_id
        WHERE d.doc_date BETWEEN ? AND ? AND d.type IN ('sale','refund')
        GROUP BY di.product_id, di.name_snapshot
@@ -2163,5 +2345,5 @@ module.exports = {
   meta,
   DOC_TYPES,
   // exposed for tests
-  _internal: { computeSale, daySummary },
+  _internal: { computeSale, daySummary, unitList, resolveUnit, unitPriceFor, unitFactor },
 };

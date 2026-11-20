@@ -188,6 +188,27 @@
     return 'Unit cost';
   }
 
+  function docProduct(d, it) {
+    return (A.state.products || []).find((x) => String(x.id) === String(it.product_id)) || null;
+  }
+
+  function docUnitCell(d, it, i) {
+    const p = docProduct(d, it);
+    const baseName = (p && p.unit) || it.unit || '';
+    if (d.type === 'count') return `<span class="small muted">${esc(it.unit || baseName)}</span>`;
+    const extras = p ? SH.units.extraUnits(p) : [];
+    if (!extras.length) return `<span class="small muted">${esc(baseName)}</span>`;
+    const opts = [{ name: baseName }].concat(extras);
+    return `<select class="input doc-unit" data-index="${i}" style="max-width:140px;padding:4px 7px">${opts
+      .map(
+        (o) =>
+          `<option value="${attr(o.name)}" ${
+            String(o.name) === String(it.unit || baseName) ? 'selected' : ''
+          }>${esc(o.name)}</option>`
+      )
+      .join('')}</select>`;
+  }
+
   function docPartyField(d) {
     const suppliers = (A.state.allCustomers || []).filter((c) => c.type === 'supplier');
     const customers = (A.state.allCustomers || []).filter((c) => c.type === 'customer');
@@ -234,11 +255,12 @@
           <div class="label mb8">Items</div>
           ${
             d.items.length
-              ? `<table class="data" style="border:1px solid var(--line);border-radius:10px;overflow:hidden"><thead><tr><th>Product</th><th class="num">Qty</th>${showPrice ? `<th class="num">${priceLabel}</th>` : ''}<th class="num">Total</th><th></th></tr></thead><tbody>
+              ? `<table class="data" style="border:1px solid var(--line);border-radius:10px;overflow:hidden"><thead><tr><th>Product</th><th>Unit</th><th class="num">Qty</th>${showPrice ? `<th class="num">${priceLabel}</th>` : ''}<th class="num">Total</th><th></th></tr></thead><tbody>
                 ${d.items
                   .map(
                     (it, i) => `<tr>
                       <td><span class="strong">${esc(it.name)}</span><div class="small muted mono">${esc(it.code || '')}</div></td>
+                      <td>${docUnitCell(d, it, i)}</td>
                       <td class="num"><input class="input doc-qty" data-index="${i}" type="number" step="0.001" min="0" value="${U.num(it.quantity)}" style="width:80px;padding:5px 7px;text-align:right" /></td>
                       ${showPrice ? `<td class="num"><input class="input doc-price" data-index="${i}" type="number" step="0.01" min="0" value="${(U.num(it.unit_price) / 100).toFixed(2)}" style="width:100px;padding:5px 7px;text-align:right" /></td>` : ''}
                       <td class="num mono strong" data-line-total="${i}">${money(Math.round(U.num(it.quantity) * U.num(it.unit_price)))}</td>
@@ -275,21 +297,34 @@
       const i = Number(inp.dataset.index);
       if (A.state.docDraft.items[i]) A.state.docDraft.items[i].unit_price = Math.round(U.num(inp.value, 0) * 100);
     });
+    form.querySelectorAll('.doc-unit').forEach((sel) => {
+      const i = Number(sel.dataset.index);
+      if (A.state.docDraft.items[i]) A.state.docDraft.items[i].unit = sel.value;
+    });
   }
 
   A.action('doc-add-item', (ds) => {
     syncDocInputs();
     const p = (A.state.products || []).find((x) => String(x.id) === String(ds.id));
     if (!p || !A.state.docDraft) return;
-    const existing = A.state.docDraft.items.find((it) => String(it.product_id) === String(p.id));
+    const type = A.state.docDraft.type;
+    const unitName = type === 'count' ? p.unit : p.default_unit || p.unit;
+    const unit = SH.units.resolveUnit(p, unitName);
+    const factor = U.num(unit.factor, 1) || 1;
+    const existing = A.state.docDraft.items.find(
+      (it) => String(it.product_id) === String(p.id) && String(it.unit || '') === String(unit.name)
+    );
     if (existing) existing.quantity = U.num(existing.quantity) + 1;
     else
       A.state.docDraft.items.push({
         product_id: p.id,
         name: p.name,
         code: p.code,
+        unit: unit.name,
+        unit_factor: factor,
         quantity: 1,
-        unit_price: A.state.docDraft.type === 'proforma' ? p.price : p.cost,
+        unit_price:
+          type === 'proforma' ? SH.units.unitPrice(p, unit) : Math.round(U.num(p.cost) * factor),
       });
     A.state.docResults = [];
     renderDocEditor();
@@ -298,6 +333,25 @@
   A.action('doc-remove-item', (ds) => {
     syncDocInputs();
     A.state.docDraft.items.splice(Number(ds.index), 1);
+    renderDocEditor();
+  });
+
+  A.action('change:doc-unit', (ds, el) => {
+    if (!A.state.docDraft) return;
+    syncDocInputs();
+    const i = Number(el.dataset.index);
+    const it = A.state.docDraft.items[i];
+    if (!it) return;
+    const p = docProduct(A.state.docDraft, it);
+    if (!p) return;
+    const unit = SH.units.resolveUnit(p, el.value);
+    const factor = U.num(unit.factor, 1) || 1;
+    it.unit = unit.name;
+    it.unit_factor = factor;
+    it.unit_price =
+      A.state.docDraft.type === 'proforma'
+        ? SH.units.unitPrice(p, unit)
+        : Math.round(U.num(p.cost) * factor);
     renderDocEditor();
   });
 
@@ -317,12 +371,12 @@
           <div class="stat"><div class="sl">Status</div><div class="sv">${esc(doc.status || 'closed')}</div></div>
           ${doc.customer ? `<div class="stat"><div class="sl">Customer</div><div class="sv" style="font-size:13px">${esc(doc.customer.name)}</div></div>` : ''}
         </div>
-        <table class="data"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead><tbody>
+        <table class="data"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Total</th></tr></thead><tbody>
           ${(doc.items || [])
             .map(
-              (it) => `<tr><td class="strong">${esc(it.name_snapshot)}</td><td class="num mono">${U.qty(it.quantity)}</td><td class="num mono">${money(
-                it.unit_price
-              )}</td><td class="num mono">${money(it.total)}</td></tr>`
+              (it) => `<tr><td class="strong">${esc(it.name_snapshot)}</td><td class="num mono">${U.qty(it.quantity)} ${esc(
+                it.unit_snapshot || it.unit || ''
+              )}</td><td class="num mono">${money(it.unit_price)}</td><td class="num mono">${money(it.total)}</td></tr>`
             )
             .join('')}
         </tbody></table>
@@ -350,8 +404,13 @@
   A.action('doc-print-report', async () => {
     const d = A.state.viewDoc;
     if (!d) return;
-    const rows = [['Product', 'Qty', 'Unit', 'Total']].concat(
-      (d.items || []).map((it) => [it.name_snapshot, U.qty(it.quantity), money(it.unit_price), money(it.total)])
+    const rows = [['Product', 'Qty', 'Price', 'Total']].concat(
+      (d.items || []).map((it) => [
+        it.name_snapshot,
+        `${U.qty(it.quantity)} ${it.unit_snapshot || it.unit || ''}`.trim(),
+        money(it.unit_price),
+        money(it.total),
+      ])
     );
     await window.api.preview(SH.reportHtml(SH.docTypeLabel(d.type) + ' ' + (d.number || ''), rows, 'Total ' + money(d.total)));
   });
@@ -1043,7 +1102,23 @@
   A.action('form:save-product', async (form) => {
     const fd = new FormData(form);
     const id = fd.get('id') ? Number(fd.get('id')) : null;
-    const barcodes = [...form.querySelectorAll('.barcode-row-input')].map((i) => i.value.trim()).filter(Boolean);
+    const barcodes = [...form.querySelectorAll('.barcode-row')]
+      .map((row) => ({
+        value: row.querySelector('.barcode-row-input').value.trim(),
+        unit: row.querySelector('.barcode-row-unit') ? row.querySelector('.barcode-row-unit').value : '',
+      }))
+      .filter((b) => b.value);
+    const units = [...form.querySelectorAll('.unit-row')]
+      .map((row) => ({
+        name: row.querySelector('.unit-name').value.trim(),
+        factor: U.num(row.querySelector('.unit-factor').value, 0),
+        price: (() => {
+          const v = row.querySelector('.unit-price').value.trim();
+          return v === '' ? null : U.num(v);
+        })(),
+        is_default: !!row.querySelector('input[name="unit_default"]:checked'),
+      }))
+      .filter((u) => u.name);
     const comments = [...form.querySelectorAll('.comment-row-input')].map((i) => i.value.trim()).filter(Boolean);
     const tax_rate_ids = [...form.querySelectorAll('input[name="tax_rate_id"]:checked')].map((i) => Number(i.value));
     const res = await A.api('saveProduct', {
@@ -1065,6 +1140,7 @@
       description: String(fd.get('description') || ''),
       low_stock: U.num(fd.get('low_stock')),
       barcodes,
+      units,
       comments,
       tax_rate_ids,
     });
@@ -1275,7 +1351,12 @@
       notes: String(fd.get('notes') || ''),
       user_id: A.state.user.id,
       register_id: (A.state.registers || []).find((r) => r.is_primary)?.id,
-      items: d.items.map((it) => ({ product_id: it.product_id, quantity: it.quantity, unit_price: it.unit_price / 100 })),
+      items: d.items.map((it) => ({
+        product_id: it.product_id,
+        quantity: it.quantity,
+        unit: it.unit,
+        unit_price: it.unit_price / 100,
+      })),
     });
     A.closeModal();
     A.state.docDraft = null;

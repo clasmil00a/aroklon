@@ -19,6 +19,9 @@ runs locally — no account, no cloud, no subscription.
   Windows printer or save as PDF from the print dialog.
 - **Products** — groups, barcodes, cost/price, tax rates, low-stock alerts,
   service items, age restrictions, images and colours.
+- **Units of measure** — sell one product in several units (pcs, box, kg…) with
+  a conversion factor and an optional price per unit; stock stays in the base
+  unit. Barcodes can be tied to a unit, and a default unit speeds up ringing.
 - **Stock** — quantities on hand, average cost, stock movements, adjustments,
   purchases, returns, loss & damage, inventory counts.
 - **Customers & suppliers** — contacts, loyalty cards, preset discounts,

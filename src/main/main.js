@@ -347,6 +347,118 @@ function createWindow() {
           'probes'
         );
 
+        out.flowUom = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App; const res = {};
+            try {
+              A.state.settings.ask_qty = '0';
+              const saved = await A.api('saveProduct', {
+                name: 'UOM Test', code: 'UOMTEST', unit: 'botol', price: 100, cost: 60,
+                active: true, is_service: false, tax_rate_ids: [],
+                units: [{ name: 'dus', factor: 12, price: 1100, is_default: false }],
+                barcodes: [{ value: 'UOMBARCODE', unit: 'dus' }],
+              });
+              res.saved = !!saved.ok;
+              await A.api('adjustStock', [saved.id, 100, 'smoke']);
+              const full = await A.api('getProduct', saved.id);
+              res.units = (full.units || []).map((u) => [u.name, u.factor, u.price, u.is_default]);
+              res.barcodeUnit = (full.barcode_rows || [])[0] || null;
+              await A.reloadCatalog();
+              A.state.catalogSearch = '';
+              A.go('sales'); await s(250);
+
+              await A.actions['pos-add']({ id: String(saved.id) }, null, { preventDefault(){} });
+              await s(250);
+              res.pickerOpen = !!document.querySelector('.unit-choice-grid');
+              const dusBtn = document.querySelector('.unit-choice-grid [data-unit="dus"]');
+              res.pickerOption = !!dusBtn;
+              if (dusBtn) { dusBtn.click(); await s(350); }
+              res.line = (A.state.cart.items || []).map((i) => [i.unit, i.unit_factor, i.price, i.quantity]);
+              res.unitSwitcher = !!document.querySelector('[data-change="pos-line-unit"]');
+
+              A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 } };
+              await A.actions['pos-add']({ id: String(saved.id), barcode_unit: 'dus' }, null, { preventDefault(){} });
+              await s(250);
+              res.barcodeLine = (A.state.cart.items || []).map((i) => [i.unit, i.unit_factor, i.price]);
+              res.barcodePicker = !!document.querySelector('.unit-choice-grid');
+
+              A.actions['product-edit']({ id: String(saved.id) });
+              await s(300);
+              res.editorUnitsTab = !!document.querySelector('[data-tab-panel="pt-units"]');
+              res.editorRows = [...document.querySelectorAll('.unit-row')].map((r) => [
+                r.querySelector('.unit-name').value,
+                r.querySelector('.unit-factor').value,
+                r.querySelector('.unit-price').value,
+              ]);
+              res.editorBarcodeUnits = [...document.querySelectorAll('.barcode-row')].map((r) =>
+                r.querySelector('.barcode-row-unit') ? r.querySelector('.barcode-row-unit').value : ''
+              );
+              const form = document.querySelector('form[data-form="save-product"]');
+              if (form) { form.requestSubmit(); await s(800); }
+              const resaved = await A.api('getProduct', saved.id);
+              res.resavedUnits = (resaved.units || []).map((u) => [u.name, u.factor, u.price]);
+              res.resavedBarcodes = (resaved.barcode_rows || []).map((b) => [b.value, b.unit]);
+
+              A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 } };
+              const search = document.getElementById('pos-search');
+              if (search) {
+                search.focus();
+                search.value = 'UOMBARCODE';
+                search.dispatchEvent(new Event('input', { bubbles: true }));
+                await s(250);
+                const fresh = document.getElementById('pos-search');
+                if (fresh) {
+                  fresh.focus();
+                  fresh.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                }
+                await s(500);
+              }
+              res.enterLine = (A.state.cart.items || []).map((i) => [i.unit, i.unit_factor]);
+
+              const cur = await A.api('getProduct', saved.id);
+              await A.api('saveProduct', {
+                ...cur,
+                price: cur.price / 100,
+                cost: cur.cost / 100,
+                tax_rate_ids: (cur.taxes || []).map((t) => t.id),
+                units: [{ name: 'dus', factor: 12, price: 1100, is_default: true }],
+                barcodes: [{ value: 'UOMBARCODE', unit: 'dus' }],
+              });
+              await A.reloadCatalog();
+              A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 } };
+              await A.actions['pos-add']({ id: String(saved.id) }, null, { preventDefault(){} });
+              await s(300);
+              res.defaultPicker = !!document.querySelector('.unit-choice-grid');
+              res.defaultLine = (A.state.cart.items || []).map((i) => [i.unit, i.unit_factor, i.price]);
+
+              const doc = await A.api('createSale', {
+                user_id: A.state.user.id,
+                items: [{ product_id: saved.id, quantity: 2, unit: 'dus' }],
+                payments: [],
+              });
+              res.sale = [doc.items[0].unit_snapshot, doc.items[0].unit_factor, doc.items[0].unit_price, doc.total];
+              const after = (await A.api('listProducts', {})).find((x) => x.id === saved.id).quantity;
+              res.stockDelta = 100 - after;
+
+              A.state.cart = {
+                items: [{ product_id: saved.id, quantity: 2, unit: 'dus', unit_factor: 12, price: 110000, cost: 6000, name: 'UOM Test', is_service: false, price_incl_tax: false, taxes: [] }],
+                customer_id: null, discount: { type: 'percent', value: 0 },
+              };
+              A.render(); await s(150);
+              res.cartBefore = A.computeCart(A.state.cart.items, A.state.cart.discount, A.state.cart.tax_override).total;
+              A.actions['change:pos-line-unit']({ index: '0' }, { value: 'botol' });
+              await s(200);
+              res.cartAfter = A.computeCart(A.state.cart.items, A.state.cart.discount, A.state.cart.tax_override).total;
+              res.qtyAfter = A.state.cart.items[0].quantity;
+              res.unitAfter = A.state.cart.items[0].unit;
+              res.unitSwitcher = !!document.querySelector('[data-change="pos-line-unit"]');
+            } catch (e) { res.err = e.message; }
+            return res;
+          })()`,
+          'flow-uom'
+        );
+
         out.flowDiscount = await js(
           `(async () => {
             const s = (ms) => new Promise((r) => setTimeout(r, ms));

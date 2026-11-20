@@ -113,9 +113,9 @@
         const disc = (it.discount_total || 0) / 100;
         return `<div style="margin:3px 0">
           <div>${esc(it.name_snapshot)}</div>
-          <div class="r-line r-muted"><span>${U.qty(it.quantity)} × ${price.toLocaleString(locale())}</span><span>${total.toLocaleString(
+          <div class="r-line r-muted"><span>${U.qty(it.quantity)} ${esc(it.unit_snapshot || it.unit || '')} × ${price.toLocaleString(
             locale()
-          )}</span></div>
+          )}</span><span>${total.toLocaleString(locale())}</span></div>
           ${disc ? `<div class="r-line r-muted" style="font-size:10px"><span>${esc(t('Discount'))}</span><span>-${disc.toLocaleString(locale())}</span></div>` : ''}
         </div>`;
       })
@@ -179,7 +179,9 @@
         .map(
           (it) =>
             `<div style="margin:4px 0"><div>${esc(it.name_snapshot)}</div>
-             <div class="r-line muted"><span>${U.qty(it.quantity)} x ${money0(it.unit_price)}</span><span>${money0(it.total)}</span></div>
+             <div class="r-line muted"><span>${U.qty(it.quantity)} ${esc(it.unit_snapshot || it.unit || '')} x ${money0(
+              it.unit_price
+            )}</span><span>${money0(it.total)}</span></div>
              ${it.discount_total ? `<div class="r-line muted"><span>${esc(t('Discount'))}</span><span>-${money0(it.discount_total)}</span></div>` : ''}
             </div>`
         )
@@ -255,9 +257,55 @@
     return list;
   }
 
+  /* ------------------------------------------------------- units of measure */
+
+  function extraUnits(p) {
+    return (p.units || []).filter((u) => !u.base);
+  }
+
+  function barcodeUnitOptions(p, selected) {
+    const opts = [{ value: p.unit || 'pcs', label: p.unit || 'pcs' }].concat(
+      extraUnits(p).map((u) => ({ value: u.name, label: u.name }))
+    );
+    return opts
+      .map(
+        (o) =>
+          `<option value="${attr(o.value)}" ${
+            String(o.value) === String(selected || p.unit || 'pcs') ? 'selected' : ''
+          }>${esc(o.label)}</option>`
+      )
+      .join('');
+  }
+
+  // Mirrors db.resolveUnit: an extra unit, the base unit, or the default one.
+  function resolveUnit(p, name) {
+    const extras = extraUnits(p);
+    const base = { name: p.unit || 'pcs', factor: 1, price: null, base: true };
+    if (name != null && String(name).trim() !== '') {
+      const key = String(name).trim().toLowerCase();
+      const found = extras.find((u) => String(u.name).toLowerCase() === key);
+      if (found) return found;
+      if (key === String(p.unit || 'pcs').toLowerCase()) return base;
+    }
+    return extras.find((u) => u.is_default) || base;
+  }
+
+  function unitPrice(p, unit) {
+    if (unit.price != null) return Math.round(U.num(unit.price));
+    return Math.round(U.num(p.price) * U.num(unit.factor, 1));
+  }
+
+  function unitOptions(p) {
+    return [{ name: p.unit || 'pcs', factor: 1 }].concat(extraUnits(p).map((u) => ({ name: u.name, factor: u.factor })));
+  }
+
+  // Shared with screens2 (document editor) which runs in its own scope.
+  SH.units = { extraUnits, resolveUnit, unitPrice, unitOptions, barcodeUnitOptions };
+
   function tileHtml(p) {
     const stock = p.is_service ? null : U.num(p.quantity);
     const low = !p.is_service && p.low_stock > 0 && stock <= p.low_stock;
+    const defaultUnit = (p.units || []).find((u) => u.is_default);
     const swatch = p.image
       ? `<img src="${attr(p.image)}" alt="" />`
       : icon('products', 24);
@@ -269,7 +317,9 @@
       <div class="tile-body">
         <div class="t-name">${esc(p.name)}</div>
         <div class="t-code">${esc(p.code || '')}${low ? ' · LOW' : ''}</div>
-        <div class="t-price">${money(p.price)}</div>
+        <div class="t-price">${money(defaultUnit ? unitPrice(p, defaultUnit) : p.price)}${
+          defaultUnit ? ` <span class="muted">/ ${esc(defaultUnit.name)}</span>` : ''
+        }</div>
       </div>
     </button>`;
   }
@@ -363,7 +413,7 @@
                         <div>
                           <div class="l-name">${esc(it.name)}</div>
                           <div class="l-meta">
-                            <span class="qty-badge">${U.qty(it.quantity)} × ${money(it.price)}</span>
+                            <span class="qty-badge">${U.qty(it.quantity)}${it.unit ? ` ${esc(it.unit)}` : ''} × ${money(it.price)}</span>
                             ${it.discount_type ? `<span class="badge good" style="padding:1px 6px;font-size:10px">${esc(it.discount_type)} discount</span>` : ''}
                           </div>
                         </div>
@@ -379,7 +429,26 @@
 
           ${
             A.state.selectedLine != null && cart.items[A.state.selectedLine]
-              ? `<div class="row gap8" style="padding:8px 16px;border-top:1px solid var(--line)">
+              ? `<div class="row gap8" style="padding:8px 16px;border-top:1px solid var(--line);flex-wrap:wrap">
+                  ${(() => {
+                    const it = cart.items[A.state.selectedLine];
+                    const p = (A.state.products || []).find((x) => String(x.id) === String(it.product_id));
+                    const opts = p ? unitOptions(p) : [];
+                    if (opts.length < 2) return '';
+                    return `<span class="small muted">${esc(t('Unit'))}</span>
+                      <select class="input" data-change="pos-line-unit" data-index="${
+                        A.state.selectedLine
+                      }" style="max-width:170px;padding:4px 8px">
+                        ${opts
+                          .map(
+                            (o) =>
+                              `<option value="${attr(o.name)}" ${
+                                String(o.name) === String(it.unit || '') ? 'selected' : ''
+                              }>${esc(o.name)}${U.num(o.factor, 1) === 1 ? '' : ` (${U.qty(o.factor)})`}</option>`
+                          )
+                          .join('')}
+                      </select>`;
+                  })()}
                   <span class="small muted">${esc(t('Qty'))}</span>
                   <button class="btn sm icon-only" data-action="pos-qty" data-delta="-1" title="${esc(t('Decrease'))}">${icon('minus', 14)}</button>
                   <span class="strong mono">${U.qty(cart.items[A.state.selectedLine].quantity)}</span>
@@ -421,9 +490,13 @@
 
   /* --------------------------------------------------------- cart actions */
 
-  async function addToCart(product, quantity) {
+  async function addToCart(product, quantity, unitName) {
     const cart = A.state.cart;
-    const existing = cart.items.find((i) => String(i.product_id) === String(product.id));
+    const unit = resolveUnit(product, unitName);
+    const price = unitPrice(product, unit);
+    const existing = cart.items.find(
+      (i) => String(i.product_id) === String(product.id) && String(i.unit || '') === String(unit.name)
+    );
     if (existing) {
       existing.quantity = U.num(existing.quantity) + quantity;
       A.state.selectedLine = cart.items.indexOf(existing);
@@ -432,9 +505,10 @@
         product_id: product.id,
         name: product.name,
         code: product.code,
-        price: product.price,
+        price,
         cost: product.cost,
-        unit: product.unit,
+        unit: unit.name,
+        unit_factor: U.num(unit.factor, 1),
         color: product.color,
         image: product.image,
         is_service: !!product.is_service,
@@ -447,6 +521,9 @@
       A.state.selectedLine = cart.items.length - 1;
     }
     A.render();
+    // Keep the search box ready for the next scan.
+    const search = document.getElementById('pos-search');
+    if (search) search.focus();
   }
 
   A.action('nav', (ds) => {
@@ -522,6 +599,32 @@
     }
   });
 
+  // Enter in the search box rings up an exact code/barcode match, which is how
+  // a scanner behaves. A barcode can carry its own unit.
+  async function addByCode(code) {
+    const clean = String(code || '').trim();
+    if (!clean) return;
+    const exact = (A.state.products || []).find(
+      (p) =>
+        String(p.code || '').toLowerCase() === clean.toLowerCase() ||
+        (p.barcodes || []).some((b) => String(b).toLowerCase() === clean.toLowerCase())
+    );
+    if (exact) {
+      // A barcode can be tied to one unit; prefer that over asking.
+      const row = (exact.barcode_rows || []).find(
+        (b) => String(b.value || '').toLowerCase() === clean.toLowerCase()
+      );
+      await A.actions['pos-add']({ id: exact.id, barcode_unit: row && row.unit ? row.unit : null });
+      return;
+    }
+    const found = await A.tryApi('getProductByBarcode', clean, 'Lookup failed');
+    if (found && found.id) {
+      await A.actions['pos-add']({ id: found.id, barcode_unit: found.barcode_unit || null });
+      return;
+    }
+    A.toast(`No product for "${clean}"`, 'warn');
+  }
+
   A.action('input:pos-search', (ds, el) => {
     A.state.catalogSearch = el.value;
     const caret = el.selectionStart;
@@ -547,11 +650,23 @@
       });
       if (!ok) return;
     }
+    const forced = ds.barcode_unit || null;
+    const extras = extraUnits(p);
+    const hasDefault = extras.some((u) => u.is_default);
+    // A default unit means "just add it"; otherwise ask which unit to sell.
+    if (!forced && extras.length && !hasDefault) {
+      openUnitPicker(p);
+      return;
+    }
+    await addProductFlow(p, forced);
+  });
+
+  async function addProductFlow(p, unitName) {
     let quantity = 1;
     if (!p.default_qty && A.state.settings.ask_qty !== '0') {
       const res = await A.prompt({
         title: 'Quantity',
-        label: p.name,
+        label: unitName ? `${p.name} (${unitName})` : p.name,
         value: '1',
         type: 'number',
         confirmLabel: 'Add to sale',
@@ -560,7 +675,45 @@
       quantity = U.num(res, 0);
       if (quantity <= 0) return A.toast('Quantity must be greater than zero', 'bad');
     }
-    await addToCart(p, quantity);
+    await addToCart(p, quantity, unitName);
+  }
+
+  // Products with extra units ask which one to sell before the quantity.
+  function openUnitPicker(p) {
+    const base = p.unit || 'pcs';
+    const choices = [{ name: base, factor: 1, price: null }].concat(extraUnits(p));
+    A.modal(
+      `<div class="modal-head">
+        <div><h2>${esc(t('Choose a unit'))}</h2><div class="sub">${esc(p.name)} · ${esc(t('Base unit'))}: ${esc(base)}</div></div>
+        <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div>
+      </div>
+      <div class="modal-body">
+        <div class="unit-choice-grid">
+          ${choices
+            .map(
+              (u) => `<button type="button" class="tile" data-action="pos-pick-unit" data-id="${p.id}" data-unit="${attr(u.name)}">
+                <div class="tile-body">
+                  <div class="t-name">${esc(u.name)}</div>
+                  <div class="t-code">${
+                    U.num(u.factor, 1) === 1 ? esc(t('Base unit')) : `1 ${esc(u.name)} = ${U.qty(u.factor)} ${esc(base)}`
+                  }</div>
+                  <div class="t-price">${money(
+                    u.price != null ? u.price : Math.round(U.num(p.price) * U.num(u.factor, 1))
+                  )}</div>
+                </div>
+              </button>`
+            )
+            .join('')}
+        </div>
+      </div>`,
+      { size: 'wide' }
+    );
+  }
+
+  A.action('pos-pick-unit', async (ds) => {
+    const p = (A.state.products || []).find((x) => String(x.id) === String(ds.id));
+    A.closeModal();
+    if (p) await addProductFlow(p, ds.unit || null);
   });
 
   A.action('pos-select-line', (ds) => {
@@ -576,6 +729,26 @@
     if (next <= 0) A.state.cart.items.splice(i, 1);
     else A.state.cart.items[i].quantity = next;
     if (A.state.selectedLine >= A.state.cart.items.length) A.state.selectedLine = null;
+    A.render();
+  });
+
+  // Switching the unit keeps the base quantity, e.g. 2 dus -> 24 botol.
+  A.action('change:pos-line-unit', (ds, el) => {
+    const i = Number(ds.index);
+    const it = A.state.cart.items[i];
+    if (!it) return;
+    const p = (A.state.products || []).find((x) => String(x.id) === String(it.product_id));
+    if (!p) return;
+    const unit = resolveUnit(p, el.value);
+    const oldFactor = U.num(it.unit_factor, 1) || 1;
+    const factor = U.num(unit.factor, 1) || 1;
+    const baseQty = U.num(it.quantity) * oldFactor;
+    let qty = Math.round((baseQty / factor) * 1000) / 1000;
+    if (!(qty > 0)) qty = 1;
+    it.quantity = qty;
+    it.unit = unit.name;
+    it.unit_factor = factor;
+    it.price = unitPrice(p, unit);
     A.render();
   });
 
@@ -941,6 +1114,7 @@
         items: cart.items.map((it) => ({
           product_id: it.product_id,
           quantity: it.quantity,
+          unit: it.unit,
           unit_price: it.price / 100,
           discount_type: it.discount_type,
           discount_value: it.discount_value,
@@ -1305,6 +1479,30 @@
     );
   }
 
+  function unitRowHtml(u) {
+    const price = u.price == null || u.price === '' ? '' : u.price / 100;
+    return `<div class="row gap8 unit-row mt8" style="align-items:flex-end;flex-wrap:wrap">
+      <div class="field" style="min-width:130px">
+        <label class="small muted">${esc(t('Unit'))}</label>
+        <input class="input unit-name" value="${attr(u.name || '')}" placeholder="${attr(t('e.g. box'))}" />
+      </div>
+      <div class="field" style="min-width:130px">
+        <label class="small muted">${esc(t('Base units per unit'))}</label>
+        <input class="input unit-factor" type="number" step="0.001" min="0" value="${attr(u.factor != null ? u.factor : 1)}" />
+      </div>
+      <div class="field" style="min-width:120px">
+        <label class="small muted">${esc(t('Price'))}</label>
+        <input class="input unit-price" type="number" step="0.01" min="0" value="${attr(price)}" placeholder="${attr(t('Auto'))}" />
+      </div>
+      <label class="row gap8 small" style="padding-bottom:8px">
+        <input type="radio" name="unit_default" value="1" ${u.is_default ? 'checked' : ''} /> ${esc(t('Default'))}
+      </label>
+      <button type="button" class="icon-btn" data-action="unit-remove" style="color:var(--bad);margin-bottom:6px" title="${attr(
+        t('Remove')
+      )}">${icon('trash', 15)}</button>
+    </div>`;
+  }
+
   function openProductEditorWith(p) {
     A.state.productDraft = p;
     const groups = (A.state.groups || []).map((g) => ({ value: g.id, label: g.name + (g.parent_id ? '' : '') }));
@@ -1318,17 +1516,29 @@
       .join('');
 
     const colors = ['#e2e8f0', '#dbeafe', '#dcfce7', '#fef3c7', '#fee2e2', '#ede9fe', '#cffafe', '#fce7f3'];
-    const barcodeRows = (p.barcodes && p.barcodes.length ? p.barcodes : [''])
-      .map((b) => `<div class="row gap8 barcode-row"><input class="input barcode-row-input" value="${attr(b)}" placeholder="Barcode or SKU" /><button type="button" class="icon-btn" data-action="barcode-remove" style="color:var(--bad)">${icon(
-        'trash',
-        15
-      )}</button></div>`)
+    const barcodeRows = (p.barcode_rows && p.barcode_rows.length ? p.barcode_rows : [{ value: '', unit: '' }])
+      .map(
+        (b) => `<div class="row gap8 barcode-row">
+          <input class="input barcode-row-input" value="${attr(b.value)}" placeholder="Barcode or SKU" />
+          ${
+            extraUnits(p).length
+              ? `<select class="input barcode-row-unit" style="max-width:140px">${barcodeUnitOptions(p, b.unit)}</select>`
+              : ''
+          }
+          <button type="button" class="icon-btn" data-action="barcode-remove" style="color:var(--bad)">${icon('trash', 15)}</button>
+        </div>`
+      )
       .join('');
     const commentRows = (p.comments && p.comments.length ? p.comments.map((c) => (typeof c === 'string' ? c : c.text)) : [''])
       .map((c) => `<div class="row gap8 comment-row"><input class="input comment-row-input" value="${attr(c)}" placeholder="e.g. Rare, Medium, Well done" /><button type="button" class="icon-btn" data-action="comment-remove" style="color:var(--bad)">${icon(
         'trash',
         15
       )}</button></div>`)
+      .join('');
+
+    const unitRows = (p.units || [])
+      .filter((u) => !u.base)
+      .map(unitRowHtml)
       .join('');
 
     A.modal(
@@ -1340,6 +1550,7 @@
         <div class="tabs">
           <button type="button" class="tab active" data-action="tab" data-target="pt-details">Details</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-price">Price & tax</button>
+          <button type="button" class="tab" data-action="tab" data-target="pt-units">Units &amp; prices</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-barcodes">Barcodes</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-comments">Comments</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-look">Image & colour</button>
@@ -1375,6 +1586,18 @@
                 <div class="row wrap gap12">${taxBoxes || '<span class="small muted">No tax rates configured.</span>'}</div>
               </div>
             </div>
+          </div>
+
+          <div data-tab-panel="pt-units" style="display:none">
+            <div class="row between wrap gap8">
+              <div>
+                <div class="label">Additional units</div>
+                <div class="hint">The base unit <b>${esc(p.unit || 'pcs')}</b> keeps the stock. Extra units convert to it, e.g. 1 dus = 12 botol.</div>
+              </div>
+              <button type="button" class="btn sm" data-action="unit-add">${icon('plus', 14)} Add unit</button>
+            </div>
+            <div id="unit-rows">${unitRows || `<div class="small muted mt8">No extra units. This product sells only in ${esc(p.unit || 'pcs')}.</div>`}</div>
+            <p class="hint mt8">Leave the price blank to calculate it from the base price × factor. Tick Default to add that unit straight away and skip the unit picker.</p>
           </div>
 
           <div data-tab-panel="pt-barcodes" style="display:none">
@@ -1430,14 +1653,34 @@
   A.action('barcode-add', () => {
     const wrap = document.getElementById('barcode-rows');
     if (!wrap) return;
+    const form = wrap.closest('form');
+    const idEl = form ? form.querySelector('input[name="id"]') : null;
+    const p = idEl && idEl.value ? (A.state.products || []).find((x) => String(x.id) === String(idEl.value)) : null;
     const div = document.createElement('div');
     div.className = 'row gap8 barcode-row mt8';
-    div.innerHTML = `<input class="input barcode-row-input" placeholder="Barcode or SKU" /><button type="button" class="icon-btn" data-action="barcode-remove" style="color:var(--bad)">${icon(
-      'trash',
-      15
-    )}</button>`;
+    div.innerHTML = `<input class="input barcode-row-input" placeholder="Barcode or SKU" />${
+      p && extraUnits(p).length
+        ? `<select class="input barcode-row-unit" style="max-width:140px">${barcodeUnitOptions(p, p.unit)}</select>`
+        : ''
+    }<button type="button" class="icon-btn" data-action="barcode-remove" style="color:var(--bad)">${icon('trash', 15)}</button>`;
     wrap.appendChild(div);
     div.querySelector('input').focus();
+  });
+
+  A.action('unit-add', () => {
+    const wrap = document.getElementById('unit-rows');
+    if (!wrap) return;
+    const empty = wrap.querySelector('.small.muted');
+    if (empty) empty.remove();
+    wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name: '', factor: 1, price: null, is_default: false }));
+    const rows = wrap.querySelectorAll('.unit-row');
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector('.unit-name').focus();
+  });
+
+  A.action('unit-remove', (ds, el) => {
+    const row = el.closest('.unit-row');
+    if (row) row.remove();
   });
 
   A.action('barcode-remove', (ds, el) => {
@@ -1644,6 +1887,11 @@
       quickPay();
       return;
     }
+    if (e.key === 'Enter' && document.activeElement && document.activeElement.id === 'pos-search') {
+      e.preventDefault();
+      addByCode(A.state.catalogSearch);
+      return;
+    }
     if (typing) return;
     if (e.key === 'F4') {
       e.preventDefault();
@@ -1690,6 +1938,7 @@
         items: A.state.cart.items.map((it) => ({
           product_id: it.product_id,
           quantity: it.quantity,
+          unit: it.unit,
           unit_price: it.price / 100,
           discount_type: it.discount_type,
           discount_value: it.discount_value,
