@@ -19,13 +19,15 @@ runs locally — no account, no cloud, no subscription.
   Windows printer or save as PDF from the print dialog.
 - **Products** — groups, barcodes, cost/price, tax rates, low-stock alerts,
   service items, age restrictions, images and colours.
-- **Units of measure & price tiers** — sell one product in several units (pcs,
-  box, kg, 500 g…) with a conversion factor (1 kg = 1000 g) and an optional
-  price per unit; stock stays in the base unit. A quick-add creates the common
-  500 g / 250 g splits, barcodes can be tied to a unit, and a default unit
-  speeds up ringing.
+- **Units of measure** — sell one product in several units (pcs, box, kg…) with
+  a conversion factor and an optional price per unit; stock stays in the base
+  unit. Barcodes can be tied to a unit, and a default unit speeds up ringing.
 - **Find anything** — search Products and Stock by name, code or barcode, with
   paging for large catalogues and a low-stock filter.
+- **Wholesale prices** — a dedicated Wholesale screen with an on/off switch
+  (off by default). Set a wholesale price and a minimum quantity per product in
+  base units; at the till the unit price switches automatically once the
+  quantity reaches the minimum.
 - **Stock** — quantities on hand, average cost, stock movements, adjustments,
   purchases, returns, loss & damage, inventory counts.
 - **Customers & suppliers** — contacts, loyalty cards, preset discounts,

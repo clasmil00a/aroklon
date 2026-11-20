@@ -417,6 +417,151 @@
 
   /* ------------------------------------------------------------- customers */
 
+  /* ------------------------------------------------------------ wholesale */
+
+  function wholesaleMatch(p, q) {
+    if (!q) return true;
+    return [p.name, p.code, p.unit, p.group_name, ...(p.barcodes || [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(q);
+  }
+
+  function wholesaleDraftValue(p, key, fallback) {
+    const d = A.state.wholesaleDraft && A.state.wholesaleDraft[p.id];
+    return d && d[key] != null ? d[key] : fallback;
+  }
+
+  function syncWholesaleInputs() {
+    if (!A.state.wholesaleDraft) A.state.wholesaleDraft = {};
+    document.querySelectorAll('.ws-price').forEach((inp) => {
+      const p = A.state.wholesaleList[Number(inp.dataset.index)];
+      if (!p) return;
+      A.state.wholesaleDraft[p.id] = {
+        ...(A.state.wholesaleDraft[p.id] || {}),
+        price: Math.round(U.num(inp.value, 0) * 100),
+      };
+    });
+    document.querySelectorAll('.ws-min').forEach((inp) => {
+      const p = A.state.wholesaleList[Number(inp.dataset.index)];
+      if (!p) return;
+      A.state.wholesaleDraft[p.id] = {
+        ...(A.state.wholesaleDraft[p.id] || {}),
+        min_qty: U.num(inp.value, 0),
+      };
+    });
+  }
+
+  A.screens.wholesale = {
+    meta: { title: t('Wholesale'), sub: t('Wholesale prices per base unit') },
+    render() {
+      const settings = A.state.settings || {};
+      const enabled = settings.wholesale_enabled === '1';
+      const products = A.state.products || [];
+      const q = String(A.state.wholesaleSearch || '').trim().toLowerCase();
+      const list = q ? products.filter((p) => wholesaleMatch(p, q)) : products;
+      const info = SH.paging.pageSlice(list, A.state.wholesalePage);
+      A.state.wholesaleList = info.rows;
+      const saving = (p) => {
+        const price = wholesaleDraftValue(p, 'price', p.wholesale_price || 0);
+        return price > 0 && p.price > 0 ? Math.round((1 - price / p.price) * 100) : 0;
+      };
+      return `<div class="card">
+        <div class="card-head">
+          <div class="row gap8"><h2>${esc(t('Wholesale'))}</h2><span class="badge ${enabled ? 'good' : 'gray'}">${
+            enabled ? 'ON' : 'OFF'
+          }</span></div>
+          <div class="right">
+            <label class="switch"><input type="checkbox" id="wholesale-toggle" data-change="wholesale-toggle" ${
+              enabled ? 'checked' : ''
+            } /><span class="track"></span><span>${esc(t('Enable wholesale prices'))}</span></label>
+          </div>
+        </div>
+        <div class="row gap8 wrap" style="padding:8px 12px;border-bottom:1px solid var(--line)">
+          <div class="search-box" style="flex:1;min-width:180px">${icon('search', 16)}<input id="wholesale-search" class="input" data-input="wholesale-search" placeholder="${esc(
+            t('Search name, code or barcode…')
+          )}" value="${attr(A.state.wholesaleSearch || '')}" autocomplete="off" /></div>
+          <span class="small muted">${esc(t('Wholesale price and minimum quantity are per base unit.'))}</span>
+        </div>
+        <div class="table-wrap">
+          ${
+            info.rows.length
+              ? `<table class="data"><thead><tr><th>Product</th><th>Group</th><th>${esc(t('Unit'))}</th><th class="num">${esc(t('Normal'))}</th><th class="num">${esc(
+                  t('Wholesale')
+                )}</th><th class="num">${esc(t('Min qty'))}</th><th class="num">${esc(t('Saving'))}</th></tr></thead><tbody>
+                ${info.rows
+                  .map(
+                    (p, i) => `<tr>
+                      <td><div class="strong">${esc(p.name)}</div><div class="small muted mono">${esc(p.code || '')}</div></td>
+                      <td><span class="badge gray">${esc(p.group_name || '—')}</span></td>
+                      <td class="mono">${esc(p.unit || '')}</td>
+                      <td class="num mono">${money(p.price)}</td>
+                      <td class="num"><input class="input ws-price" data-index="${i}" type="number" step="0.01" min="0" value="${(
+                        wholesaleDraftValue(p, 'price', p.wholesale_price || 0) / 100
+                      ).toFixed(2)}" style="width:110px;padding:5px 7px;text-align:right" /></td>
+                      <td class="num"><input class="input ws-min" data-index="${i}" type="number" step="0.001" min="0" value="${U.num(
+                        wholesaleDraftValue(p, 'min_qty', p.wholesale_min_qty || 0)
+                      )}" style="width:100px;padding:5px 7px;text-align:right" /></td>
+                      <td class="num mono">${saving(p) ? `-${saving(p)}%` : '—'}</td>
+                    </tr>`
+                  )
+                  .join('')}
+              </tbody></table>${SH.paging.pageBar(info, 'wholesale-page', 'Products')}`
+              : SH.empty({ icon: 'tag', title: 'No products', text: 'Add products first.' })
+          }
+        </div>
+        <div class="row between wrap gap8" style="padding:10px 12px;border-top:1px solid var(--line)">
+          <span class="small muted">${esc(t('Turn the switch on to use these prices at the till.'))}</span>
+          <button class="btn primary" data-action="wholesale-save">${icon('check', 15)} ${esc(t('Save changes'))}</button>
+        </div>
+      </div>`;
+    },
+  };
+
+  A.action('input:wholesale-search', (ds, el) => {
+    const caret = el.selectionStart;
+    syncWholesaleInputs();
+    A.state.wholesaleSearch = el.value;
+    A.state.wholesalePage = 1;
+    A.render();
+    const next = document.getElementById('wholesale-search');
+    if (next) {
+      next.focus();
+      try {
+        next.setSelectionRange(caret, caret);
+      } catch (e) {}
+    }
+  });
+
+  A.action('wholesale-page', (ds) => {
+    syncWholesaleInputs();
+    A.state.wholesalePage = Number(ds.page) || 1;
+    A.render();
+  });
+
+  A.action('change:wholesale-toggle', async (ds, el) => {
+    syncWholesaleInputs();
+    await A.api('setSetting', ['wholesale_enabled', el.checked ? '1' : '0']);
+    A.state.settings = await A.api('getSettings');
+    A.render();
+    A.toast(el.checked ? 'Harga grosir diaktifkan' : 'Harga grosir dinonaktifkan', 'good');
+  });
+
+  A.action('wholesale-save', async () => {
+    syncWholesaleInputs();
+    const items = Object.entries(A.state.wholesaleDraft || {}).map(([id, d]) => ({
+      id: Number(id),
+      price: (d.price || 0) / 100,
+      min_qty: d.min_qty || 0,
+    }));
+    if (items.length) await A.api('saveWholesalePrices', [items]);
+    A.state.wholesaleDraft = {};
+    await A.reloadCatalog();
+    A.render();
+    A.toast('Harga grosir disimpan');
+  });
+
   A.screens.customers = {
     meta: { title: t('Customers'), sub: t('Contacts, suppliers and loyalty') },
     render() {
@@ -1242,6 +1387,8 @@
       image: String(fd.get('image') || '') || null,
       description: String(fd.get('description') || ''),
       low_stock: U.num(fd.get('low_stock')),
+      wholesale_price: U.num(fd.get('wholesale_price')),
+      wholesale_min_qty: U.num(fd.get('wholesale_min_qty')),
       barcodes,
       units,
       comments,

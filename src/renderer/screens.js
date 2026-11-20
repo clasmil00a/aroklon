@@ -100,6 +100,8 @@
     </div>`;
   }
 
+  SH.paging = { pageSlice, pageBar, PAGE_SIZE };
+
   function matchesSearch(p, q) {
     if (!q) return true;
     return [p.name, p.code, p.unit, p.group_name, ...(p.barcodes || [])]
@@ -327,9 +329,27 @@
     return extras.find((u) => u.is_default) || base;
   }
 
-  function unitPrice(p, unit) {
-    if (unit.price != null) return Math.round(U.num(unit.price));
-    return Math.round(U.num(p.price) * U.num(unit.factor, 1));
+  function wholesaleActive(p, unit, quantity) {
+    if (!A.state.settings || A.state.settings.wholesale_enabled !== '1') return false;
+    if (!(U.num(p.wholesale_price) > 0) || !(U.num(p.wholesale_min_qty) > 0)) return false;
+    const factor = U.num(unit.factor, 1) > 0 ? U.num(unit.factor, 1) : 1;
+    return U.num(quantity) * factor + 1e-9 >= U.num(p.wholesale_min_qty);
+  }
+
+  function isWholesaleLine(it) {
+    const p = (A.state.products || []).find((x) => String(x.id) === String(it.product_id));
+    if (!p) return false;
+    return wholesaleActive(p, resolveUnit(p, it.unit), it.quantity);
+  }
+
+  function unitPrice(p, unit, quantity) {
+    const normal =
+      unit.price != null ? Math.round(U.num(unit.price)) : Math.round(U.num(p.price) * U.num(unit.factor, 1));
+    if (quantity != null && wholesaleActive(p, unit, quantity)) {
+      const factor = U.num(unit.factor, 1) > 0 ? U.num(unit.factor, 1) : 1;
+      return Math.round(U.num(p.wholesale_price) * factor);
+    }
+    return normal;
   }
 
   function unitOptions(p) {
@@ -463,6 +483,7 @@
                           <div class="l-name">${esc(it.name)}</div>
                           <div class="l-meta">
                             <span class="qty-badge">${U.qty(it.quantity)}${it.unit ? ` ${esc(it.unit)}` : ''} × ${money(it.price)}</span>
+                            ${isWholesaleLine(it) ? `<span class="badge good" style="padding:1px 6px;font-size:10px">${esc(t('Wholesale'))}</span>` : ''}
                             ${it.discount_type ? `<span class="badge good" style="padding:1px 6px;font-size:10px">${esc(it.discount_type)} discount</span>` : ''}
                           </div>
                         </div>
@@ -542,7 +563,7 @@
   async function addToCart(product, quantity, unitName) {
     const cart = A.state.cart;
     const unit = resolveUnit(product, unitName);
-    const price = unitPrice(product, unit);
+    const price = unitPrice(product, unit, quantity);
     const existing = cart.items.find(
       (i) => String(i.product_id) === String(product.id) && String(i.unit || '') === String(unit.name)
     );
@@ -775,8 +796,16 @@
     if (i == null || !A.state.cart.items[i]) return;
     const delta = Number(ds.delta);
     const next = U.num(A.state.cart.items[i].quantity) + delta;
-    if (next <= 0) A.state.cart.items.splice(i, 1);
-    else A.state.cart.items[i].quantity = next;
+    if (next <= 0) {
+      A.state.cart.items.splice(i, 1);
+      if (A.state.selectedLine >= A.state.cart.items.length) A.state.selectedLine = null;
+      A.render();
+      return;
+    }
+    const it = A.state.cart.items[i];
+    it.quantity = next;
+    const prod = (A.state.products || []).find((x) => String(x.id) === String(it.product_id));
+    if (prod) it.price = unitPrice(prod, resolveUnit(prod, it.unit), it.quantity);
     if (A.state.selectedLine >= A.state.cart.items.length) A.state.selectedLine = null;
     A.render();
   });
@@ -797,7 +826,7 @@
     it.quantity = qty;
     it.unit = unit.name;
     it.unit_factor = factor;
-    it.price = unitPrice(p, unit);
+    it.price = unitPrice(p, unit, qty);
     A.render();
   });
 
@@ -1553,6 +1582,8 @@
         is_service: false,
         cost: 0,
         price: 0,
+        wholesale_price: 0,
+        wholesale_min_qty: 0,
         price_incl_tax: false,
         price_change_allowed: true,
         default_qty: false,
@@ -1569,34 +1600,19 @@
     );
   }
 
-  function splitPresets(base) {
-    const b = String(base || '').toLowerCase().trim();
-    if (b === 'kg' || b === 'kilogram') return [['500 gr', 0.5], ['250 gr', 0.25], ['100 gr', 0.1]];
-    if (b === 'l' || b === 'liter' || b === 'ltr') return [['500 ml', 0.5], ['250 ml', 0.25]];
-    return [];
-  }
-
-  function splitButtonLabel(base) {
-    const b = String(base || '').toLowerCase().trim();
-    return b === 'kg' || b === 'kilogram' ? '500 gr & 250 gr' : '500 ml & 250 ml';
-  }
-
-  function unitRowHtml(u, baseUnit) {
+  function unitRowHtml(u) {
     const price = u.price == null || u.price === '' ? '' : u.price / 100;
-    const factor = u.factor != null ? u.factor : 1;
-    const base = baseUnit || 'pcs';
-    return `<div class="row gap8 unit-row mt8" style="align-items:flex-end;flex-wrap:wrap" data-base="${attr(base)}">
+    return `<div class="row gap8 unit-row mt8" style="align-items:flex-end;flex-wrap:wrap">
       <div class="field" style="min-width:130px">
         <label class="small muted">${esc(t('Unit'))}</label>
-        <input class="input unit-name" data-input="unit-name" value="${attr(u.name || '')}" placeholder="${attr(t('e.g. box'))}" />
+        <input class="input unit-name" value="${attr(u.name || '')}" placeholder="${attr(t('e.g. box'))}" />
       </div>
-      <div class="field" style="min-width:150px">
-        <label class="small muted">1 <span class="unit-name-label">${esc(u.name || t('unit'))}</span> = … ${esc(base)}</label>
-        <input class="input unit-factor" type="number" step="0.001" min="0" value="${attr(factor)}" data-input="unit-factor" />
-        <div class="hint unit-preview">${factor > 0 ? `= ${U.qty(factor)} ${esc(base)}` : ''}</div>
+      <div class="field" style="min-width:130px">
+        <label class="small muted">${esc(t('Base units per unit'))}</label>
+        <input class="input unit-factor" type="number" step="0.001" min="0" value="${attr(u.factor != null ? u.factor : 1)}" />
       </div>
       <div class="field" style="min-width:120px">
-        <label class="small muted">${esc(t('Price'))} / ${esc(u.name || t('unit'))}</label>
+        <label class="small muted">${esc(t('Price'))}</label>
         <input class="input unit-price" type="number" step="0.01" min="0" value="${attr(price)}" placeholder="${attr(t('Auto'))}" />
       </div>
       <label class="row gap8 small" style="padding-bottom:8px">
@@ -1643,7 +1659,7 @@
 
     const unitRows = (p.units || [])
       .filter((u) => !u.base)
-      .map((u) => unitRowHtml(u, p.unit || 'pcs'))
+      .map(unitRowHtml)
       .join('');
 
     A.modal(
@@ -1655,7 +1671,7 @@
         <div class="tabs">
           <button type="button" class="tab active" data-action="tab" data-target="pt-details">Details</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-price">Price & tax</button>
-          <button type="button" class="tab" data-action="tab" data-target="pt-units">${esc(t('Units & prices'))}</button>
+          <button type="button" class="tab" data-action="tab" data-target="pt-units">Units &amp; prices</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-barcodes">Barcodes</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-comments">Comments</button>
           <button type="button" class="tab" data-action="tab" data-target="pt-look">Image & colour</button>
@@ -1682,6 +1698,12 @@
             <div class="form-grid">
               ${SH.field('Cost', SH.input('cost', (p.cost || 0) / 100, { type: 'number', step: '0.01', min: '0' }))}
               ${SH.field('Sell price', SH.input('price', (p.price || 0) / 100, { type: 'number', step: '0.01', min: '0', required: true }))}
+              ${SH.field('Wholesale price', SH.input('wholesale_price', (p.wholesale_price || 0) / 100, { type: 'number', step: '0.01', min: '0' }), {
+                hint: `Per ${p.unit || 'pcs'}. Only used when the Wholesale menu is switched on.`,
+              })}
+              ${SH.field('Wholesale min qty', SH.input('wholesale_min_qty', p.wholesale_min_qty || 0, { type: 'number', step: '0.001', min: '0' }), {
+                hint: 'Minimum quantity in base units before the wholesale price applies.',
+              })}
               <div class="span2 row wrap gap12">
                 ${SH.checkbox('price_incl_tax', 'Price includes tax', !!p.price_incl_tax)}
                 ${SH.checkbox('price_change_allowed', 'Allow price change at sale', p.price_change_allowed !== false)}
@@ -1696,18 +1718,13 @@
           <div data-tab-panel="pt-units" style="display:none">
             <div class="row between wrap gap8">
               <div>
-                <div class="label">${esc(t('Additional units & price tiers'))}</div>
-                <div class="hint">The base unit <b>${esc(p.unit || 'pcs')}</b> keeps the stock. Extra units convert to it, e.g. 1 dus = 12 pcs, 1 kg = 1000 gr.</div>
+                <div class="label">Additional units</div>
+                <div class="hint">The base unit <b>${esc(p.unit || 'pcs')}</b> keeps the stock. Extra units convert to it, e.g. 1 dus = 12 botol.</div>
               </div>
-              <div class="row gap8">
-                ${splitPresets(p.unit).length ? `<button type="button" class="btn sm" data-action="unit-split">${icon('plus', 14)} ${esc(
-                  t('Add')
-                )} ${esc(splitButtonLabel(p.unit))}</button>` : ''}
-                <button type="button" class="btn sm" data-action="unit-add">${icon('plus', 14)} Add unit</button>
-              </div>
+              <button type="button" class="btn sm" data-action="unit-add">${icon('plus', 14)} Add unit</button>
             </div>
             <div id="unit-rows">${unitRows || `<div class="small muted mt8">No extra units. This product sells only in ${esc(p.unit || 'pcs')}.</div>`}</div>
-            <p class="hint mt8">Isi faktor = berapa satuan dasar dalam 1 satuan ini. Contoh jika satuan dasar <b>Kg</b>: <b>1 kg = 1000 gr</b>, jadi isi <b>0.001</b> untuk gr, <b>0.5</b> untuk 500 gr, <b>0.25</b> untuk 250 gr. Harga kosong = harga dasar × faktor. Centang Default untuk menjual satuan itu langsung saat produk ditempel.</p>
+            <p class="hint mt8">Leave the price blank to calculate it from the base price × factor. Tick Default to add that unit straight away and skip the unit picker.</p>
           </div>
 
           <div data-tab-panel="pt-barcodes" style="display:none">
@@ -1777,59 +1794,15 @@
     div.querySelector('input').focus();
   });
 
-  function unitBaseName() {
-    const form = document.querySelector('form[data-form="save-product"]');
-    const input = form ? form.querySelector('input[name="unit"]') : null;
-    return (input && input.value.trim()) || 'pcs';
-  }
-
   A.action('unit-add', () => {
     const wrap = document.getElementById('unit-rows');
     if (!wrap) return;
     const empty = wrap.querySelector('.small.muted');
     if (empty) empty.remove();
-    wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name: '', factor: 1, price: null, is_default: false }, unitBaseName()));
+    wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name: '', factor: 1, price: null, is_default: false }));
     const rows = wrap.querySelectorAll('.unit-row');
     const last = rows[rows.length - 1];
     if (last) last.querySelector('.unit-name').focus();
-  });
-
-  A.action('unit-split', () => {
-    const wrap = document.getElementById('unit-rows');
-    if (!wrap) return;
-    const base = unitBaseName();
-    const presets = splitPresets(base);
-    if (!presets.length) return;
-    const empty = wrap.querySelector('.small.muted');
-    if (empty) empty.remove();
-    let added = 0;
-    for (const [name, factor] of presets) {
-      const exists = [...wrap.querySelectorAll('.unit-name')].some(
-        (i) => i.value.trim().toLowerCase() === name.toLowerCase()
-      );
-      if (exists) continue;
-      wrap.insertAdjacentHTML('beforeend', unitRowHtml({ name, factor, price: null, is_default: false }, base));
-      added++;
-    }
-    A.toast(added ? `${added} ${t('units added')}` : 'Satuan itu sudah ada', added ? 'good' : 'warn');
-    const rows = wrap.querySelectorAll('.unit-row');
-    const last = rows[rows.length - 1];
-    if (last) last.querySelector('.unit-name').focus();
-  });
-
-  A.action('input:unit-factor', (ds, el) => {
-    const row = el.closest('.unit-row');
-    if (!row) return;
-    const out = row.querySelector('.unit-preview');
-    if (!out) return;
-    const f = U.num(el.value, 0);
-    out.textContent = f > 0 ? `= ${U.qty(f)} ${row.dataset.base || ''}` : '';
-  });
-
-  A.action('input:unit-name', (ds, el) => {
-    const row = el.closest('.unit-row');
-    const label = row && row.querySelector('.unit-name-label');
-    if (label) label.textContent = el.value.trim() || 'unit';
   });
 
   A.action('unit-remove', (ds, el) => {
@@ -2101,6 +2074,8 @@
             const n = U.num(v, 0);
             if (n > 0) {
               it.quantity = n;
+              const prod = (A.state.products || []).find((x) => String(x.id) === String(it.product_id));
+              if (prod) it.price = unitPrice(prod, resolveUnit(prod, it.unit), n);
               A.render();
             }
           });

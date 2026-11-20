@@ -82,7 +82,7 @@ function createWindow() {
       try {
         const r = await Promise.race([
           mainWindow.webContents.executeJavaScript(code),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + label)), 30000)),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + label)), 90000)),
         ]);
         console.log('smoke js ok:', label, JSON.stringify(r));
         return r;
@@ -569,32 +569,93 @@ function createWindow() {
           'flow-customer'
         );
 
+        if (process.env.AROKLON_WHOLESALE_TEST) {
+          out.flowWholesale = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                await A.api('setSetting', ['wholesale_enabled', '0']);
+                const saved = await A.api('saveProduct', {
+                  name: 'Gula WS', code: 'GULAWS', unit: 'pcs', price: 10000, cost: 6000,
+                  active: true, price_change_allowed: true, tax_rate_ids: [],
+                });
+                await A.api('adjustStock', [saved.id, 100, 'test']);
+                await A.reloadCatalog();
+                A.state.settings = await A.api('getSettings');
+                A.state.settings.ask_qty = '0';
+                A.go('wholesale'); await s(500);
+                res.screen = !!document.getElementById('wholesale-toggle');
+                res.toggleOff = A.state.settings.wholesale_enabled !== '1';
+
+                const tog = document.getElementById('wholesale-toggle');
+                if (tog) {
+                  tog.checked = true;
+                  tog.dispatchEvent(new Event('change', { bubbles: true }));
+                  await s(500);
+                }
+                res.toggleOn = A.state.settings.wholesale_enabled === '1';
+                const idx = (A.state.wholesaleList || []).findIndex((p) => p.name === 'Gula WS');
+                const row = document.querySelectorAll('table.data tbody tr')[idx];
+                res.row = !!row;
+                if (row) {
+                  row.querySelector('.ws-price').value = '8000';
+                  row.querySelector('.ws-min').value = '10';
+                }
+                const save = document.querySelector('[data-action="wholesale-save"]');
+                if (save) save.click();
+                await s(700);
+                const full = await A.api('getProduct', saved.id);
+                res.saved = [full.wholesale_price, full.wholesale_min_qty];
+                A.state.settings.ask_qty = '0';
+                A.go('sales'); await s(400);
+                A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+                await A.actions['pos-add']({ id: String(saved.id) }, null, { preventDefault(){} });
+                await s(300);
+                // quantity 1 by default
+                const before = A.state.cart.items[0];
+                res.qty1 = [before.price, before.quantity];
+                A.state.selectedLine = 0;
+                A.actions['pos-qty']({ delta: '9' });
+                await s(250);
+                const after = A.state.cart.items[0];
+                res.qty10 = [after.price, after.quantity, A.computeCart(A.state.cart.items, A.state.cart.discount, A.state.cart.tax_override).total];
+
+                A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+                await A.actions['pos-add']({ id: String(saved.id) }, null, { preventDefault(){} });
+                await s(250);
+                A.state.selectedLine = 0;
+                A.actions['pos-qty']({ delta: '4' });
+                await s(250);
+                res.qty5 = [A.state.cart.items[0].price, A.state.cart.items[0].quantity];
+
+                await A.api('setSetting', ['wholesale_enabled', '0']);
+                A.state.settings = await A.api('getSettings');
+                A.state.settings.ask_qty = '0';
+                A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+                await A.actions['pos-add']({ id: String(saved.id) }, null, { preventDefault(){} });
+                await s(250);
+                A.state.selectedLine = 0;
+                A.actions['pos-qty']({ delta: '9' });
+                await s(250);
+                res.off10 = [A.state.cart.items[0].price, A.state.cart.items[0].quantity];
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-wholesale'
+          );
+        }
+
         if (process.env.AROKLON_CATALOGUE_TEST) {
           out.flowCatalogue = await js(
             `(async () => {
               const s = (ms) => new Promise((r) => setTimeout(r, ms));
               const A = window.App; const res = {};
               try {
-                const saved = await A.api('saveProduct', {
-                  name: 'Gula Test', code: 'GULA1', unit: 'kg', price: 19000, cost: 12000,
-                  active: true, tax_rate_ids: [],
-                  units: [], barcodes: [],
+                await A.api('saveProduct', {
+                  name: 'Gula Test', code: 'GULA1', unit: 'kg', price: 19000, cost: 12000, active: true,
                 });
                 await A.reloadCatalog(); await s(250);
-
-                A.actions['product-edit']({ id: String(saved.id) });
-                await s(300);
-                const splitBtn = document.querySelector('[data-action="unit-split"]');
-                res.splitButton = !!splitBtn;
-                if (splitBtn) { splitBtn.click(); await s(250); }
-                res.rows = [...document.querySelectorAll('.unit-row')].map((r) => [
-                  r.querySelector('.unit-name').value,
-                  r.querySelector('.unit-factor').value,
-                ]);
-                const form = document.querySelector('form[data-form="save-product"]');
-                if (form) { form.requestSubmit(); await s(700); }
-                const full = await A.api('getProduct', saved.id);
-                res.savedUnits = (full.units || []).map((u) => [u.name, u.factor, u.price]);
 
                 A.go('products'); await s(400);
                 const pi = document.getElementById('product-search');

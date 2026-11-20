@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS product (
   image TEXT,
   description TEXT,
   low_stock INTEGER DEFAULT 0,
+  wholesale_price INTEGER DEFAULT 0,
+  wholesale_min_qty REAL DEFAULT 0,
   sort_order INTEGER DEFAULT 0
 );
 
@@ -316,6 +318,8 @@ function migrate() {
   addColumn('barcode', 'unit_id', 'INTEGER');
   addColumn('document_item', 'unit_snapshot', 'TEXT');
   addColumn('document_item', 'unit_factor', 'REAL DEFAULT 1');
+  addColumn('product', 'wholesale_price', 'INTEGER DEFAULT 0');
+  addColumn('product', 'wholesale_min_qty', 'REAL DEFAULT 0');
   run(`UPDATE document_item SET unit_factor = 1 WHERE unit_factor IS NULL`);
   run(
     `UPDATE document_item SET unit_snapshot = COALESCE(
@@ -1052,6 +1056,18 @@ function unitPriceFor(p, unit) {
   return Math.round(num(p.price) * num(u.factor, 1));
 }
 
+// Wholesale price per base unit. The master switch lives in settings and
+// defaults to off, so nothing changes until the shop turns it on.
+function wholesalePriceFor(p, unit, quantity) {
+  if (getSetting('wholesale_enabled') !== '1') return null;
+  if (!(num(p.wholesale_price) > 0) || !(num(p.wholesale_min_qty) > 0)) return null;
+  const u = unit || resolveUnit(p, null);
+  const factor = num(u.factor, 1) > 0 ? num(u.factor, 1) : 1;
+  const baseQty = num(quantity) * factor;
+  if (baseQty + 1e-9 < num(p.wholesale_min_qty)) return null;
+  return Math.round(num(p.wholesale_price) * factor);
+}
+
 function unitFactor(p, name) {
   const f = num(resolveUnit(p, name).factor, 1);
   return f > 0 ? f : 1;
@@ -1213,6 +1229,8 @@ function saveProduct(p) {
     image: p.image || null,
     description: p.description || '',
     low_stock: num(p.low_stock),
+    wholesale_price: cents(p.wholesale_price),
+    wholesale_min_qty: num(p.wholesale_min_qty),
     sort_order: num(p.sort_order),
   };
 
@@ -1244,7 +1262,7 @@ function saveProduct(p) {
     run(
       `UPDATE product SET name=?, code=?, unit=?, group_id=?, active=?, is_service=?, cost=?, price=?,
         price_incl_tax=?, price_change_allowed=?, default_qty=?, age_restricted=?, color=?, image=?,
-        description=?, low_stock=?, sort_order=? WHERE id=?`,
+        description=?, low_stock=?, wholesale_price=?, wholesale_min_qty=?, sort_order=? WHERE id=?`,
       [
         values.name,
         values.code,
@@ -1262,6 +1280,8 @@ function saveProduct(p) {
         values.image,
         values.description,
         values.low_stock,
+        values.wholesale_price,
+        values.wholesale_min_qty,
         values.sort_order,
         id,
       ]
@@ -1270,8 +1290,8 @@ function saveProduct(p) {
     const res = run(
       `INSERT INTO product (name, code, unit, group_id, active, is_service, cost, price,
         price_incl_tax, price_change_allowed, default_qty, age_restricted, color, image,
-        description, low_stock, sort_order)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        description, low_stock, wholesale_price, wholesale_min_qty, sort_order)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         values.name,
         values.code,
@@ -1289,6 +1309,8 @@ function saveProduct(p) {
         values.image,
         values.description,
         values.low_stock,
+        values.wholesale_price,
+        values.wholesale_min_qty,
         values.sort_order,
       ]
     );
@@ -1354,6 +1376,18 @@ function saveProduct(p) {
   }
   persist();
   return { ok: true, id };
+}
+
+function saveWholesalePrices(items) {
+  tx(() => {
+    for (const it of items || []) {
+      const price = Math.max(0, cents(it.price));
+      const minQty = Math.max(0, num(it.min_qty));
+      run(`UPDATE product SET wholesale_price=?, wholesale_min_qty=? WHERE id=?`, [price, minQty, Number(it.id)]);
+    }
+  });
+  persist();
+  return { ok: true };
 }
 
 function deleteProduct(id) {
@@ -1612,11 +1646,14 @@ function computeSale(input) {
       throw new Error(`Not enough stock for ${p.name} (on hand: ${p.stock.quantity} ${p.unit})`);
     }
 
-    let unitPrice = unitPriceFor(p, unit);
+    const normalPrice = unitPriceFor(p, unit);
+    const wholesale = wholesalePriceFor(p, unit, qty);
+    let unitPrice = wholesale != null ? wholesale : normalPrice;
     if (it.unit_price != null) {
       const override = cents(it.unit_price);
-      // The till always sends the catalogue price, so only a real change counts.
-      if (override !== unitPrice) {
+      // The till sends either the normal or the wholesale price; anything else
+      // is treated as a manual override.
+      if (override !== normalPrice && override !== unitPrice) {
         if (!p.price_change_allowed) throw new Error(`Price cannot be changed for ${p.name}`);
         unitPrice = override;
       }
@@ -3038,6 +3075,7 @@ module.exports = {
   getProduct,
   getProductByBarcode,
   saveProduct,
+  saveWholesalePrices,
   deleteProduct,
   listStock,
   adjustStock,
