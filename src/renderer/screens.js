@@ -1969,7 +1969,7 @@
         <div class="modal-body">
           <div class="form-grid">
             ${SH.field('Quantity on hand', SH.input('quantity', U.num(s.quantity), { type: 'number', step: '0.001', required: true }), { hint: `Currently ${U.qty(s.quantity)} ${esc(s.unit || '')}. Enter the real counted quantity.` })}
-            ${SH.field('Reason', SH.input('reason', '', { placeholder: 'e.g. stock count, breakage', required: true }), { span: 2 })}
+            ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('Optional') }), { span: 2 })}
           </div>
         </div>
         ${SH.modalFoot('Save adjustment')}
@@ -1994,7 +1994,6 @@
     const productId = Number(fd.get('product_id'));
     const quantity = U.num(fd.get('quantity'));
     const reason = String(fd.get('reason') || '').trim();
-    if (!reason) throw new Error('A reason is required');
     if (!Number.isFinite(quantity)) throw new Error('Enter a valid quantity');
     const res = await A.api('adjustStock', [productId, quantity, reason]);
     if (!res || !res.ok) throw new Error((res && res.error) || 'Could not adjust stock');

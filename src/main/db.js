@@ -2556,10 +2556,10 @@ function listCashMovements(registerId) {
 function addCash(kind, amount, reason, userId, registerId) {
   const amt = cents(amount);
   if (!(amt > 0)) return { ok: false, error: 'Enter an amount greater than zero' };
-  if (!reason || !String(reason).trim()) return { ok: false, error: 'A reason is required' };
+  const reasonText = String(reason || '').trim();
   run(
     `INSERT INTO cash_movement (register_id, user_id, kind, amount, reason, occurred_at) VALUES (?,?,?,?,?,?)`,
-    [registerId || null, userId || null, kind, amt, reason, nowLocal()]
+    [registerId || null, userId || null, kind, amt, reasonText, nowLocal()]
   );
   persist();
   return { ok: true };

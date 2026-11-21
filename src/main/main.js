@@ -730,7 +730,7 @@ function createWindow() {
                   res.hasAdjustForm = !!form;
                   if (form) {
                     form.querySelector('[name="quantity"]').value = String((beforeQty || 0) + 5);
-                    form.querySelector('[name="reason"]').value = 'smoke test';
+                    form.querySelector('[name="reason"]').value = '';
                     form.requestSubmit();
                     await s(900);
                   }
@@ -759,7 +759,7 @@ function createWindow() {
                   res.prodStockForm = !!form;
                   if (form) {
                     form.querySelector('[name="quantity"]').value = String(before + 7);
-                    form.querySelector('[name="reason"]').value = 'smoke';
+                    form.querySelector('[name="reason"]').value = '';
                     form.requestSubmit();
                     await s(1000);
                   }
