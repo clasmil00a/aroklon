@@ -432,7 +432,11 @@
           <div class="catalog-body">
             ${
               products.length
-                ? `<div class="product-grid" id="product-grid">${shownProducts.map(tileHtml).join('')}</div>
+                ? `<div class="product-grid ${A.state.settings && A.state.settings.layout === 'list' ? 'list' : ''}" id="product-grid">${
+                        shownProducts
+                          .map(tileHtml)
+                          .join('')
+                      }</div>
                    ${
                      products.length > shownProducts.length
                        ? `<div class="hint" style="padding:8px 12px">${esc(
@@ -1973,6 +1977,22 @@
       </form>`,
       { size: '' }
     );
+  });
+
+  A.action('form:stock-adjust', async (form) => {
+    const fd = new FormData(form);
+    const productId = Number(fd.get('product_id'));
+    const quantity = U.num(fd.get('quantity'));
+    const reason = String(fd.get('reason') || '').trim();
+    if (!reason) throw new Error('A reason is required');
+    if (!Number.isFinite(quantity)) throw new Error('Enter a valid quantity');
+    const res = await A.api('adjustStock', [productId, quantity, reason]);
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Could not adjust stock');
+    A.closeModal();
+    A.state.stock = await A.api('listStock', {});
+    await A.reloadCatalog();
+    A.render();
+    A.toast('Stock adjusted');
   });
 
   A.action('stock-history', async (ds) => {

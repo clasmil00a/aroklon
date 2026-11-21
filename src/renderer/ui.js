@@ -551,6 +551,7 @@
         ['documents', 'Documents', 'documents'],
         ['products', 'Products', 'products'],
         ['stock', 'Stock', 'stock'],
+        ['wholesale', 'Wholesale', 'tag'],
         ['reports', 'Reporting', 'reports'],
         ['customers', 'Customers & Suppliers', 'customers'],
         ['promotions', 'Promotions', 'tag'],

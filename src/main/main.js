@@ -646,6 +646,85 @@ function createWindow() {
           );
         }
 
+        if (process.env.AROKLON_PREFS_TEST) {
+          out.flowPrefs = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                A.state.settings.ask_qty = '0';
+                A.go('settings'); A.state.settingsTab = 'prefs'; await s(400);
+
+                const pl = document.getElementById('product_layout');
+                res.hasProductLayout = !!pl;
+                if (pl) pl.value = 'list';
+                let pf = document.querySelector('form[data-form="save-prefs"]');
+                if (pf) { pf.requestSubmit(); await s(700); }
+                res.layoutSetting = (await A.api('getSettings')).layout;
+                A.go('sales'); await s(400);
+                res.listClass = !!document.querySelector('.product-grid.list');
+
+                A.go('settings'); A.state.settingsTab = 'prefs'; await s(400);
+                const pl2 = document.getElementById('product_layout');
+                if (pl2) pl2.value = 'grid';
+                pf = document.querySelector('form[data-form="save-prefs"]');
+                if (pf) { pf.requestSubmit(); await s(600); }
+                A.go('sales'); await s(400);
+                res.gridClass = !!document.querySelector('.product-grid:not(.list)');
+
+                A.go('settings'); A.state.settingsTab = 'prefs'; await s(400);
+                const layoutSel = document.getElementById('layout');
+                res.hasAppearanceLayout = !!layoutSel;
+                if (layoutSel) { layoutSel.value = 'classic'; layoutSel.dispatchEvent(new Event('change', { bubbles: true })); await s(300); }
+                res.classic = document.documentElement.dataset.layout;
+                if (layoutSel) { layoutSel.value = 'modern'; layoutSel.dispatchEvent(new Event('change', { bubbles: true })); await s(200); }
+
+                const modeSel = document.getElementById('mode');
+                if (modeSel) { modeSel.value = 'light'; modeSel.dispatchEvent(new Event('change', { bubbles: true })); await s(250); }
+                res.light = document.documentElement.dataset.mode;
+                if (modeSel) { modeSel.value = 'dark'; modeSel.dispatchEvent(new Event('change', { bubbles: true })); await s(200); }
+
+                const langSel = document.getElementById('lang');
+                if (langSel) { langSel.value = 'en'; langSel.dispatchEvent(new Event('change', { bubbles: true })); await s(250); }
+                res.en = window.I18N ? I18N.lang : null;
+                if (langSel) { langSel.value = 'id'; langSel.dispatchEvent(new Event('change', { bubbles: true })); await s(200); }
+
+                A.go('stock'); await s(500);
+                const btn = document.querySelector('[data-action="stock-adjust"]');
+                res.hasAdjust = !!btn;
+                if (btn) {
+                  const id = Number(btn.dataset.id);
+                  const before = (await A.api('listStock', {})).find((x) => x.id === id);
+                  const beforeQty = before ? before.quantity : null;
+                  btn.click(); await s(300);
+                  const form = document.querySelector('form[data-form="stock-adjust"]');
+                  res.hasAdjustForm = !!form;
+                  if (form) {
+                    form.querySelector('[name="quantity"]').value = String((beforeQty || 0) + 5);
+                    form.querySelector('[name="reason"]').value = 'smoke test';
+                    form.requestSubmit();
+                    await s(900);
+                  }
+                  const after = (await A.api('listStock', {})).find((x) => x.id === id);
+                  res.stockDelta = after && beforeQty != null ? after.quantity - beforeQty : null;
+                  res.adjustClosed = !document.querySelector('form[data-form="stock-adjust"]');
+                }
+
+                A.go('settings'); await s(400);
+                res.tabs = {};
+                for (const tab of ['company', 'tax', 'tenders', 'countries', 'registers', 'prefs', 'data']) {
+                  A.actions['tab']({ target: 'set-' + tab }, null, {});
+                  await s(120);
+                  const panel = document.querySelector('[data-tab-panel="set-' + tab + '"]');
+                  res.tabs[tab] = !!panel && panel.style.display !== 'none';
+                }
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-prefs'
+          );
+        }
+
         if (process.env.AROKLON_CATALOGUE_TEST) {
           out.flowCatalogue = await js(
             `(async () => {
