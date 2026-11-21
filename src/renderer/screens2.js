@@ -99,8 +99,8 @@
               { value: 'partial', label: t('Partial') },
               { value: 'open', label: t('Open') },
             ], f.status, { dataChange: 'doc-filter', dataKey: 'status' })}</div>
-            <div class="field"><label>From</label><input class="input" type="date" data-change="doc-filter" data-key="from" value="${attr(f.from)}" /></div>
-            <div class="field"><label>To</label><input class="input" type="date" data-change="doc-filter" data-key="to" value="${attr(f.to)}" /></div>
+            <div class="field"><label>From</label>${SH.dateField('from', f.from, { dataChange: 'doc-filter', dataKey: 'from', id: 'doc-from' })}</div>
+            <div class="field"><label>To</label>${SH.dateField('to', f.to, { dataChange: 'doc-filter', dataKey: 'to', id: 'doc-to' })}</div>
             <div class="field" style="flex:1;min-width:150px"><label>Number</label><input class="input" data-change="doc-filter" data-key="number" value="${attr(f.number)}" placeholder="Search number" /></div>
             <button class="btn" data-action="docs-refresh">${icon('filter', 14)} Apply</button>
             ${f.type || f.status || f.from || f.to || f.number ? '<button class="btn ghost" data-action="doc-clear-filters">Clear</button>' : ''}
@@ -247,10 +247,10 @@
           <div class="form-grid mb16">
             ${docPartyField(d)}
             ${SH.field('External reference', SH.input('external_number', d.external_number, { placeholder: 'Supplier invoice no.' }))}
-            ${SH.field('Document date', `<input class="input" type="datetime-local" data-change="doc-header" data-key="doc_date" value="${attr(d.doc_date)}" />`)}
+            ${SH.field('Document date', SH.dateField('doc_date', d.doc_date, { time: true, dataChange: 'doc-header', dataKey: 'doc_date', id: 'doc-date' }))}
             ${
               d.type === 'count'
-                ? SH.field('Stock date (when counted)', `<input class="input" type="datetime-local" data-change="doc-header" data-key="stock_date" value="${attr(d.stock_date)}" />`, { hint: 'Expected quantity is calculated as of this date. Cannot be in the future.' })
+                ? SH.field('Stock date (when counted)', SH.dateField('stock_date', d.stock_date, { time: true, dataChange: 'doc-header', dataKey: 'stock_date', id: 'doc-stock-date' }), { hint: 'Expected quantity is calculated as of this date. Cannot be in the future.' })
                 : ''
             }
             ${SH.field('Notes', SH.input('notes', d.notes, { placeholder: 'Optional' }), { span: 2 })}
@@ -801,8 +801,8 @@
           <div class="card-head">
             <h2>${esc((reports.find((r) => r.id === rep) || {}).name || 'Report')}</h2>
             <div class="right">
-              ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<input class="input" type="date" data-change="report-filter" data-key="from" value="${attr(A.state.reportFilters.from)}" style="width:145px" />
-              <input class="input" type="date" data-change="report-filter" data-key="to" value="${attr(A.state.reportFilters.to)}" style="width:145px" />
+              ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<div style="width:150px">${SH.dateField('from', A.state.reportFilters.from, { dataChange: 'report-filter', dataKey: 'from', id: 'rep-from' })}</div>
+              <div style="width:150px">${SH.dateField('to', A.state.reportFilters.to, { dataChange: 'report-filter', dataKey: 'to', id: 'rep-to' })}</div>
               <button class="btn sm" data-action="report-load">${icon('refresh', 14)} ${esc(t('Run'))}</button>` : ''}
               <button class="btn sm" data-action="report-print">${icon('print', 14)} Print</button>
               <button class="btn sm" data-action="report-csv">${icon('download', 14)} CSV</button>

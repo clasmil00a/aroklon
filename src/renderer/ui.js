@@ -17,6 +17,7 @@
     settings:
       '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>',
     cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/>',
+    calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M7 2v4M17 2v4M3 10h18"/>',
     day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
@@ -97,9 +98,17 @@
     return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
 
+  function clockText() {
+    const d = new Date();
+    const date = d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    const time = d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+    return `${date} · ${time}`;
+  }
+
   function fmtDate(iso, withTime = false) {
     if (!iso) return '—';
-    const d = new Date(iso);
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+    const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
     const date = d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
     if (!withTime) return date;
@@ -658,14 +667,10 @@
 
     _statusbar() {
       const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
-      const d = new Date();
-      const dateStr = isNaN(d.getTime())
-        ? ''
-        : d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
       return `<footer class="classic-status">
         <span>${icon('store', 13)} ${esc(reg.name || t('Register'))}</span>
         <span data-notranslate>${icon('users', 13)} ${esc(this.state.user.name)}</span>
-        <span>${icon('day', 13)} ${esc(dateStr)}</span>
+        <span>${icon('day', 13)} <span data-clock>${esc(clockText())}</span></span>
         <span class="spacer"></span>
         <span class="ok">${icon('check', 13)} ${esc(t('Database connected'))}</span>
         <span class="ver">v${esc((this.state.meta && this.state.meta.version) || '1.0.0')}</span>
@@ -805,8 +810,6 @@
 
     _topbar(meta) {
       const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
-      const d = new Date();
-      const dateStr = d.toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
       return `<header class="topbar">
         <div>
           <h1>${esc(meta.title || 'Aroklon')}</h1>
@@ -814,7 +817,7 @@
         </div>
         <div class="topbar-right">
           <span class="chip">${icon('store', 14)} ${esc(reg.name || t('Register'))}</span>
-          <span class="chip">${icon('day', 14)} ${esc(dateStr)}</span>
+          <span class="chip">${icon('day', 14)} <span data-clock>${esc(clockText())}</span></span>
           <button class="btn sm icon-only" data-action="toggle-mode" title="${document.documentElement.dataset.mode === 'dark' ? t('Light') : t('Dark')}">${icon(
             document.documentElement.dataset.mode === 'dark' ? 'day' : 'moon',
             16
@@ -1021,4 +1024,12 @@
   App.fmtTime = fmtTime;
   App.todayKey = todayKey;
   App.initials = initials;
+
+  // Keep the header clock fresh without re-rendering the whole app.
+  setInterval(() => {
+    const text = clockText();
+    document.querySelectorAll('[data-clock]').forEach((el) => {
+      el.textContent = text;
+    });
+  }, 30000);
 })();

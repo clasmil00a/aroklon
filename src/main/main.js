@@ -785,6 +785,55 @@ function createWindow() {
           );
         }
 
+        if (process.env.AROKLON_DATE_TEST) {
+          out.flowDate = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                A.go('documents'); await s(550);
+                const from = document.getElementById('doc-from');
+                res.hidden = !!from;
+                const btn = document.querySelector('[data-action="date-open"][data-target="doc-from"]');
+                res.btn = !!btn;
+                if (btn) btn.click();
+                await s(300);
+                const pop = document.querySelector('.cal-pop');
+                res.pop = !!pop;
+                res.days = document.querySelectorAll('.cal-day').length;
+                res.weekdays = document.querySelectorAll('.cal-week span').length;
+                res.title = (document.querySelector('.cal-title') || {}).textContent || '';
+                const d15 = document.querySelector('[data-cal-day="15"]');
+                if (d15) d15.click();
+                await s(300);
+                res.value = from ? from.value : null;
+                res.closed = !document.querySelector('.cal-pop');
+                res.label = (document.querySelector('[data-action="date-open"][data-target="doc-from"] span') || {}).textContent || '';
+
+                A.actions['doc-new']({}, null, {}); await s(300);
+                A.actions['doc-pick-type']({ type: 'purchase' }, null, {}); await s(450);
+                const dd = document.getElementById('doc-date');
+                res.docDate = !!dd;
+                const dbtn = document.querySelector('[data-action="date-open"][data-target="doc-date"]');
+                if (dbtn) dbtn.click();
+                await s(300);
+                res.timeInput = !!document.querySelector('.cal-time-input');
+                const day = document.querySelector('[data-cal-day="10"]');
+                if (day) day.click();
+                await s(200);
+                const ok = document.querySelector('[data-cal-nav="ok"]');
+                if (ok) ok.click();
+                await s(300);
+                res.docValue = dd ? dd.value : null;
+                res.clock = !!document.querySelector('[data-clock]');
+                A.closeModal();
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-date'
+          );
+        }
+
         if (process.env.AROKLON_TAX_TEST) {
           out.flowTax = await js(
             `(async () => {

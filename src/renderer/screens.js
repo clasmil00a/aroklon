@@ -359,6 +359,182 @@
   // Shared with screens2 (document editor) which runs in its own scope.
   SH.units = { extraUnits, resolveUnit, unitPrice, unitOptions, barcodeUnitOptions };
 
+  /* ----------------------------------------------------------- date picker */
+
+  const p2 = (n) => String(n).padStart(2, '0');
+
+  let dateFieldSeq = 0;
+
+  SH.dateField = (name, value, opts = {}) => {
+    const id = opts.id || `date-${++dateFieldSeq}`;
+    const hasTime = !!opts.time;
+    const label = value ? fmtDate(value, hasTime) : t('Select date');
+    return `<div class="date-field">
+      <input type="hidden" id="${id}" name="${attr(name)}" value="${attr(value == null ? '' : value)}"
+        data-has-time="${hasTime ? '1' : '0'}"
+        ${opts.dataChange ? `data-change="${attr(opts.dataChange)}"` : ''}
+        ${opts.dataKey ? `data-key="${attr(opts.dataKey)}"` : ''} />
+      <button type="button" class="input date-btn" data-action="date-open" data-target="${id}">
+        ${icon('calendar', 15)} <span>${esc(label)}</span>
+      </button>
+    </div>`;
+  };
+
+  let activeDatePicker = null;
+
+  function closeDatePicker() {
+    if (!activeDatePicker) return;
+    const { pop, cleanup } = activeDatePicker;
+    activeDatePicker = null;
+    cleanup();
+    if (pop && pop.parentNode) pop.parentNode.removeChild(pop);
+  }
+
+  function openDatePicker(anchor, input) {
+    closeDatePicker();
+    const hasTime = input.dataset.hasTime === '1';
+    const parse = (value) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(value || ''));
+      if (m) return { y: +m[1], m: +m[2] - 1, d: +m[3], time: m[4] ? `${m[4]}:${m[5]}` : '00:00' };
+      const n = new Date();
+      return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate(), time: `${p2(n.getHours())}:${p2(n.getMinutes())}` };
+    };
+    const initial = parse(input.value);
+    let view = new Date(initial.y, initial.m, 1);
+    let selected = new Date(initial.y, initial.m, initial.d);
+    let time = initial.time;
+
+    const pop = document.createElement('div');
+    pop.className = 'cal-pop';
+    document.body.appendChild(pop);
+
+    const weekdays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(2024, 0, 1 + i);
+      return `<span>${esc(new Intl.DateTimeFormat(locale(), { weekday: 'short' }).format(d))}</span>`;
+    }).join('');
+
+    function render() {
+      const monthLabel = new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(view);
+      const first = new Date(view.getFullYear(), view.getMonth(), 1);
+      const offset = (first.getDay() + 6) % 7;
+      const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      const today = new Date();
+      let cells = '';
+      for (let i = 0; i < offset; i++) cells += '<span></span>';
+      for (let d = 1; d <= days; d++) {
+        const isSel =
+          selected &&
+          d === selected.getDate() &&
+          view.getMonth() === selected.getMonth() &&
+          view.getFullYear() === selected.getFullYear();
+        const isToday =
+          d === today.getDate() && view.getMonth() === today.getMonth() && view.getFullYear() === today.getFullYear();
+        cells += `<button type="button" class="cal-day ${isSel ? 'sel' : ''} ${isToday ? 'today' : ''}" data-cal-day="${d}">${d}</button>`;
+      }
+      pop.innerHTML = `
+        <div class="cal-head">
+          <button type="button" class="cal-nav" data-cal-nav="prev" title="${esc(t('Previous month'))}">‹</button>
+          <div class="cal-title">${esc(monthLabel)}</div>
+          <button type="button" class="cal-nav" data-cal-nav="next" title="${esc(t('Next month'))}">›</button>
+        </div>
+        <div class="cal-week">${weekdays}</div>
+        <div class="cal-grid">${cells}</div>
+        ${
+          hasTime
+            ? `<div class="cal-time"><span>${esc(t('Time'))}</span><input type="time" class="input cal-time-input" value="${attr(
+                time
+              )}" style="width:120px;padding:4px 8px" /></div>`
+            : ''
+        }
+        <div class="cal-foot">
+          <button type="button" class="btn sm" data-cal-nav="today">${esc(t('Today'))}</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn sm primary" data-cal-nav="ok">${esc(t('OK'))}</button>
+        </div>`;
+    }
+
+    function commit() {
+      const ymd = `${selected.getFullYear()}-${p2(selected.getMonth() + 1)}-${p2(selected.getDate())}`;
+      input.value = hasTime ? `${ymd}T${time}` : ymd;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      const label = anchor.querySelector('span');
+      if (label) label.textContent = fmtDate(input.value, hasTime);
+    }
+
+    const onClick = (e) => {
+      const nav = e.target.closest('[data-cal-nav]');
+      if (nav) {
+        const kind = nav.dataset.calNav;
+        if (kind === 'prev') {
+          view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+          render();
+        } else if (kind === 'next') {
+          view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+          render();
+        } else if (kind === 'today') {
+          const n = new Date();
+          view = new Date(n.getFullYear(), n.getMonth(), 1);
+          selected = n;
+          if (hasTime) time = `${p2(n.getHours())}:${p2(n.getMinutes())}`;
+          render();
+          if (!hasTime) { commit(); closeDatePicker(); }
+        } else if (kind === 'ok') {
+          commit();
+          closeDatePicker();
+        }
+        return;
+      }
+      const day = e.target.closest('[data-cal-day]');
+      if (day) {
+        const d = Number(day.dataset.calDay);
+        selected = new Date(view.getFullYear(), view.getMonth(), d, selected.getHours(), selected.getMinutes());
+        if (!hasTime) { commit(); closeDatePicker(); }
+        else render();
+      }
+    };
+    const onTime = (e) => {
+      if (e.target.matches('.cal-time-input')) time = e.target.value || '00:00';
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeDatePicker();
+      }
+    };
+    const onDoc = (e) => {
+      if (!pop.contains(e.target) && !anchor.contains(e.target)) closeDatePicker();
+    };
+
+    pop.addEventListener('click', onClick);
+    pop.addEventListener('change', onTime);
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => document.addEventListener('mousedown', onDoc), 0);
+
+    const cleanup = () => {
+      pop.removeEventListener('click', onClick);
+      pop.removeEventListener('change', onTime);
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('mousedown', onDoc);
+    };
+
+    render();
+
+    const rect = anchor.getBoundingClientRect();
+    const popH = hasTime ? 380 : 340;
+    let top = rect.bottom + 6;
+    if (top + popH > window.innerHeight - 8) top = Math.max(8, rect.top - popH - 6);
+    pop.style.top = `${top}px`;
+    pop.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 296))}px`;
+
+    activeDatePicker = { pop, cleanup };
+  }
+
+  A.action('date-open', (ds, el) => {
+    const input = document.getElementById(ds.target);
+    if (input) openDatePicker(el, input);
+  });
+
   function tileHtml(p) {
     const stock = p.is_service ? null : U.num(p.quantity);
     const low = !p.is_service && p.low_stock > 0 && stock <= p.low_stock;
