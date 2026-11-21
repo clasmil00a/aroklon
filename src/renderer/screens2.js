@@ -784,11 +784,14 @@
   A.screens.reports = {
     meta: { title: t('Reports'), sub: t('Print or export your numbers') },
     render() {
+      const taxOn = (A.state.settings || {}).tax_enabled === '1';
+      const reports = taxOn ? REPORTS : REPORTS.filter((r) => r.id !== 'tax_summary');
+      if (!taxOn && A.state.reportId === 'tax_summary') A.state.reportId = 'sales_summary';
       const rep = A.state.reportId;
       const rows = A.state.reportRows || [];
       return `<div class="split-2">
         <div class="report-list">
-          ${REPORTS.map(
+          ${reports.map(
             (r) => `<button class="report-item ${rep === r.id ? 'active' : ''}" data-action="report-pick" data-id="${r.id}">
               <div class="rt">${esc(r.name)}</div><div class="rd">${esc(r.desc)}</div>
             </button>`
@@ -796,7 +799,7 @@
         </div>
         <div class="card" style="flex:1;min-width:0">
           <div class="card-head">
-            <h2>${esc((REPORTS.find((r) => r.id === rep) || {}).name || 'Report')}</h2>
+            <h2>${esc((reports.find((r) => r.id === rep) || {}).name || 'Report')}</h2>
             <div class="right">
               ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<input class="input" type="date" data-change="report-filter" data-key="from" value="${attr(A.state.reportFilters.from)}" style="width:145px" />
               <input class="input" type="date" data-change="report-filter" data-key="to" value="${attr(A.state.reportFilters.to)}" style="width:145px" />
@@ -1000,6 +1003,7 @@
     render() {
       const s = A.state.settings || {};
       const c = A.state.company || {};
+      const taxOn = s.tax_enabled === '1';
       const tab = (A.state.params && A.state.params.tab) || A.state.settingsTab || 'company';
       A.state.settingsTab = tab;
       const ps = (t) => (tab === t ? '' : 'style="display:none"');
@@ -1037,20 +1041,30 @@
           </div>
 
           <div data-tab-panel="set-tax" ${ps('tax')}>
-            <div class="row mb12"><div><div class="strong">Tax rates</div><div class="small muted">VAT, GST or sales tax. Multiple rates can apply to one product.</div></div><span class="spacer"></span>
-              <button class="btn primary sm" data-action="tax-new">${icon('plus', 15)} Add tax rate</button></div>
-            ${miniTable(
-              ['Name', 'Percent', 'Compound', 'Default', ''],
-              (A.state.taxRates || []).map(
-                (t) => [
-                  esc(t.name),
-                  U.num(t.percent) + '%',
-                  t.compound ? 'Yes' : 'No',
-                  t.is_default ? SH.badge('Default', 'info') : '',
-                  `<div class="row gap8" style="justify-content:flex-end"><button class="icon-btn" data-action="tax-edit" data-id="${t.id}">${icon('edit', 15)}</button><button class="icon-btn" data-action="tax-delete" data-id="${t.id}" style="color:var(--bad)">${icon('trash', 15)}</button></div>`,
-                ]
-              )
-            )}
+            <div class="row between wrap gap8 mb12">
+              <div><div class="strong">Tax rates</div><div class="small muted">VAT, GST or sales tax. Multiple rates can apply to one product.</div></div>
+              <div class="row gap8">
+                <span class="badge ${taxOn ? 'good' : 'gray'}">${taxOn ? 'ON' : 'OFF'}</span>
+                <label class="switch"><input type="checkbox" data-change="tax-toggle" ${taxOn ? 'checked' : ''} /><span class="track"></span><span>${esc(t('Enable tax'))}</span></label>
+              </div>
+            </div>
+            ${
+              taxOn
+                ? `<div class="row mb12"><span class="spacer"></span><button class="btn primary sm" data-action="tax-new">${icon('plus', 15)} Add tax rate</button></div>
+                   ${miniTable(
+                     ['Name', 'Percent', 'Compound', 'Default', ''],
+                     (A.state.taxRates || []).map(
+                       (t) => [
+                         esc(t.name),
+                         U.num(t.percent) + '%',
+                         t.compound ? 'Yes' : 'No',
+                         t.is_default ? SH.badge('Default', 'info') : '',
+                         `<div class="row gap8" style="justify-content:flex-end"><button class="icon-btn" data-action="tax-edit" data-id="${t.id}">${icon('edit', 15)}</button><button class="icon-btn" data-action="tax-delete" data-id="${t.id}" style="color:var(--bad)">${icon('trash', 15)}</button></div>`,
+                       ]
+                     )
+                   )}`
+                : `<div class="hint">${esc(t('Tax is off. Turn it on to manage tax rates and charge tax on sales.'))}</div>`
+            }
           </div>
 
           <div data-tab-panel="set-tenders" ${ps('tenders')}>
@@ -1450,8 +1464,9 @@
       }))
       .filter((u) => u.name);
     const comments = [...form.querySelectorAll('.comment-row-input')].map((i) => i.value.trim()).filter(Boolean);
+    const taxOn = (A.state.settings || {}).tax_enabled === '1';
     const tax_rate_ids = [...form.querySelectorAll('input[name="tax_rate_id"]:checked')].map((i) => Number(i.value));
-    const res = await A.api('saveProduct', {
+    const payload = {
       id,
       name: String(fd.get('name') || '').trim(),
       code: String(fd.get('code') || '').trim(),
@@ -1475,7 +1490,9 @@
       units,
       comments,
       tax_rate_ids,
-    });
+    };
+    if (!taxOn) delete payload.tax_rate_ids;
+    const res = await A.api('saveProduct', payload);
     if (!res.ok) throw new Error(res.error);
     A.closeModal();
     await A.reloadCatalog();
@@ -1488,7 +1505,8 @@
     const scope = fd.get('scope');
     const type = fd.get('discount_type');
     const value = U.num(fd.get('discount_value'));
-    const tax = String(fd.get('tax_override') || '').trim();
+    const taxOn = (A.state.settings || {}).tax_enabled === '1';
+    const tax = taxOn ? String(fd.get('tax_override') || '').trim() : '';
     if (scope === 'item') {
       const idx = Number(fd.get('line_index'));
       const it = A.state.cart.items[idx];
@@ -1766,6 +1784,14 @@
 
   A.action('change:pref-theme', (ds, el) => {
     A.setTheme(el.value);
+  });
+
+  A.action('change:tax-toggle', async (ds, el) => {
+    await A.api('setSetting', ['tax_enabled', el.checked ? '1' : '0']);
+    A.state.settings = await A.api('getSettings');
+    if (A.state.cart) A.state.cart.tax_override = null;
+    A.render();
+    A.toast(el.checked ? 'Tax enabled' : 'Tax disabled');
   });
 
   /* tax / tender / register delete actions */

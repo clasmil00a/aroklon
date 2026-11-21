@@ -46,6 +46,8 @@ runs locally — no account, no cloud, no subscription.
 - **Languages** — Bahasa Indonesia (default) and English, switchable at login or in Settings.
 - **Receipts** — white paper with dark text in every colour mode.
 - **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
+- **Tax (optional)** — tax is off by default. Turn it on in Settings → Tax rates;
+  when it is off, tax fields are hidden and new sales are untaxed.
 - **Data** — local SQLite file, backup/restore, reset.
 - **Migration** — import products, stock, customers, taxes and settings from an Aronium Lite database (`pos.db`).
 

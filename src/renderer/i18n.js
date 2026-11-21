@@ -54,6 +54,11 @@
     Next: 'Berikutnya',
     'Low stock only': 'Hanya stok menipis',
     'Adjust stock': 'Sesuaikan stok',
+    'Enable tax': 'Aktifkan pajak',
+    'Tax is off. Turn it on to manage tax rates and charge tax on sales.':
+      'Pajak nonaktif. Aktifkan untuk mengatur tarif pajak dan mengenakan pajak pada penjualan.',
+    'Tax is disabled in Settings → Tax rates.':
+      'Pajak dinonaktifkan di Settings → Tarif pajak.',
     'No matching stock': 'Stok tidak cocok',
     'Try another search or filter.': 'Coba pencarian atau filter lain.',
     'Nothing matches this search.': 'Tidak ada yang cocok dengan pencarian ini.',

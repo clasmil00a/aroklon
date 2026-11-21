@@ -171,7 +171,8 @@
       l.discount_total = l.item_disc + share;
       const base = Math.max(l.net_after_item - share, 0);
       const rates = taxOverride != null && taxOverride !== '' ? [{ percent: num(taxOverride) }] : l.taxes;
-      const rate = effectiveRate(rates);
+      const taxSettings = window.App && window.App.state ? window.App.state.settings : null;
+      const rate = taxSettings && taxSettings.tax_enabled === '1' ? effectiveRate(rates) : 0;
       const tax = l.incl ? base - base / (1 + rate) : base * rate;
       l.tax_total = Math.round(tax);
       l.total = l.incl ? Math.round(base) : Math.round(base + l.tax_total);
@@ -591,7 +592,7 @@
               <div class="cmb-sep"></div>
               <button class="cmb-item" data-action="nav-settings" data-tab="tenders">${icon('cash', 15)}<span>${esc(t('Payment types'))}</span></button>
               <button class="cmb-item" data-action="nav-settings" data-tab="countries">${icon('globe', 15)}<span>${esc(t('Countries'))}</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>${esc(t('Tax rates'))}</span></button>
+              ${this.state.settings && this.state.settings.tax_enabled === '1' ? `<button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>${esc(t('Tax rates'))}</span></button>` : ''}
               <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>${esc(t('My company'))}</span></button>
             </div>
           </details>
@@ -648,7 +649,7 @@
         <div class="ct-sep"></div>
         <div class="ct-label">Setup</div>
         ${sitem('company', 'My company', 'store')}
-        ${sitem('tax', 'Tax rates', 'tag')}
+        ${this.state.settings && this.state.settings.tax_enabled === '1' ? sitem('tax', 'Tax rates', 'tag') : ''}
         ${sitem('tenders', 'Payment types', 'cash')}
         ${sitem('countries', 'Countries', 'globe')}
         ${item('users', 'Users & Security', 'users')}

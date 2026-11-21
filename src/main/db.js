@@ -1420,10 +1420,12 @@ function saveProduct(p) {
       run(`INSERT INTO barcode (product_id, value, unit_id) VALUES (?,?,?)`, [id, w.value, w.unit_id]);
   }
 
-  // taxes
-  run(`DELETE FROM product_tax WHERE product_id=?`, [id]);
-  for (let i = 0; i < (p.tax_rate_ids || []).length; i++) {
-    run(`INSERT INTO product_tax (product_id, tax_rate_id, sort_order) VALUES (?,?,?)`, [id, p.tax_rate_ids[i], i + 1]);
+  // taxes (undefined means "leave the existing tax assignments alone")
+  if (p.tax_rate_ids != null) {
+    run(`DELETE FROM product_tax WHERE product_id=?`, [id]);
+    for (let i = 0; i < p.tax_rate_ids.length; i++) {
+      run(`INSERT INTO product_tax (product_id, tax_rate_id, sort_order) VALUES (?,?,?)`, [id, p.tax_rate_ids[i], i + 1]);
+    }
   }
 
   // comments
@@ -1774,7 +1776,9 @@ function computeSale(input) {
     const base = Math.max(l.net_after_item - share, 0);
 
     let rates;
-    if (taxOverride != null) {
+    if (getSetting('tax_enabled') !== '1') {
+      rates = [{ name: 'Tax', percent: 0 }];
+    } else if (taxOverride != null) {
       rates = [{ name: 'Tax override', percent: taxOverride }];
     } else {
       rates = l.taxRates.length

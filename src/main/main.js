@@ -767,10 +767,78 @@ function createWindow() {
                   res.prodStockDelta = after - before;
                   res.prodStockClosed = !document.querySelector('form[data-form="stock-adjust"]');
                 }
+
+                A.go('stock'); await s(500);
+                const adj = document.querySelector('[data-action="stock-adjust"]');
+                if (adj) {
+                  adj.click(); await s(350);
+                  const q = document.querySelector('form[data-form="stock-adjust"] [name="quantity"]');
+                  res.qtyStep = q ? q.getAttribute('step') : null;
+                  const cancel = document.querySelector('[data-modal-cancel]');
+                  if (cancel) cancel.click();
+                  await s(200);
+                }
               } catch (e) { res.err = e.message; }
               return res;
             })()`,
             'flow-prefs'
+          );
+        }
+
+        if (process.env.AROKLON_TAX_TEST) {
+          out.flowTax = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                await A.api('setSetting', ['tax_enabled', '0']);
+                await A.reloadReference();
+                A.go('settings'); A.state.settingsTab = 'tax'; await s(450);
+                res.toggle = !!document.querySelector('[data-change="tax-toggle"]');
+                res.offBadge = (document.querySelector('[data-tab-panel="set-tax"] .badge') || {}).textContent || '';
+                res.taxTable = !!document.querySelector('[data-tab-panel="set-tax"] table.data');
+                res.addTaxBtn = !!document.querySelector('[data-tab-panel="set-tax"] [data-action="tax-new"]');
+
+                const withTax = (A.state.products || []).find((p) => (p.taxes || []).length);
+                res.taxProduct = !!withTax;
+                if (withTax) {
+                  A.actions['product-edit']({ id: String(withTax.id) });
+                  await s(450);
+                  res.productTaxFields = document.querySelectorAll('input[name="tax_rate_id"]').length;
+                  A.closeModal(); await s(150);
+                }
+
+                A.go('reports'); await s(500);
+                res.taxReport = !!document.querySelector('[data-id="tax_summary"]');
+
+                await A.api('setSetting', ['tax_enabled', '1']);
+                A.state.settings = await A.api('getSettings');
+                A.go('settings'); A.state.settingsTab = 'tax'; await s(450);
+                res.onTable = !!document.querySelector('[data-tab-panel="set-tax"] table.data');
+                res.onAdd = !!document.querySelector('[data-tab-panel="set-tax"] [data-action="tax-new"]');
+
+                if (withTax) {
+                  const doc = await A.api('createSale', {
+                    user_id: A.state.user.id,
+                    items: [{ product_id: withTax.id, quantity: 1 }],
+                    payments: [],
+                  });
+                  res.taxTotalOn = doc.tax_total;
+                }
+                await A.api('setSetting', ['tax_enabled', '0']);
+                A.state.settings = await A.api('getSettings');
+                if (withTax) {
+                  const doc2 = await A.api('createSale', {
+                    user_id: A.state.user.id,
+                    items: [{ product_id: withTax.id, quantity: 1 }],
+                    payments: [],
+                  });
+                  res.taxTotalOff = doc2.tax_total;
+                }
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-tax'
           );
         }
 

@@ -387,6 +387,7 @@
     render() {
       const cart = A.state.cart;
       const calc = cartCalc();
+      const taxOn = (A.state.settings || {}).tax_enabled === '1';
       const disc = activeDiscount();
       const customer = (A.state.customers || []).find((c) => String(c.id) === String(cart.customer_id));
       const products = filteredProducts();
@@ -543,7 +544,7 @@
                   })</span><span class="mono">-${money(calc.discount_total)}</span></div>`
                 : ''
             }
-            <div class="sum-row"><span>${esc(t('Tax'))}</span><span class="mono">${money(calc.tax_total)}</span></div>
+            ${taxOn ? `<div class="sum-row"><span>${esc(t('Tax'))}</span><span class="mono">${money(calc.tax_total)}</span></div>` : ''}
             <div class="sum-row total"><span>${esc(t('Total'))}</span><span class="mono">${money(calc.total)}</span></div>
             <div class="row gap8" style="margin-top:10px">
               <button class="btn sm" data-action="pos-customer" style="max-width:190px;overflow:hidden;text-overflow:ellipsis">
@@ -973,7 +974,7 @@
               { value: 'fixed', label: t('Fixed amount') },
             ], cart.discount.type))}
             ${SH.field(t('Value'), SH.input('discount_value', cart.discount.value, { type: 'number', step: '0.01', min: '0', placeholder: '0' }))}
-            ${SH.field(t('Tax override (%, blank = normal)'), SH.input('tax_override', cart.tax_override != null ? cart.tax_override : '', { type: 'number', step: '0.01', min: '0', placeholder: t('Use product tax') }), { span: 2, hint: t('Applies to the whole sale. Leave blank to use each product’s tax rate.') })}
+            ${taxOn ? SH.field(t('Tax override (%, blank = normal)'), SH.input('tax_override', cart.tax_override != null ? cart.tax_override : '', { type: 'number', step: '0.01', min: '0', placeholder: t('Use product tax') }), { span: 2, hint: t('Applies to the whole sale. Leave blank to use each product’s tax rate.') }) : ''}
           </div>
           <p class="hint mt12">${esc(t('Tax is calculated after discounts. A customer with a preset discount cannot receive an extra discount.'))}</p>
         </div>
@@ -1631,6 +1632,7 @@
 
   function openProductEditorWith(p) {
     A.state.productDraft = p;
+    const taxOn = (A.state.settings || {}).tax_enabled === '1';
     const groups = (A.state.groups || []).map((g) => ({ value: g.id, label: g.name + (g.parent_id ? '' : '') }));
     const taxBoxes = (A.state.taxRates || [])
       .map(
@@ -1714,8 +1716,13 @@
                 ${SH.checkbox('price_change_allowed', 'Allow price change at sale', p.price_change_allowed !== false)}
               </div>
               <div class="span2">
-                <div class="label mb8">Tax rates</div>
-                <div class="row wrap gap12">${taxBoxes || '<span class="small muted">No tax rates configured.</span>'}</div>
+                ${
+                  taxOn
+                    ? `<div class="label mb8">Tax rates</div>
+                       <div class="row wrap gap12">${taxBoxes || '<span class="small muted">No tax rates configured.</span>'}</div>`
+                    : `<div class="label mb8">Tax rates</div>
+                       <div class="hint">${esc(t('Tax is disabled in Settings → Tax rates.'))}</div>`
+                }
               </div>
             </div>
           </div>
@@ -1968,7 +1975,7 @@
         ${SH.modalHead('Adjust stock', s.name)}
         <div class="modal-body">
           <div class="form-grid">
-            ${SH.field('Quantity on hand', SH.input('quantity', U.num(s.quantity), { type: 'number', step: '0.001', required: true }), { hint: `Currently ${U.qty(s.quantity)} ${esc(s.unit || '')}. Enter the real counted quantity.` })}
+            ${SH.field('Quantity on hand', SH.input('quantity', U.num(s.quantity), { type: 'number', step: '1', min: '0', required: true }), { hint: `Currently ${U.qty(s.quantity)} ${esc(s.unit || '')}. Enter the real counted quantity.` })}
             ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('Optional') }), { span: 2 })}
           </div>
         </div>
