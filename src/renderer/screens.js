@@ -1774,7 +1774,7 @@
         </div>
         ${SH.modalFoot(p.id ? 'Save changes' : 'Create product')}
       </form>`,
-      { size: 'wide' }
+      { size: 'max' }
     );
   }
 

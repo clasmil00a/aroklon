@@ -646,6 +646,35 @@ function createWindow() {
           );
         }
 
+        if (process.env.AROKLON_MODAL_TEST) {
+          out.flowModal = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                A.state.settings.ask_qty = '0';
+                A.go('products'); await s(400);
+                const btn = document.querySelector('[data-action="product-edit"]');
+                res.btn = !!btn;
+                if (btn) btn.click();
+                await s(500);
+                const modal = document.querySelector('.modal');
+                res.box = modal ? [modal.offsetWidth, modal.offsetHeight] : null;
+                const tabs = [...document.querySelectorAll('.modal .tab')];
+                res.tabs = tabs.map((t) => t.textContent.trim());
+                for (const t of tabs) { t.click(); await s(150); }
+                const m2 = document.querySelector('.modal');
+                res.boxAfter = m2 ? [m2.offsetWidth, m2.offsetHeight] : null;
+                res.stable = !!(res.box && res.boxAfter && res.box[0] === res.boxAfter[0] && res.box[1] === res.boxAfter[1]);
+                res.bigEnough = !!(res.box && res.box[0] >= 1000 && res.box[1] >= 700);
+                A.closeModal();
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-modal'
+          );
+        }
+
         if (process.env.AROKLON_PREFS_TEST) {
           out.flowPrefs = await js(
             `(async () => {
