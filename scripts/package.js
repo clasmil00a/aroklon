@@ -21,7 +21,7 @@ const opts = {
   platform,
   arch,
   name: 'Aroklon',
-  appVersion: '1.0.0',
+  appVersion: JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version,
   appCopyright: 'Copyright © 2026 Aroklon',
   icon: path.join(root, 'build', 'icon.ico'),
   prune: true,

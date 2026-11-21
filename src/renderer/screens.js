@@ -505,7 +505,7 @@
 
   A.action('about', () => {
     A.toast(
-      'Aroklon v' + ((A.state.meta && A.state.meta.version) || '1.0.0') + ' — offline Windows POS. Data lokal, tanpa akun.',
+      'Aroklon v' + ((A.state.meta && A.state.meta.version) || '1.1.0') + ' — offline Windows POS. Data lokal, tanpa akun.',
       'good',
       5000
     );

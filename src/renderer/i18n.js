@@ -67,8 +67,8 @@
     'Every sale and return moves it': 'Setiap jual dan retur memperbaruinya',
     'Close the day cleanly': 'Tutup hari dengan rapi',
     'Z reports, cash and tax totals': 'Laporan Z, kas, dan total pajak',
-    'Aroklon 1.1.0 · Local database · No account required':
-      'Aroklon 1.1.0 · Database lokal · Tanpa akun',
+    'Aroklon {version} · Local database · No account required':
+      'Aroklon {version} · Database lokal · Tanpa akun',
     'First run: Owner · PIN 1234 | Cashier · PIN 1111':
       'Pertama kali: Owner · PIN 1234 | Kasir · PIN 1111',
 

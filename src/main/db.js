@@ -2418,7 +2418,7 @@ function factoryReset() {
 
 /* ------------------------------------------------------------------ stats */
 
-function meta() {
+function meta(version) {
   return {
     db_path: dbPath,
     counts: {
@@ -2427,7 +2427,7 @@ function meta() {
       customers: num(get(`SELECT COUNT(*) AS c FROM customer`).c),
       users: num(get(`SELECT COUNT(*) AS c FROM user`).c),
     },
-    version: '1.0.0',
+    version: version || '1.1.0',
   };
 }
 

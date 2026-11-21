@@ -1212,7 +1212,7 @@
               <div class="row wrap gap8">
                 <div>
                   <div class="strong">Updates</div>
-                  <div class="small muted">Aroklon v${esc((A.state.meta && A.state.meta.version) || '1.0.0')} · app-only patch, bukan download runtime penuh.</div>
+                  <div class="small muted">Aroklon v${esc((A.state.meta && A.state.meta.version) || '1.1.0')} · app-only patch, bukan download runtime penuh.</div>
                 </div>
                 <span class="spacer"></span>
                 <button class="btn" data-action="check-update">${icon('refresh', 15)} Check for updates</button>

@@ -858,7 +858,7 @@ ipcMain.handle('app:invoke', async (_e, action, payload) => {
   }
 });
 
-ipcMain.handle('app:meta', () => db.meta());
+ipcMain.handle('app:meta', () => db.meta(app.getVersion()));
 
 /* ------------------------------------------------------------- updates */
 

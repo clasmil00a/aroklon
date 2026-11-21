@@ -707,7 +707,7 @@
         <span>${icon('day', 13)} ${esc(dateStr)}</span>
         <span class="spacer"></span>
         <span class="ok">${icon('check', 13)} ${esc(t('Database connected'))}</span>
-        <span class="ver">v${esc((this.state.meta && this.state.meta.version) || '1.0.0')}</span>
+        <span class="ver">v${esc((this.state.meta && this.state.meta.version) || '1.1.0')}</span>
       </footer>`;
     },
 
@@ -877,6 +877,7 @@
       const users = this.state.users || [];
       const sel = this.state.loginUser || (users[0] && users[0].id);
       this.state.loginUser = sel;
+      const version = (this.state.meta && this.state.meta.version) || '1.1.0';
       const feats = [
         ['sales', 'Ring sales in seconds', 'Barcode, SKU or name search'],
         ['stock', 'Stock that stays honest', 'Every sale and return moves it'],
@@ -905,7 +906,7 @@
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">${esc(t('Aroklon 1.1.0 · Local database · No account required'))}</div>
+          <div class="login-foot">${esc(t('Aroklon {version} · Local database · No account required', { version }))}</div>
         </div>
         <div class="login-panel">
           <div class="login-card">
