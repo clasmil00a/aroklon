@@ -119,7 +119,11 @@
                         <td class="small muted">${esc(d.user_name || '—')}</td>
                         <td class="num mono strong">${money(d.total)}</td>
                         <td>${SH.badge(t(d.status || 'closed'), d.status === 'open' ? 'warn' : d.status === 'partial' ? 'info' : 'good')}</td>
-                        <td class="right"><button class="btn sm" data-action="doc-view" data-id="${d.id}">View</button></td>
+                        <td class="right"><div class="row gap8" style="justify-content:flex-end">
+                          <button class="btn sm" data-action="doc-view" data-id="${d.id}">${esc(t('View'))}</button>
+                          ${A.can('documents.edit') ? `<button class="btn sm" data-action="doc-edit" data-id="${d.id}">${esc(t('Edit'))}</button>` : ''}
+                          ${A.can('documents.delete') ? `<button class="btn sm" data-action="doc-delete" data-id="${d.id}" style="color:var(--bad)">${esc(t('Delete'))}</button>` : ''}
+                        </div></td>
                       </tr>`
                     )
                     .join('')}
@@ -184,8 +188,14 @@
 
   function docItemsLabel(type) {
     if (type === 'count') return 'Counted quantity';
-    if (type === 'proforma') return 'Unit price';
+    if (type === 'proforma' || type === 'sale' || type === 'refund') return 'Unit price';
     return 'Unit cost';
+  }
+
+  function toLocalInput(value) {
+    const d = value ? new Date(value) : new Date();
+    if (isNaN(d.getTime())) return '';
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }
 
   function docProduct(d, it) {
@@ -275,6 +285,13 @@
               : SH.empty({ icon: 'products', title: 'No items yet', text: 'Search above and tap a product to add it.' })
           }
         </div>
+        ${
+          d.id && (d.type === 'sale' || d.type === 'refund')
+            ? `<div class="hint mt12">${esc(
+                t('Payments stay as recorded. If the total changes, the difference is calculated as change or outstanding balance.')
+              )}</div>`
+            : ''
+        }
         ${SH.modalFoot(d.id ? 'Save document' : 'Create document')}
       </form>`,
       { size: 'wide' }
@@ -346,12 +363,14 @@
     if (!p) return;
     const unit = SH.units.resolveUnit(p, el.value);
     const factor = U.num(unit.factor, 1) || 1;
+    const oldFactor = U.num(it.unit_factor, 1) || 1;
+    const baseQty = U.num(it.quantity) * oldFactor;
+    const qty = Math.round((baseQty / factor) * 1000) / 1000;
+    it.quantity = qty > 0 ? qty : 1;
     it.unit = unit.name;
     it.unit_factor = factor;
-    it.unit_price =
-      A.state.docDraft.type === 'proforma'
-        ? SH.units.unitPrice(p, unit)
-        : Math.round(U.num(p.cost) * factor);
+    const sells = ['proforma', 'sale', 'refund'].includes(A.state.docDraft.type);
+    it.unit_price = sells ? SH.units.unitPrice(p, unit) : Math.round(U.num(p.cost) * factor);
     renderDocEditor();
   });
 
@@ -385,6 +404,8 @@
           .join('')}` : ''}
       </div>
       <div class="modal-foot"><button type="button" class="btn" data-modal-cancel>Close</button>
+        ${A.can('documents.edit') ? `<button type="button" class="btn" data-action="doc-edit" data-id="${doc.id}">${icon('edit', 15)} ${esc(t('Edit'))}</button>` : ''}
+        ${A.can('documents.delete') ? `<button type="button" class="btn danger" data-action="doc-delete" data-id="${doc.id}">${icon('trash', 15)} ${esc(t('Delete'))}</button>` : ''}
         ${
           canPrint
             ? `<button type="button" class="btn primary" data-action="doc-print" data-id="${doc.id}">${icon('print', 15)} Print</button>`
@@ -393,6 +414,59 @@
       </div>`,
       { size: 'wide' }
     );
+  });
+
+  A.action('doc-edit', async (ds) => {
+    const doc = await A.tryApi('getDocument', Number(ds.id), 'Could not load document');
+    if (!doc) return;
+    A.state.docDraft = {
+      id: doc.id,
+      type: doc.type,
+      supplier_id: doc.supplier_id,
+      customer_id: doc.customer_id,
+      external_number: doc.external_number || '',
+      doc_date: toLocalInput(doc.doc_date),
+      stock_date: toLocalInput(doc.stock_date || doc.doc_date),
+      notes: doc.notes || '',
+      items: (doc.items || []).map((it) => ({
+        product_id: it.product_id,
+        name: it.name_snapshot,
+        code: it.sku_snapshot,
+        quantity: it.quantity,
+        unit: it.unit_snapshot || it.unit,
+        unit_factor: it.unit_factor,
+        unit_price: it.unit_price,
+      })),
+    };
+    A.state.docResults = [];
+    renderDocEditor();
+  });
+
+  A.action('doc-delete', async (ds) => {
+    const doc = await A.tryApi('getDocument', Number(ds.id), 'Could not load document');
+    if (!doc) return;
+    const reason = await A.prompt({
+      title: `Delete ${doc.number || 'document'}?`,
+      label: t('Reason'),
+      value: '',
+      confirmLabel: t('Delete'),
+    });
+    if (reason == null) return;
+    const clean = String(reason).trim();
+    if (!clean) return A.toast(t('A reason is required'), 'warn');
+    const ok = await A.confirm({
+      title: `Delete ${doc.number || 'document'}?`,
+      message: `<p class="small">${esc(t('Stock will be returned and the document will be removed. This cannot be undone.'))}</p>`,
+      confirmLabel: t('Delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    const res = await A.api('deleteDocument', [doc.id, { user_id: A.state.user.id, reason: clean }]);
+    if (!res || res.ok === false) throw new Error((res && res.error) || 'Delete failed');
+    A.state.documents = await A.api('listDocuments', A.state.docFilters || {});
+    await A.reloadCatalog();
+    A.render();
+    A.toast(t('Document deleted'));
   });
 
   A.action('doc-print', async (ds) => {
@@ -880,6 +954,7 @@
     const p = u || { name: '', pin: '', access_level_id: (A.state.accessLevels || [])[0]?.id, register_id: A.state.user.register_id, active: true };
     const levels = (A.state.accessLevels || []).map((l) => ({ value: l.id, label: l.name }));
     const regs = (A.state.registers || []).map((r) => ({ value: r.id, label: r.name }));
+    const perms = p.permissions && typeof p.permissions === 'object' ? p.permissions : {};
     A.modal(
       `<form data-form="save-user">
         <input type="hidden" name="id" value="${attr(p.id || '')}" />
@@ -891,6 +966,14 @@
             ${SH.field('Access level', SH.select('access_level_id', levels, p.access_level_id))}
             ${SH.field('Default register', SH.select('register_id', [{ value: '', label: '—' }].concat(regs), p.register_id))}
             <div class="span2">${SH.checkbox('active', 'Active (can sign in)', p.active !== false)}</div>
+            <div class="span2">
+              <div class="label mb8">${esc(t('Document permissions'))}</div>
+              <div class="row wrap gap12">
+                ${SH.checkbox('perm_documents_edit', t('Can edit documents'), !!perms['documents.edit'])}
+                ${SH.checkbox('perm_documents_delete', t('Can delete documents'), !!perms['documents.delete'])}
+              </div>
+              <div class="hint mt8">${esc(t('Owner always has full access. These permissions apply to this user only.'))}</div>
+            </div>
           </div>
           <div class="hint mt12">You can only manage users with the same or a lower access level than your own.</div>
         </div>
@@ -1577,6 +1660,10 @@
       access_level_id: Number(fd.get('access_level_id')),
       register_id: fd.get('register_id') ? Number(fd.get('register_id')) : null,
       active: fd.get('active') === '1',
+      permissions: {
+        'documents.edit': fd.get('perm_documents_edit') === '1',
+        'documents.delete': fd.get('perm_documents_delete') === '1',
+      },
     });
     if (!res.ok) throw new Error(res.error);
     A.closeModal();
@@ -1591,23 +1678,42 @@
     syncDocInputs();
     if (!d.items.length) throw new Error('Add at least one product');
     const fd = new FormData(form);
-    const res = await A.api('createDocument', {
-      type: d.type,
-      supplier_id: d.supplier_id || null,
-      customer_id: d.customer_id || null,
-      external_number: String(fd.get('external_number') || '') || null,
-      doc_date: d.doc_date || new Date().toISOString(),
-      stock_date: d.stock_date || d.doc_date,
-      notes: String(fd.get('notes') || ''),
-      user_id: A.state.user.id,
-      register_id: (A.state.registers || []).find((r) => r.is_primary)?.id,
-      items: d.items.map((it) => ({
-        product_id: it.product_id,
-        quantity: it.quantity,
-        unit: it.unit,
-        unit_price: it.unit_price / 100,
-      })),
-    });
+    const items = d.items.map((it) => ({
+      product_id: it.product_id,
+      quantity: it.quantity,
+      unit: it.unit,
+      unit_price: it.unit_price / 100,
+    }));
+    let doc;
+    if (d.id) {
+      doc = await A.api('updateDocument', [
+        d.id,
+        {
+          user_id: A.state.user.id,
+          supplier_id: d.supplier_id || null,
+          customer_id: d.customer_id || null,
+          external_number: String(fd.get('external_number') || '') || null,
+          doc_date: d.doc_date || new Date().toISOString(),
+          stock_date: d.stock_date || d.doc_date,
+          notes: String(fd.get('notes') || ''),
+          items,
+        },
+      ]);
+    } else {
+      doc = await A.api('createDocument', {
+        type: d.type,
+        supplier_id: d.supplier_id || null,
+        customer_id: d.customer_id || null,
+        external_number: String(fd.get('external_number') || '') || null,
+        doc_date: d.doc_date || new Date().toISOString(),
+        stock_date: d.stock_date || d.doc_date,
+        notes: String(fd.get('notes') || ''),
+        user_id: A.state.user.id,
+        register_id: (A.state.registers || []).find((r) => r.is_primary)?.id,
+        items,
+      });
+    }
+    if (doc && doc.ok === false) throw new Error(doc.error || 'Save failed');
     A.closeModal();
     A.state.docDraft = null;
     await A.reloadCatalog();

@@ -33,7 +33,11 @@ runs locally — no account, no cloud, no subscription.
 - **Customers & suppliers** — contacts, loyalty cards, preset discounts,
   balances.
 - **Documents** — purchase, stock return, inventory count, loss & damage,
-  proforma; searchable document list.
+  proforma; searchable document list. Any document can be edited, or deleted
+  with stock returned and a reason recorded in an audit log.
+- **Document permissions** — Owner can always edit/delete documents; other
+  users can be granted **Can edit documents** and/or **Can delete documents**
+  in Settings → Users.
 - **Reports** — sales by day, product sales, payment mix, tax, customer sales,
   stock valuation and low stock; print or export CSV.
 - **Users** — PIN sign-in with access levels (Owner / Manager / Cashier).
@@ -150,6 +154,21 @@ Aronium **Pro** stores data on Microsoft SQL Server, so its database cannot be
 read by this importer. Export products and customers from Aronium Pro as CSV
 instead. Sales history is not imported — the importer sets current stock on
 hand, so old documents are not replayed.
+
+## Cancel or edit a document
+
+Open **Documents**, find the document, then use **Edit** or **Delete**:
+
+- **Delete** returns the stock movement, removes the document and asks for a
+  reason. The reason, number, total and items are kept in an audit table.
+  A sale that already has a refund cannot be deleted until that refund is
+  deleted.
+- **Edit** replaces the items and recalculates stock and totals. For a paid
+  sale the cash tendered stays as it was; if the new total is lower the
+  difference becomes change, if it is higher the sale becomes **Partial**.
+
+Only **Owner** and users with the matching document permission can see these
+buttons, and the server checks the permission too.
 
 ## Updates (small patches)
 

@@ -725,6 +725,82 @@ function createWindow() {
           );
         }
 
+        if (process.env.AROKLON_DOCS_TEST) {
+          out.flowDocs = await js(
+            `(async () => {
+              const s = (ms) => new Promise((r) => setTimeout(r, ms));
+              const A = window.App; const res = {};
+              try {
+                const users = await A.api('listUsers');
+                const owner = users.find((u) => u.access_rank >= 100);
+                const cashier = users.find((u) => u.access_rank < 100);
+                res.permOwner = await A.api('hasPermission', [owner.id, 'documents.delete']);
+                res.permCashier = await A.api('hasPermission', [cashier.id, 'documents.delete']);
+
+                const p = await A.api('saveProduct', {
+                  name: 'Doc Test', code: 'DOCT', unit: 'pcs', price: 10000, cost: 6000,
+                  active: true, price_change_allowed: true,
+                });
+                await A.api('adjustStock', [p.id, 50, 'test']);
+                const sale = await A.api('createSale', {
+                  user_id: owner.id,
+                  items: [{ product_id: p.id, quantity: 5, unit: 'pcs', unit_price: 100 }],
+                  payments: [{ payment_type_id: 1, amount: 500, tendered: 500 }],
+                });
+                const stockOf = async () => (await A.api('listProducts', {})).find((x) => x.id === p.id).quantity;
+                res.stockBefore = await stockOf();
+
+                A.go('users'); await s(400);
+                A.actions['user-new']({}, null, {});
+                await s(300);
+                res.userPermField = !!document.querySelector('[name="perm_documents_delete"]');
+                A.closeModal(); await s(150);
+                A.state.settings.ask_qty = '0';
+                A.go('documents'); await s(500);
+                let row = [...document.querySelectorAll('table.data tbody tr')].find((tr) => tr.innerText.includes(sale.number));
+                res.row = !!row;
+                res.buttons = row ? [...row.querySelectorAll('button')].map((b) => b.textContent.trim()) : [];
+                const editBtn = row && row.querySelector('[data-action="doc-edit"]');
+                res.editBtn = !!editBtn;
+                if (editBtn) { editBtn.click(); await s(500); }
+                res.editor = !!document.querySelector('form[data-form="save-doc"]');
+                const qty = document.querySelector('.doc-qty');
+                if (qty) { qty.value = '3'; qty.dispatchEvent(new Event('input', { bubbles: true })); }
+                const form = document.querySelector('form[data-form="save-doc"]');
+                if (form) { form.requestSubmit(); await s(1000); }
+                const edited = (await A.api('listDocuments', {})).find((d) => d.id === sale.id);
+                res.edited = edited ? [edited.total, edited.status] : null;
+                res.stockAfterEdit = await stockOf();
+                const denied = await A.api('deleteDocument', [sale.id, { user_id: cashier.id, reason: 'test' }]);
+                res.cashierDenied = [denied.ok, /permission/i.test(denied.error || '')];
+
+                A.go('documents'); await s(400);
+                row = [...document.querySelectorAll('table.data tbody tr')].find((tr) => tr.innerText.includes(sale.number));
+                const delBtn = row && row.querySelector('[data-action="doc-delete"]');
+                res.delBtn = !!delBtn;
+                if (delBtn) { delBtn.click(); await s(400); }
+                const reason = document.querySelector('#prompt-input');
+                res.prompt = !!reason;
+                if (reason) {
+                  reason.value = 'test cancel';
+                  reason.dispatchEvent(new Event('input', { bubbles: true }));
+                  const ok = document.querySelector('[data-modal-ok]');
+                  if (ok) ok.click();
+                  await s(400);
+                }
+                const confirm = document.querySelector('[data-modal-ok]');
+                res.confirm = !!confirm;
+                if (confirm) confirm.click();
+                await s(1000);
+                res.gone = !(await A.api('listDocuments', {})).some((d) => d.id === sale.id);
+                res.stockAfterDelete = await stockOf();
+              } catch (e) { res.err = e.message; }
+              return res;
+            })()`,
+            'flow-docs'
+          );
+        }
+
         if (process.env.AROKLON_CATALOGUE_TEST) {
           out.flowCatalogue = await js(
             `(async () => {

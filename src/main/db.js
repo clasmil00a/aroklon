@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS user (
   access_level_id INTEGER,
   active INTEGER DEFAULT 1,
   register_id INTEGER,
+  permissions TEXT DEFAULT '{}',
   created_at TEXT
 );
 
@@ -194,6 +195,7 @@ CREATE TABLE IF NOT EXISTS document (
   customer_id INTEGER,
   supplier_id INTEGER,
   user_id INTEGER,
+  original_document_id INTEGER,
   register_id INTEGER,
   doc_date TEXT,
   stock_date TEXT,
@@ -291,6 +293,18 @@ CREATE TABLE IF NOT EXISTS zreport (
   cash_expected INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS deleted_document (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  number TEXT,
+  type TEXT NOT NULL,
+  total INTEGER DEFAULT 0,
+  user_id INTEGER,
+  reason TEXT,
+  items_json TEXT,
+  payments_json TEXT,
+  deleted_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS number_seq (
   key TEXT PRIMARY KEY,
   next INTEGER DEFAULT 1
@@ -320,6 +334,8 @@ function migrate() {
   addColumn('document_item', 'unit_factor', 'REAL DEFAULT 1');
   addColumn('product', 'wholesale_price', 'INTEGER DEFAULT 0');
   addColumn('product', 'wholesale_min_qty', 'REAL DEFAULT 0');
+  addColumn('user', 'permissions', "TEXT DEFAULT '{}'");
+  addColumn('document', 'original_document_id', 'INTEGER');
   run(`UPDATE document_item SET unit_factor = 1 WHERE unit_factor IS NULL`);
   run(
     `UPDATE document_item SET unit_snapshot = COALESCE(
@@ -764,6 +780,17 @@ function getSettings() {
 
 /* -------------------------------------------------------------------- auth */
 
+function parsePermissions(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value && !Array.isArray(value) ? value : {};
+  try {
+    const p = JSON.parse(value);
+    return p && typeof p === 'object' && !Array.isArray(p) ? p : {};
+  } catch (e) {
+    return {};
+  }
+}
+
 function login(userId, pin) {
   const u = get(
     `SELECT u.*, a.name AS access_name, a.rank AS access_rank
@@ -781,6 +808,7 @@ function login(userId, pin) {
       access_name: u.access_name,
       access_rank: u.access_rank,
       register_id: u.register_id,
+      permissions: parsePermissions(u.permissions),
     },
   };
 }
@@ -792,7 +820,20 @@ function listUsers() {
      LEFT JOIN access_level a ON a.id=u.access_level_id
      LEFT JOIN register r ON r.id=u.register_id
      ORDER BY a.rank DESC, u.name`
+  ).map((u) => ({ ...u, permissions: parsePermissions(u.permissions) }));
+}
+
+function hasPermission(userId, key) {
+  if (!userId) return false;
+  const u = get(
+    `SELECT u.permissions, a.rank
+     FROM user u LEFT JOIN access_level a ON a.id=u.access_level_id
+     WHERE u.id=?`,
+    [userId]
   );
+  if (!u) return false;
+  if (num(u.rank) >= 100) return true;
+  return parsePermissions(u.permissions)[key] === true;
 }
 
 function listAccessLevels() {
@@ -801,37 +842,57 @@ function listAccessLevels() {
 
 function saveUser(payload) {
   const id = payload.id;
+  let permissions;
+  if (payload.permissions !== undefined) {
+    permissions = parsePermissions(payload.permissions);
+  } else {
+    const existing = id ? get(`SELECT permissions FROM user WHERE id=?`, [id]) : null;
+    permissions = parsePermissions(existing ? existing.permissions : null);
+    if (payload.can_edit_documents !== undefined) permissions['documents.edit'] = !!payload.can_edit_documents;
+    if (payload.can_delete_documents !== undefined) permissions['documents.delete'] = !!payload.can_delete_documents;
+  }
+  const permissionsJson = JSON.stringify(permissions);
+
   if (payload.pin) {
     if (id) {
-      run(`UPDATE user SET name=?, pin=?, access_level_id=?, active=?, register_id=? WHERE id=?`, [
-        payload.name,
-        String(payload.pin),
-        payload.access_level_id,
-        payload.active ? 1 : 0,
-        payload.register_id || null,
-        id,
-      ]);
-    } else {
       run(
-        `INSERT INTO user (name, pin, access_level_id, active, register_id, created_at) VALUES (?,?,?,?,?,?)`,
+        `UPDATE user SET name=?, pin=?, access_level_id=?, active=?, register_id=?, permissions=? WHERE id=?`,
         [
           payload.name,
           String(payload.pin),
           payload.access_level_id,
           payload.active ? 1 : 0,
           payload.register_id || null,
+          permissionsJson,
+          id,
+        ]
+      );
+    } else {
+      run(
+        `INSERT INTO user (name, pin, access_level_id, active, register_id, permissions, created_at)
+         VALUES (?,?,?,?,?,?,?)`,
+        [
+          payload.name,
+          String(payload.pin),
+          payload.access_level_id,
+          payload.active ? 1 : 0,
+          payload.register_id || null,
+          permissionsJson,
           nowIso(),
         ]
       );
     }
   } else if (id) {
-    run(`UPDATE user SET name=?, access_level_id=?, active=?, register_id=? WHERE id=?`, [
+    run(`UPDATE user SET name=?, access_level_id=?, active=?, register_id=?, permissions=? WHERE id=?`, [
       payload.name,
       payload.access_level_id,
       payload.active ? 1 : 0,
       payload.register_id || null,
+      permissionsJson,
       id,
     ]);
+  } else {
+    return { ok: false, error: 'A PIN is required for a new user' };
   }
   persist();
   return { ok: true };
@@ -1973,9 +2034,6 @@ function refundSale(documentId, opts = {}) {
       subtotal += Math.round(it.quantity * it.unit_price);
       tax += Math.round(it.tax_total * share);
       total += it.total;
-      if (!it.product_id) continue;
-      const p = get(`SELECT is_service FROM product WHERE id=?`, [it.product_id]);
-      if (p && !p.is_service) applyStock(it.product_id, it.quantity * num(it.unit_factor, 1), it.cost, null, 'in');
     }
 
     const number = nextNumber('R');
@@ -2007,6 +2065,15 @@ function refundSale(documentId, opts = {}) {
       ]
     );
     const docId = get(`SELECT last_insert_rowid() AS id`).id;
+    run(`UPDATE document SET original_document_id=? WHERE id=?`, [original.id, docId]);
+
+    for (const it of items) {
+      if (!it.product_id) continue;
+      const p = get(`SELECT is_service FROM product WHERE id=?`, [it.product_id]);
+      if (p && !p.is_service) {
+        applyStock(it.product_id, it.quantity * num(it.unit_factor, 1), it.cost, docId, 'in');
+      }
+    }
 
     for (const it of items) {
       run(
@@ -2059,6 +2126,169 @@ const DOC_TYPES = {
   credit: { label: 'Credit payment', prefix: 'CR', stock: 'none' },
 };
 
+function prepareDocumentItems(type, items) {
+  let subtotal = 0;
+  let total = 0;
+  const prepared = [];
+  for (const it of items || []) {
+    const p = getProduct(it.product_id);
+    if (!p) throw new Error(`Product ${it.product_id} not found`);
+    const qty = num(it.quantity, 1);
+    if (qty <= 0) throw new Error(`Invalid quantity for ${p.name}`);
+    const unit = resolveUnit(p, it.unit);
+    const factor = unitFactor(p, unit.name);
+    const baseQty = qty * factor;
+    const sells = type === 'proforma' || type === 'sale' || type === 'refund';
+    const defaultPrice = sells ? unitPriceFor(p, unit) : Math.round(num(p.cost) * factor);
+    const price = it.unit_price != null ? cents(it.unit_price) : defaultPrice;
+    const gross = Math.round(qty * price);
+    subtotal += gross;
+    total += gross;
+    prepared.push({ p, qty, baseQty, unit, factor, unitPrice: price, gross });
+  }
+  return { prepared, subtotal, total };
+}
+
+function stockDirectionFor(type) {
+  if (type === 'sale') return 'out';
+  if (type === 'refund') return 'in';
+  return (DOC_TYPES[type] || {}).stock || 'none';
+}
+
+function stockUnitCost(type, p, unitPrice, factor) {
+  if (type === 'purchase') return Math.round(num(unitPrice) / (num(factor) || 1));
+  return num(p.cost);
+}
+
+function applyPreparedStock(docId, prepared, type) {
+  const direction = stockDirectionFor(type);
+  for (const item of prepared) {
+    const { p, baseQty, factor, unitPrice } = item;
+    const unitCost = stockUnitCost(type, p, unitPrice, factor);
+    if (direction === 'in') applyStock(p.id, baseQty, unitCost, docId, 'in');
+    else if (direction === 'out') applyStock(p.id, -baseQty, unitCost, docId, 'out');
+    else if (direction === 'set') {
+      const before = get(`SELECT quantity FROM stock_item WHERE product_id=?`, [p.id]);
+      const delta = baseQty - num(before ? before.quantity : 0);
+      applyStock(p.id, delta, p.cost, docId, 'adjust');
+    }
+  }
+}
+
+// Puts back (or takes back) every stock movement recorded for a document.
+function reverseDocumentStock(docId) {
+  const moves = all(`SELECT * FROM stock_movement WHERE document_id=? ORDER BY id`, [docId]);
+  if (moves.length) {
+    for (const m of moves) applyStock(m.product_id, -num(m.quantity), m.unit_cost, null, 'void');
+    return;
+  }
+  // Legacy refunds recorded their stock movement without a document id.
+  const doc = get(`SELECT type FROM document WHERE id=?`, [docId]);
+  if (!doc || doc.type !== 'refund') return;
+  const items = all(
+    `SELECT product_id, quantity, COALESCE(unit_factor, 1) AS unit_factor
+     FROM document_item WHERE document_id=? AND voided=0`,
+    [docId]
+  );
+  for (const it of items) {
+    if (!it.product_id) continue;
+    applyStock(it.product_id, -num(it.quantity) * num(it.unit_factor, 1), 0, null, 'void');
+  }
+}
+
+function insertDocumentItems(docId, prepared, type) {
+  const direction = stockDirectionFor(type);
+  const sign = type === 'refund' ? -1 : 1;
+  for (let i = 0; i < prepared.length; i++) {
+    const { p, qty, unit, factor, unitPrice, gross } = prepared[i];
+    run(
+      `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
+        unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
+        tax_total, total, voided, sort_order)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
+      [docId, p.id, p.name, p.code, qty, unitPrice, unit.name, factor, p.cost, null, 0, 0, 0, sign * gross, i + 1]
+    );
+    if (direction === 'none') continue;
+  }
+}
+
+function insertSaleLines(docId, lines) {
+  for (const l of lines) {
+    run(
+      `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
+        unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
+        tax_total, total, voided, sort_order)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
+      [
+        docId,
+        l.product_id,
+        l.name_snapshot,
+        l.sku_snapshot,
+        l.quantity,
+        l.unit_price,
+        l.unit_snapshot,
+        l.unit_factor,
+        l.cost,
+        l.discount_type,
+        l.discount_value,
+        Math.round(l.discount_total),
+        l.tax_total,
+        l.total,
+        l.sort_order,
+      ]
+    );
+  }
+}
+
+// Keeps the money side consistent when a document total changes. Cash tendered
+// stays as it was; the difference becomes change (or an open balance).
+function recalculatePayments(docId, type, newTotal) {
+  const pays = all(`SELECT * FROM payment WHERE document_id=? ORDER BY id`, [docId]);
+  if (!pays.length) return { paidTotal: 0, changeTotal: 0 };
+
+  if (type === 'refund') {
+    const p = pays[0];
+    run(`UPDATE payment SET amount=?, tendered=?, change=0 WHERE id=?`, [-newTotal, -newTotal, p.id]);
+    for (let i = 1; i < pays.length; i++) run(`DELETE FROM payment WHERE id=?`, [pays[i].id]);
+    return { paidTotal: -newTotal, changeTotal: 0 };
+  }
+
+  if (type !== 'sale') {
+    const p = pays[0];
+    run(`UPDATE payment SET amount=?, tendered=?, change=0 WHERE id=?`, [newTotal, newTotal, p.id]);
+    for (let i = 1; i < pays.length; i++) run(`DELETE FROM payment WHERE id=?`, [pays[i].id]);
+    return { paidTotal: newTotal, changeTotal: 0 };
+  }
+
+  const tenderedTotal = pays.reduce((s, p) => s + num(p.tendered), 0);
+  const oldPaid = pays.reduce((s, p) => s + num(p.amount), 0);
+
+  if (newTotal <= tenderedTotal) {
+    let allocated = 0;
+    for (let i = 0; i < pays.length; i++) {
+      const p = pays[i];
+      let amount;
+      if (i === pays.length - 1) amount = newTotal - allocated;
+      else {
+        amount = oldPaid > 0 ? Math.round((num(p.amount) / oldPaid) * newTotal) : 0;
+        allocated += amount;
+      }
+      run(`UPDATE payment SET amount=?, change=0 WHERE id=?`, [amount, p.id]);
+    }
+    const change = Math.max(tenderedTotal - newTotal, 0);
+    if (change > 0) {
+      const last = pays[pays.length - 1];
+      run(`UPDATE payment SET change=? WHERE id=?`, [change, last.id]);
+    }
+    return { paidTotal: newTotal, changeTotal: change };
+  }
+
+  for (const p of pays) {
+    run(`UPDATE payment SET amount=?, change=0 WHERE id=?`, [num(p.tendered), p.id]);
+  }
+  return { paidTotal: tenderedTotal, changeTotal: 0 };
+}
+
 function createDocument(payload) {
   return tx(() => {
     const type = payload.type;
@@ -2074,27 +2304,8 @@ function createDocument(payload) {
     const items = payload.items || [];
     if (!items.length) throw new Error('Add at least one product');
 
-    let subtotal = 0;
-    let tax = 0;
-    let total = 0;
-    const prepared = [];
-
-    for (const it of items) {
-      const p = getProduct(it.product_id);
-      if (!p) throw new Error(`Product ${it.product_id} not found`);
-      const qty = num(it.quantity, 1);
-      if (qty <= 0) throw new Error(`Invalid quantity for ${p.name}`);
-      const unit = resolveUnit(p, it.unit);
-      const factor = unitFactor(p, unit.name);
-      const baseQty = qty * factor;
-      // Proforma sells at the unit price; other documents default to cost per base unit.
-      const defaultPrice = type === 'proforma' ? unitPriceFor(p, unit) : Math.round(num(p.cost) * factor);
-      const price = it.unit_price != null ? cents(it.unit_price) : defaultPrice;
-      const gross = Math.round(qty * price);
-      subtotal += gross;
-      total += gross;
-      prepared.push({ p, qty, baseQty, unit, factor, unitPrice: price, gross });
-    }
+    const { prepared, subtotal, total } = prepareDocumentItems(type, items);
+    const tax = 0;
 
     const number = nextNumber(def.prefix);
     run(
@@ -2125,25 +2336,8 @@ function createDocument(payload) {
     );
     const docId = get(`SELECT last_insert_rowid() AS id`).id;
 
-    for (let i = 0; i < prepared.length; i++) {
-      const { p, qty, baseQty, unit, factor, unitPrice, gross } = prepared[i];
-      run(
-        `INSERT INTO document_item (document_id, product_id, name_snapshot, sku_snapshot, quantity,
-          unit_price, unit_snapshot, unit_factor, cost, discount_type, discount_value, discount_total,
-          tax_total, total, voided, sort_order)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`,
-        [docId, p.id, p.name, p.code, qty, unitPrice, unit.name, factor, p.cost, null, 0, 0, 0, gross, i + 1]
-      );
-
-      // Stock is tracked in base units, so cost has to be per base unit too.
-      if (def.stock === 'in') applyStock(p.id, baseQty, Math.round(unitPrice / factor), docId, 'in');
-      else if (def.stock === 'out') applyStock(p.id, -baseQty, Math.round(unitPrice / factor), docId, 'out');
-      else if (def.stock === 'set') {
-        const before = get(`SELECT quantity FROM stock_item WHERE product_id=?`, [p.id]);
-        const delta = baseQty - num(before ? before.quantity : 0);
-        applyStock(p.id, delta, p.cost, docId, 'adjust');
-      }
-    }
+    insertDocumentItems(docId, prepared, type);
+    applyPreparedStock(docId, prepared, type);
 
     if (payload.payments && payload.payments.length) {
       for (const pay of payload.payments) {
@@ -2159,6 +2353,194 @@ function createDocument(payload) {
     }
 
     return getDocument(docId);
+  });
+}
+
+function deleteDocument(documentId, opts = {}) {
+  const doc = getDocument(documentId);
+  if (!doc) return { ok: false, error: 'Document not found' };
+  if (!hasPermission(opts.user_id, 'documents.delete')) {
+    return { ok: false, error: 'You do not have permission to delete documents.' };
+  }
+  const reason = String(opts.reason || '').trim();
+  if (!reason) return { ok: false, error: 'A reason is required' };
+
+  if (doc.type === 'sale') {
+    const refund = get(
+      `SELECT id FROM document WHERE type='refund' AND (original_document_id=? OR notes LIKE ?) LIMIT 1`,
+      [doc.id, `%${doc.number}%`]
+    );
+    if (refund) return { ok: false, error: 'This sale already has a refund. Delete the refund first.' };
+  }
+
+  let moves = all(`SELECT * FROM stock_movement WHERE document_id=?`, [doc.id]);
+  if (!moves.length && doc.type === 'refund') {
+    // Legacy refunds recorded their restock without a document id.
+    const items = all(
+      `SELECT product_id, quantity, COALESCE(unit_factor, 1) AS unit_factor
+       FROM document_item WHERE document_id=? AND voided=0`,
+      [doc.id]
+    );
+    moves = items
+      .filter((it) => it.product_id)
+      .map((it) => ({ product_id: it.product_id, quantity: -num(it.quantity) * num(it.unit_factor, 1), unit_cost: 0 }));
+  }
+  const allowNegative = getSetting('allow_negative_stock') === '1';
+  const deltas = {};
+  for (const m of moves) deltas[m.product_id] = num(deltas[m.product_id]) - num(m.quantity);
+  for (const key of Object.keys(deltas)) {
+    const delta = deltas[key];
+    if (delta < 0) {
+      const row = get(`SELECT quantity FROM stock_item WHERE product_id=?`, [Number(key)]);
+      if (!allowNegative && num(row && row.quantity) + delta < -1e-9) {
+        return { ok: false, error: 'Deleting this document would make stock negative. Adjust stock first.' };
+      }
+    }
+  }
+
+  tx(() => {
+    for (const m of moves) applyStock(m.product_id, -num(m.quantity), m.unit_cost, null, 'void');
+    run(
+      `INSERT INTO deleted_document (number, type, total, user_id, reason, items_json, payments_json, deleted_at)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [
+        doc.number,
+        doc.type,
+        doc.total,
+        opts.user_id || null,
+        reason,
+        JSON.stringify(doc.items || []),
+        JSON.stringify(doc.payments || []),
+        nowIso(),
+      ]
+    );
+    run(`DELETE FROM payment WHERE document_id=?`, [doc.id]);
+    run(`DELETE FROM document_item WHERE document_id=?`, [doc.id]);
+    run(`DELETE FROM document WHERE id=?`, [doc.id]);
+  });
+  persist();
+  return { ok: true };
+}
+
+function updateDocument(id, payload) {
+  const original = getDocument(id);
+  if (!original) return { ok: false, error: 'Document not found' };
+  if (!hasPermission(payload.user_id, 'documents.edit')) {
+    return { ok: false, error: 'You do not have permission to edit documents.' };
+  }
+  const type = original.type;
+  const items = payload.items || [];
+  if (!items.length) throw new Error('Add at least one product');
+  const docDate = payload.doc_date || original.doc_date;
+  const stockDate = payload.stock_date || docDate;
+  if (type === 'count' && new Date(stockDate).getTime() > Date.now()) {
+    throw new Error('Stock date for an inventory count cannot be in the future');
+  }
+
+  if (type === 'sale') {
+    const refund = get(
+      `SELECT id FROM document WHERE type='refund' AND (original_document_id=? OR notes LIKE ?) LIMIT 1`,
+      [original.id, `%${original.number}%`]
+    );
+    if (refund) return { ok: false, error: 'This sale already has a refund. Delete the refund first.' };
+    const cartDiscount =
+      num(original.cart_discount) > 0 ? { type: 'fixed', value: num(original.cart_discount) / 100 } : null;
+    // The editor does not show item discounts, so carry them over by product.
+    const oldLines = original.items || [];
+    const saleItems = items.map((it, index) => {
+      const old = oldLines.find((o) => String(o.product_id) === String(it.product_id)) || oldLines[index];
+      if (!old) return it;
+      return {
+        ...it,
+        discount_type: old.discount_type,
+        discount_value: old.discount_value,
+      };
+    });
+    return tx(() => {
+      reverseDocumentStock(id);
+      run(`DELETE FROM stock_movement WHERE document_id=?`, [id]);
+      run(`DELETE FROM document_item WHERE document_id=?`, [id]);
+      const calc = computeSale({
+        items: saleItems,
+        customer_id: payload.customer_id != null ? payload.customer_id : original.customer_id,
+        discount: cartDiscount,
+        tax_override_percent: original.tax_override_percent,
+      });
+      insertSaleLines(id, calc.lines);
+      for (const l of calc.lines) {
+        if (!l.is_service) applyStock(l.product_id, -l.quantity * l.unit_factor, l.cost, id, 'out');
+      }
+      const pay = recalculatePayments(id, 'sale', calc.total);
+      let status = 'closed';
+      if (pay.paidTotal + 1e-9 < calc.total) status = pay.paidTotal === 0 ? 'open' : 'partial';
+      run(
+        `UPDATE document SET customer_id=?, external_number=?, doc_date=?, stock_date=?, subtotal=?,
+          item_discount=?, cart_discount=?, discount_total=?, tax_override_percent=?, tax_total=?,
+          tax_breakdown=?, total=?, paid_total=?, change_total=?, notes=?, status=?, closed_at=?
+         WHERE id=?`,
+        [
+          payload.customer_id != null ? payload.customer_id : original.customer_id,
+          payload.external_number || null,
+          docDate,
+          stockDate,
+          calc.subtotal,
+          calc.item_discount,
+          calc.cart_discount,
+          calc.discount_total,
+          original.tax_override_percent,
+          calc.tax_total,
+          JSON.stringify(calc.tax_breakdown),
+          calc.total,
+          pay.paidTotal,
+          pay.changeTotal,
+          payload.notes || '',
+          status,
+          nowIso(),
+          id,
+        ]
+      );
+      return getDocument(id);
+    });
+  }
+
+  return tx(() => {
+    reverseDocumentStock(id);
+    run(`DELETE FROM stock_movement WHERE document_id=?`, [id]);
+    run(`DELETE FROM document_item WHERE document_id=?`, [id]);
+    const { prepared, subtotal, total } = prepareDocumentItems(type, items);
+    const direction = stockDirectionFor(type);
+    if (direction === 'in' && getSetting('allow_negative_stock') !== '1') {
+      for (const item of prepared) {
+        const row = get(`SELECT quantity FROM stock_item WHERE product_id=?`, [item.p.id]);
+        if (num(row && row.quantity) < item.baseQty - 1e-9) {
+          throw new Error(`Not enough stock to reverse this document for ${item.p.name}`);
+        }
+      }
+    }
+    insertDocumentItems(id, prepared, type);
+    applyPreparedStock(id, prepared, type);
+    const pay = recalculatePayments(id, type, total);
+    const signedTotal = type === 'refund' ? -total : total;
+    run(
+      `UPDATE document SET supplier_id=?, customer_id=?, external_number=?, doc_date=?, stock_date=?,
+        subtotal=?, tax_total=0, total=?, paid_total=?, change_total=?, notes=?, status='closed', closed_at=?
+       WHERE id=?`,
+      [
+        payload.supplier_id || null,
+        payload.customer_id || null,
+        payload.external_number || null,
+        docDate,
+        stockDate,
+        type === 'refund' ? -subtotal : subtotal,
+        signedTotal,
+        pay.paidTotal,
+        pay.changeTotal,
+        payload.notes || '',
+        nowIso(),
+        id,
+      ]
+    );
+    return getDocument(id);
   });
 }
 
@@ -3060,6 +3442,7 @@ module.exports = {
   listAccessLevels,
   saveUser,
   deleteUser,
+  hasPermission,
   getCompany,
   saveCompany,
   listTaxRates,
@@ -3093,6 +3476,8 @@ module.exports = {
   createSale,
   refundSale,
   createDocument,
+  updateDocument,
+  deleteDocument,
   listCashMovements,
   addCash,
   getDayState,

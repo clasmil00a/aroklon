@@ -365,6 +365,15 @@
       this.loaders[name] = fn;
     },
 
+    // Permission check mirrored on the server. Owner (rank 100) can do anything.
+    can(key) {
+      const u = this.state.user;
+      if (!u) return false;
+      if (Number(u.access_rank) >= 100) return true;
+      const p = u.permissions && typeof u.permissions === 'object' ? u.permissions : {};
+      return p[key] === true;
+    },
+
     async api(action, payload) {
       try {
         const res = await window.api.invoke(action, payload);

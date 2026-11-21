@@ -25,6 +25,18 @@
     Reporting: 'Pelaporan',
     'Customers & Suppliers': 'Pelanggan & Pemasok',
     'Users & Security': 'Pengguna & Keamanan',
+    'Document permissions': 'Izin dokumen',
+    'Can edit documents': 'Dapat mengedit dokumen',
+    'Can delete documents': 'Dapat menghapus dokumen',
+    'Owner always has full access. These permissions apply to this user only.':
+      'Owner selalu punya akses penuh. Izin ini hanya berlaku untuk user ini.',
+    'Payments stay as recorded. If the total changes, the difference is calculated as change or outstanding balance.':
+      'Pembayaran tetap seperti tercatat. Jika total berubah, selisih dihitung sebagai kembalian atau sisa piutang.',
+    'Stock will be returned and the document will be removed. This cannot be undone.':
+      'Stok akan dikembalikan dan dokumen dihapus. Tindakan ini tidak bisa dibatalkan.',
+    'A reason is required': 'Alasan wajib diisi',
+    'Document deleted': 'Dokumen dihapus',
+    Reason: 'Alasan',
     'My company': 'Perusahaan Saya',
     Promotions: 'Promosi',
     Users: 'Pengguna',
