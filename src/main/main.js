@@ -793,22 +793,47 @@ function createWindow() {
               try {
                 A.go('documents'); await s(550);
                 const from = document.getElementById('doc-from');
-                res.hidden = !!from;
+                const to = document.getElementById('doc-to');
+                res.hidden = !!from && !!to;
                 const btn = document.querySelector('[data-action="date-open"][data-target="doc-from"]');
                 res.btn = !!btn;
                 if (btn) btn.click();
-                await s(300);
-                const pop = document.querySelector('.cal-pop');
-                res.pop = !!pop;
+                await s(350);
+                res.range = !!document.querySelector('.cal-pop.range');
+                res.months = document.querySelectorAll('.cal-month').length;
+                res.presets = document.querySelectorAll('.cal-preset').length;
                 res.days = document.querySelectorAll('.cal-day').length;
                 res.weekdays = document.querySelectorAll('.cal-week span').length;
-                res.title = (document.querySelector('.cal-title') || {}).textContent || '';
-                const d15 = document.querySelector('[data-cal-day="15"]');
+                const d10 = document.querySelector('[data-cal-day="2026-11-10"]');
+                if (d10) d10.click();
+                await s(200);
+                const d15 = document.querySelector('[data-cal-day="2026-11-15"]');
                 if (d15) d15.click();
+                await s(200);
+                res.values = [...document.querySelectorAll('.cal-value')].map((e) => e.textContent);
+                const ok = document.querySelector('[data-cal-nav="ok"]');
+                if (ok) ok.click();
                 await s(300);
-                res.value = from ? from.value : null;
+                res.from = from ? from.value : null;
+                res.to = to ? to.value : null;
                 res.closed = !document.querySelector('.cal-pop');
-                res.label = (document.querySelector('[data-action="date-open"][data-target="doc-from"] span') || {}).textContent || '';
+
+                const btn2 = document.querySelector('[data-action="date-open"][data-target="doc-from"]');
+                if (btn2) btn2.click();
+                await s(300);
+                res.presetBefore = [...document.querySelectorAll('.cal-value')].map((e) => e.textContent);
+                const lastWeek = document.querySelector('[data-cal-preset="lastweek"]');
+                res.presetBtn = !!lastWeek;
+                if (lastWeek) lastWeek.click();
+                await s(250);
+                res.presetAfter = [...document.querySelectorAll('.cal-value')].map((e) => e.textContent);
+                const ok2 = document.querySelector('[data-cal-nav="ok"]');
+                if (ok2) ok2.click();
+                await s(300);
+                const from2 = document.getElementById('doc-from');
+                const to2 = document.getElementById('doc-to');
+                res.presetFrom = from2 ? from2.value : null;
+                res.presetTo = to2 ? to2.value : null;
 
                 A.actions['doc-new']({}, null, {}); await s(300);
                 A.actions['doc-pick-type']({ type: 'purchase' }, null, {}); await s(450);
@@ -818,11 +843,11 @@ function createWindow() {
                 if (dbtn) dbtn.click();
                 await s(300);
                 res.timeInput = !!document.querySelector('.cal-time-input');
-                const day = document.querySelector('[data-cal-day="10"]');
+                const day = document.querySelector('[data-cal-day="2026-11-10"]');
                 if (day) day.click();
                 await s(200);
-                const ok = document.querySelector('[data-cal-nav="ok"]');
-                if (ok) ok.click();
+                const ok3 = document.querySelector('[data-cal-nav="ok"]');
+                if (ok3) ok3.click();
                 await s(300);
                 res.docValue = dd ? dd.value : null;
                 res.clock = !!document.querySelector('[data-clock]');
@@ -831,139 +856,6 @@ function createWindow() {
               return res;
             })()`,
             'flow-date'
-          );
-        }
-
-        if (process.env.AROKLON_TAX_TEST) {
-          out.flowTax = await js(
-            `(async () => {
-              const s = (ms) => new Promise((r) => setTimeout(r, ms));
-              const A = window.App; const res = {};
-              try {
-                await A.api('setSetting', ['tax_enabled', '0']);
-                await A.reloadReference();
-                A.go('settings'); A.state.settingsTab = 'tax'; await s(450);
-                res.toggle = !!document.querySelector('[data-change="tax-toggle"]');
-                res.offBadge = (document.querySelector('[data-tab-panel="set-tax"] .badge') || {}).textContent || '';
-                res.taxTable = !!document.querySelector('[data-tab-panel="set-tax"] table.data');
-                res.addTaxBtn = !!document.querySelector('[data-tab-panel="set-tax"] [data-action="tax-new"]');
-
-                const withTax = (A.state.products || []).find((p) => (p.taxes || []).length);
-                res.taxProduct = !!withTax;
-                if (withTax) {
-                  A.actions['product-edit']({ id: String(withTax.id) });
-                  await s(450);
-                  res.productTaxFields = document.querySelectorAll('input[name="tax_rate_id"]').length;
-                  A.closeModal(); await s(150);
-                }
-
-                A.go('reports'); await s(500);
-                res.taxReport = !!document.querySelector('[data-id="tax_summary"]');
-
-                await A.api('setSetting', ['tax_enabled', '1']);
-                A.state.settings = await A.api('getSettings');
-                A.go('settings'); A.state.settingsTab = 'tax'; await s(450);
-                res.onTable = !!document.querySelector('[data-tab-panel="set-tax"] table.data');
-                res.onAdd = !!document.querySelector('[data-tab-panel="set-tax"] [data-action="tax-new"]');
-
-                if (withTax) {
-                  const doc = await A.api('createSale', {
-                    user_id: A.state.user.id,
-                    items: [{ product_id: withTax.id, quantity: 1 }],
-                    payments: [],
-                  });
-                  res.taxTotalOn = doc.tax_total;
-                }
-                await A.api('setSetting', ['tax_enabled', '0']);
-                A.state.settings = await A.api('getSettings');
-                if (withTax) {
-                  const doc2 = await A.api('createSale', {
-                    user_id: A.state.user.id,
-                    items: [{ product_id: withTax.id, quantity: 1 }],
-                    payments: [],
-                  });
-                  res.taxTotalOff = doc2.tax_total;
-                }
-              } catch (e) { res.err = e.message; }
-              return res;
-            })()`,
-            'flow-tax'
-          );
-        }
-
-        if (process.env.AROKLON_DOCS_TEST) {
-          out.flowDocs = await js(
-            `(async () => {
-              const s = (ms) => new Promise((r) => setTimeout(r, ms));
-              const A = window.App; const res = {};
-              try {
-                const users = await A.api('listUsers');
-                const owner = users.find((u) => u.access_rank >= 100);
-                const cashier = users.find((u) => u.access_rank < 100);
-                res.permOwner = await A.api('hasPermission', [owner.id, 'documents.delete']);
-                res.permCashier = await A.api('hasPermission', [cashier.id, 'documents.delete']);
-
-                const p = await A.api('saveProduct', {
-                  name: 'Doc Test', code: 'DOCT', unit: 'pcs', price: 10000, cost: 6000,
-                  active: true, price_change_allowed: true,
-                });
-                await A.api('adjustStock', [p.id, 50, 'test']);
-                const sale = await A.api('createSale', {
-                  user_id: owner.id,
-                  items: [{ product_id: p.id, quantity: 5, unit: 'pcs', unit_price: 100 }],
-                  payments: [{ payment_type_id: 1, amount: 500, tendered: 500 }],
-                });
-                const stockOf = async () => (await A.api('listProducts', {})).find((x) => x.id === p.id).quantity;
-                res.stockBefore = await stockOf();
-
-                A.go('users'); await s(400);
-                A.actions['user-new']({}, null, {});
-                await s(300);
-                res.userPermField = !!document.querySelector('[name="perm_documents_delete"]');
-                A.closeModal(); await s(150);
-                A.state.settings.ask_qty = '0';
-                A.go('documents'); await s(500);
-                let row = [...document.querySelectorAll('table.data tbody tr')].find((tr) => tr.innerText.includes(sale.number));
-                res.row = !!row;
-                res.buttons = row ? [...row.querySelectorAll('button')].map((b) => b.textContent.trim()) : [];
-                const editBtn = row && row.querySelector('[data-action="doc-edit"]');
-                res.editBtn = !!editBtn;
-                if (editBtn) { editBtn.click(); await s(500); }
-                res.editor = !!document.querySelector('form[data-form="save-doc"]');
-                const qty = document.querySelector('.doc-qty');
-                if (qty) { qty.value = '3'; qty.dispatchEvent(new Event('input', { bubbles: true })); }
-                const form = document.querySelector('form[data-form="save-doc"]');
-                if (form) { form.requestSubmit(); await s(1000); }
-                const edited = (await A.api('listDocuments', {})).find((d) => d.id === sale.id);
-                res.edited = edited ? [edited.total, edited.status] : null;
-                res.stockAfterEdit = await stockOf();
-                const denied = await A.api('deleteDocument', [sale.id, { user_id: cashier.id, reason: 'test' }]);
-                res.cashierDenied = [denied.ok, /permission/i.test(denied.error || '')];
-
-                A.go('documents'); await s(400);
-                row = [...document.querySelectorAll('table.data tbody tr')].find((tr) => tr.innerText.includes(sale.number));
-                const delBtn = row && row.querySelector('[data-action="doc-delete"]');
-                res.delBtn = !!delBtn;
-                if (delBtn) { delBtn.click(); await s(400); }
-                const reason = document.querySelector('#prompt-input');
-                res.prompt = !!reason;
-                if (reason) {
-                  reason.value = '';
-                  reason.dispatchEvent(new Event('input', { bubbles: true }));
-                  const ok = document.querySelector('[data-modal-ok]');
-                  if (ok) ok.click();
-                  await s(400);
-                }
-                const confirm = document.querySelector('[data-modal-ok]');
-                res.confirm = !!confirm;
-                if (confirm) confirm.click();
-                await s(1000);
-                res.gone = !(await A.api('listDocuments', {})).some((d) => d.id === sale.id);
-                res.stockAfterDelete = await stockOf();
-              } catch (e) { res.err = e.message; }
-              return res;
-            })()`,
-            'flow-docs'
           );
         }
 

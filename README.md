@@ -46,8 +46,11 @@ runs locally — no account, no cloud, no subscription.
 - **Languages** — Bahasa Indonesia (default) and English, switchable at login or in Settings.
 - **Receipts** — white paper with dark text in every colour mode.
 - **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
-- **Dates** — date fields open a locale-aware calendar (month/day names follow
-  the selected language); the header clock shows date and time in that locale.
+- **Dates** — date filters open a two-month range picker with presets (today,
+  yesterday, this week, last week, this month, last month, this year, last
+  year), locale-aware month/day names and OK/Cancel. Document dates use a
+  single-date picker with time. The header clock shows date and time in the
+  selected locale.
 - **Tax (optional)** — tax is off by default. Turn it on in Settings → Tax rates;
   when it is off, tax fields are hidden and new sales are untaxed.
 - **Data** — local SQLite file, backup/restore, reset.

@@ -374,7 +374,8 @@
         data-has-time="${hasTime ? '1' : '0'}"
         ${opts.dataChange ? `data-change="${attr(opts.dataChange)}"` : ''}
         ${opts.dataKey ? `data-key="${attr(opts.dataKey)}"` : ''} />
-      <button type="button" class="input date-btn" data-action="date-open" data-target="${id}">
+      <button type="button" class="input date-btn" data-action="date-open" data-target="${id}"
+        ${opts.rangeWith ? `data-range-with="${attr(opts.rangeWith)}"` : ''}>
         ${icon('calendar', 15)} <span>${esc(label)}</span>
       </button>
     </div>`;
@@ -409,14 +410,14 @@
     document.body.appendChild(pop);
 
     const weekdays = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(2024, 0, 1 + i);
+      const d = new Date(2024, 0, 7 + i);
       return `<span>${esc(new Intl.DateTimeFormat(locale(), { weekday: 'short' }).format(d))}</span>`;
     }).join('');
 
     function render() {
       const monthLabel = new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(view);
       const first = new Date(view.getFullYear(), view.getMonth(), 1);
-      const offset = (first.getDay() + 6) % 7;
+      const offset = first.getDay();
       const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
       const today = new Date();
       let cells = '';
@@ -429,7 +430,9 @@
           view.getFullYear() === selected.getFullYear();
         const isToday =
           d === today.getDate() && view.getMonth() === today.getMonth() && view.getFullYear() === today.getFullYear();
-        cells += `<button type="button" class="cal-day ${isSel ? 'sel' : ''} ${isToday ? 'today' : ''}" data-cal-day="${d}">${d}</button>`;
+        const date = new Date(view.getFullYear(), view.getMonth(), d);
+        const key = `${date.getFullYear()}-${p2(date.getMonth() + 1)}-${p2(date.getDate())}`;
+        cells += `<button type="button" class="cal-day ${isSel ? 'sel' : ''} ${isToday ? 'today' : ''}" data-cal-day="${key}">${d}</button>`;
       }
       pop.innerHTML = `
         <div class="cal-head">
@@ -487,8 +490,8 @@
       }
       const day = e.target.closest('[data-cal-day]');
       if (day) {
-        const d = Number(day.dataset.calDay);
-        selected = new Date(view.getFullYear(), view.getMonth(), d, selected.getHours(), selected.getMinutes());
+        const picked = new Date(day.dataset.calDay + 'T00:00:00');
+        selected = new Date(picked.getFullYear(), picked.getMonth(), picked.getDate(), selected.getHours(), selected.getMinutes());
         if (!hasTime) { commit(); closeDatePicker(); }
         else render();
       }
@@ -530,9 +533,251 @@
     activeDatePicker = { pop, cleanup };
   }
 
+  function openDateRangePicker(anchor, startInput, endInput) {
+    closeDatePicker();
+    const parse = (value, fallback) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      return fallback;
+    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const ymd = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    const startOfWeek = (d) => addDays(d, -d.getDay());
+    const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+    let start = parse(startInput.value, today);
+    let end = parse(endInput.value, start);
+    if (end < start) { const t = start; start = end; end = t; }
+    let selecting = 'start';
+    let view = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    const pop = document.createElement('div');
+    pop.className = 'cal-pop range';
+    document.body.appendChild(pop);
+
+    const monthLabel = (d) => new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(d);
+    const weekdays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(2024, 0, 7 + i);
+      return `<span>${esc(new Intl.DateTimeFormat(locale(), { weekday: 'short' }).format(d))}</span>`;
+    }).join('');
+
+    function monthHtml(monthDate) {
+      const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const offset = first.getDay();
+      const days = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      let cells = '';
+      for (let i = 0; i < offset; i++) cells += '<span></span>';
+      for (let d = 1; d <= days; d++) {
+        const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
+        const isStart = start && date.getTime() === start.getTime();
+        const isEnd = end && date.getTime() === end.getTime();
+        const inRange = start && end && date > start && date < end;
+        const isToday = date.getTime() === today.getTime();
+        const cls = [
+          'cal-day',
+          isStart ? 'range-start' : '',
+          isEnd ? 'range-end' : '',
+          inRange ? 'in-range' : '',
+          isToday ? 'today' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        cells += `<button type="button" class="${cls}" data-cal-day="${ymd(date)}">${d}</button>`;
+      }
+      return `<div class="cal-month">
+        <div class="cal-month-title">${esc(monthLabel(monthDate))}</div>
+        <div class="cal-week">${weekdays}</div>
+        <div class="cal-grid">${cells}</div>
+      </div>`;
+    }
+
+    function render() {
+      const next = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+      const presets = [
+        ['today', t('Today')],
+        ['yesterday', t('Yesterday')],
+        ['thisweek', t('This week')],
+        ['lastweek', t('Last week')],
+        ['thismonth', t('This month')],
+        ['lastmonth', t('Last month')],
+        ['thisyear', t('This year')],
+        ['lastyear', t('Last year')],
+      ];
+      pop.innerHTML = `
+        <div class="cal-head">
+          <div class="cal-title">${esc(t('Period'))}</div>
+          <button type="button" class="cal-nav" data-cal-nav="close" title="${esc(t('Close'))}">×</button>
+        </div>
+        <div class="cal-range-inputs">
+          <div class="cal-field"><span class="cal-label">${esc(t('Start'))}</span><div class="cal-value">${
+            start ? esc(fmtDate(ymd(start))) : '—'
+          }</div></div>
+          <div class="cal-field"><span class="cal-label">${esc(t('End'))}</span><div class="cal-value">${
+            end ? esc(fmtDate(ymd(end))) : '—'
+          }</div></div>
+        </div>
+        <div class="cal-range-nav">
+          <button type="button" class="cal-nav" data-cal-nav="prev">‹</button>
+          <span class="cal-range-hint">${esc(t('Pick a start date, then an end date'))}</span>
+          <button type="button" class="cal-nav" data-cal-nav="next">›</button>
+        </div>
+        <div class="cal-range-body">
+          <div class="cal-months">${monthHtml(view)}${monthHtml(next)}</div>
+          <div class="cal-presets">
+            ${presets.map(([k, label]) => `<button type="button" class="cal-preset" data-cal-preset="${k}">${esc(label)}</button>`).join('')}
+          </div>
+        </div>
+        <div class="cal-foot">
+          <button type="button" class="btn sm" data-cal-nav="cancel">${esc(t('Cancel'))}</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn sm primary" data-cal-nav="ok">${esc(t('OK'))}</button>
+        </div>`;
+    }
+
+    function applyPreset(kind) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      let s;
+      let e;
+      if (kind === 'today') {
+        s = now;
+        e = now;
+      } else if (kind === 'yesterday') {
+        s = addDays(now, -1);
+        e = s;
+      } else if (kind === 'thisweek') {
+        s = startOfWeek(now);
+        e = addDays(s, 6);
+      } else if (kind === 'lastweek') {
+        s = addDays(startOfWeek(now), -7);
+        e = addDays(s, 6);
+      } else if (kind === 'thismonth') {
+        s = startOfMonth(now);
+        e = endOfMonth(now);
+      } else if (kind === 'lastmonth') {
+        const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        s = startOfMonth(d);
+        e = endOfMonth(d);
+      } else if (kind === 'thisyear') {
+        s = new Date(now.getFullYear(), 0, 1);
+        e = new Date(now.getFullYear(), 11, 31);
+      } else if (kind === 'lastyear') {
+        s = new Date(now.getFullYear() - 1, 0, 1);
+        e = new Date(now.getFullYear() - 1, 11, 31);
+      }
+      if (!s || !e) return;
+      start = s;
+      end = e;
+      selecting = 'start';
+      view = new Date(s.getFullYear(), s.getMonth(), 1);
+      render();
+    }
+
+    function commit() {
+      if (!start || !end) return;
+      startInput.value = ymd(start);
+      endInput.value = ymd(end);
+      for (const input of [startInput, endInput]) {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      const pairs = [
+        [startInput, ymd(start)],
+        [endInput, ymd(end)],
+      ];
+      for (const [input, value] of pairs) {
+        const btn = document.querySelector(`[data-action="date-open"][data-target="${input.id}"] span`);
+        if (btn) btn.textContent = fmtDate(value);
+      }
+    }
+
+    const onClick = (e) => {
+      const nav = e.target.closest('[data-cal-nav]');
+      if (nav) {
+        const kind = nav.dataset.calNav;
+        if (kind === 'prev') {
+          view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+          render();
+        } else if (kind === 'next') {
+          view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+          render();
+        } else if (kind === 'ok') {
+          commit();
+          closeDatePicker();
+        } else if (kind === 'cancel' || kind === 'close') {
+          closeDatePicker();
+        }
+        return;
+      }
+      const preset = e.target.closest('[data-cal-preset]');
+      if (preset) {
+        applyPreset(preset.dataset.calPreset);
+        return;
+      }
+      const day = e.target.closest('[data-cal-day]');
+      if (day) {
+        const d = new Date(day.dataset.calDay + 'T00:00:00');
+        if (selecting === 'start' || !start) {
+          start = d;
+          end = d;
+          selecting = 'end';
+        } else if (d < start) {
+          end = start;
+          start = d;
+          selecting = 'start';
+        } else {
+          end = d;
+          selecting = 'start';
+        }
+        render();
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeDatePicker();
+      }
+    };
+    const onDoc = (e) => {
+      if (!pop.contains(e.target) && !anchor.contains(e.target)) closeDatePicker();
+    };
+
+    pop.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => document.addEventListener('mousedown', onDoc), 0);
+    const cleanup = () => {
+      pop.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('mousedown', onDoc);
+    };
+
+    render();
+
+    const rect = anchor.getBoundingClientRect();
+    const popW = Math.min(760, window.innerWidth - 16);
+    pop.style.width = `${popW}px`;
+    let left = rect.left;
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    pop.style.left = `${Math.max(8, left)}px`;
+    let top = rect.bottom + 6;
+    const popH = 440;
+    if (top + popH > window.innerHeight - 8) top = Math.max(8, rect.top - popH - 6);
+    pop.style.top = `${top}px`;
+
+    activeDatePicker = { pop, cleanup };
+  }
+
   A.action('date-open', (ds, el) => {
     const input = document.getElementById(ds.target);
-    if (input) openDatePicker(el, input);
+    if (!input) return;
+    if (el.dataset.rangeWith) {
+      const other = document.getElementById(el.dataset.rangeWith);
+      if (other) { openDateRangePicker(el, input, other); return; }
+    }
+    openDatePicker(el, input);
   });
 
   function tileHtml(p) {
