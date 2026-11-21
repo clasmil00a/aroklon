@@ -9,6 +9,16 @@ const db = require('./db');
 
 let mainWindow = null;
 let printWindow = null;
+
+if (process.env.AROKLON_SMOKE_DIR) {
+  try {
+    fs.mkdirSync(process.env.AROKLON_SMOKE_DIR, { recursive: true });
+    app.setPath('userData', process.env.AROKLON_SMOKE_DIR);
+  } catch (e) {
+    console.error('Could not set smoke userData dir:', e.message);
+  }
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
@@ -35,7 +45,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     show: false,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#2b2b2b',
     title: 'Aroklon',
     icon: iconPath,
     autoHideMenuBar: false,
@@ -63,9 +73,10 @@ function createWindow() {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     async function js(code, label) {
       try {
+        const timeout = Number(process.env.AROKLON_SMOKE_JS_TIMEOUT) || 30000;
         const r = await Promise.race([
           mainWindow.webContents.executeJavaScript(code),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + label)), 30000)),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + label)), timeout)),
         ]);
         console.log('smoke js ok:', label, JSON.stringify(r));
         return r;
@@ -76,7 +87,15 @@ function createWindow() {
     }
     async function shot(name) {
       if (!shotDir) return;
-      await sleep(400);
+      await sleep(800);
+      try {
+        await mainWindow.webContents.executeJavaScript(
+          'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))'
+        );
+      } catch (e) {
+        /* page not ready */
+      }
+      await sleep(250);
       try {
         const img = await mainWindow.webContents.capturePage();
         fs.writeFileSync(path.join(shotDir, name + '.png'), img.toPNG());
@@ -94,6 +113,14 @@ function createWindow() {
       const out = {};
       try {
         await sleep(800);
+        await js(
+          `(async () => {
+            const s = (ms) => new Promise(r => setTimeout(r, ms));
+            for (let i = 0; i < 200 && !document.querySelector('.login-card'); i++) await s(50);
+            return !!document.querySelector('.login-card');
+          })()`,
+          'wait-login'
+        );
         await shot('01-login');
         await js(
           `(async () => {
@@ -109,8 +136,14 @@ function createWindow() {
             for (let i = 0; i < 80 && !A.state.user; i++) await s(50);
             if (!A.state.user) await A.login(A.state.users[0].id, '1234');
             A.state.settings.ask_qty = '0';
-            await s(400);
-            return { ok: true, products: A.state.products.length, pin: A.state.pin };
+            if (!A.state.day || !A.state.day.register_open) {
+              await A.api('openDay', [0, A.state.user.id, A.todayKey()]);
+              A.state.day = await A.api('getDayState');
+              A.state.daySummary = await A.api('xReport');
+              A.go('sales');
+            }
+            await s(500);
+            return { ok: true, products: A.state.products.length, pin: A.state.pin, registerOpen: !!(A.state.day && A.state.day.register_open) };
           })()`,
           'login'
         );
@@ -129,7 +162,17 @@ function createWindow() {
         );
         await shot('03-sales-filled');
 
-        await js(`(() => { window.App.actions['pos-pay']({}, null, {}); return true; })()`, 'payment');
+        await js(
+          `(async () => {
+            const s = (ms) => new Promise(r => setTimeout(r, ms));
+            const A = window.App;
+            A.actions['pos-pay']({}, null, {});
+            for (let i = 0; i < 40 && !document.querySelector('.pay2'); i++) await s(50);
+            await s(200);
+            return !!document.querySelector('.pay2');
+          })()`,
+          'payment-open'
+        );
         await shot('04-payment');
 
         const paid = await js(
@@ -152,8 +195,46 @@ function createWindow() {
 
         await js(`(() => { const A = window.App; A.closeModal(); A.go('dashboard'); return true; })()`, 'dashboard');
         await shot('06-dashboard');
+        out.dashBox = await js(
+          `(() => {
+            const box = (sel) => {
+              const el = document.querySelector(sel);
+              if (!el) return null;
+              const r = el.getBoundingClientRect();
+              const cs = getComputedStyle(el);
+              return { top: Math.round(r.top), height: Math.round(r.height), display: cs.display, flex: cs.flex, alignSelf: cs.alignSelf, overflow: cs.overflow, position: cs.position };
+            };
+            return {
+              innerHeight,
+              docH: document.documentElement.scrollHeight,
+              bodyH: document.body.scrollHeight,
+              app: box('#app'),
+              shell: box('.shell'),
+              body: box('.classic-body'),
+              tree: box('.classic-tree'),
+              main: box('.main'),
+              view: box('.view'),
+              status: box('.classic-status')
+            };
+          })()`,
+          'dash-box'
+        );
         await js(`(() => { window.App.go('products'); return true; })()`, 'products');
         await shot('07-products');
+        await js(
+          `(async () => {
+            const s = (ms) => new Promise(r => setTimeout(r, ms));
+            const A = window.App;
+            const p = (A.state.products || [])[0];
+            if (!p) return false;
+            A.actions['product-edit']({ id: String(p.id) }, null, { preventDefault() {} });
+            for (let i = 0; i < 30 && !document.querySelector('form[data-form="save-product"]'); i++) await s(50);
+            return !!document.querySelector('form[data-form="save-product"]');
+          })()`,
+          'product-editor'
+        );
+        await shot('07b-product-editor');
+        await js(`(() => { window.App.closeModal(); return true; })()`, 'close-product-editor');
         await js(`(() => { window.App.go('stock'); return true; })()`, 'stock');
         await shot('08-stock');
         await js(`(() => { window.App.go('documents'); return true; })()`, 'documents');
@@ -166,6 +247,31 @@ function createWindow() {
         await shot('12-settings');
         await js(`(() => { window.App.go('day'); return true; })()`, 'day');
         await shot('13-day');
+
+        await js(
+          `(async () => { const s=(ms)=>new Promise(r=>setTimeout(r,ms)); const A=window.App; A.actions['cash']({},null,{}); await s(700); return !!document.querySelector('form[data-form="cash-move"]'); })()`,
+          'cash-modal'
+        );
+        await shot('14-cash');
+        await js(`(() => { const A=window.App; A.closeModal(); A.go('day'); return true; })()`, 'day-again');
+        await js(
+          `(async () => { const s=(ms)=>new Promise(r=>setTimeout(r,ms)); const A=window.App; A.actions['close-day']({},null,{}); await s(700); return !!document.querySelector('form[data-form="close-day"]'); })()`,
+          'close-day-modal'
+        );
+        await shot('15-close-day');
+        await js(`(() => { window.App.closeModal(); window.App.go('promotions'); return true; })()`, 'promotions');
+        await js(
+          `(async () => { const s=(ms)=>new Promise(r=>setTimeout(r,ms)); const A=window.App; await s(500); A.actions['promo-new']({},null,{}); await s(400); return !!document.querySelector('form[data-form="save-promotion"]'); })()`,
+          'promo-form'
+        );
+        await shot('16-promotion-form');
+        await js(`(() => { window.App.closeModal(); window.App.go('products'); return true; })()`, 'products-again');
+        await js(
+          `(async () => { const s=(ms)=>new Promise(r=>setTimeout(r,ms)); const A=window.App; A.actions['import-products']({},null,{}); await s(400); return !!document.querySelector('form[data-form="import-products"]'); })()`,
+          'import-modal'
+        );
+        await shot('17-import');
+        await js(`(() => { window.App.closeModal(); return true; })()`, 'close-import');
 
         out.classic = await js(
           `(async () => {
@@ -194,6 +300,8 @@ function createWindow() {
             A.setTheme('modern');
             await s(250);
             res.modernSidebar = !!document.querySelector('.sidebar');
+            A.setTheme('classic');
+            await s(250);
             return res;
           })()`,
           'classic'
@@ -247,6 +355,7 @@ function createWindow() {
             A.setLanguage('en'); await s(300);
             const en = document.body.innerText.replace(/\\s+/g, ' ').slice(0, 140);
             A.setLanguage('id'); await s(300);
+            A.setTheme('classic'); await s(250);
             return { dark, light, classicDark, en, back: document.body.innerText.replace(/\\s+/g, ' ').slice(0, 100) };
           })()`,
           'theme'
@@ -325,6 +434,13 @@ function createWindow() {
               res.reports = {};
               for (const id of ids) { const rows = await A.api('report', [id, A.state.reportFilters]); res.reports[id] = Array.isArray(rows) ? rows.length : 0; }
             } catch (e) { res.reportErr = e.message; }
+            try {
+              A.go('sales'); await s(250);
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', ctrlKey: true, bubbles: true }));
+              await s(300);
+              res.ctrlM = A.state.route === 'dashboard';
+              A.go('sales'); await s(150);
+            } catch (e) { res.ctrlMErr = e.message; }
             return res;
           })()`,
           'probes'
@@ -403,6 +519,175 @@ function createWindow() {
           })()`,
           'flow-customer'
         );
+
+        out.flowPromotions = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App; const res = {};
+            try {
+              const saved = await A.api('savePromotion', {
+                name: 'Smoke happy hour', kind: 'cart_percent', scope: 'cart',
+                value: 10, min_total: 0, days: [], time_from: '', time_to: '',
+                date_from: '', date_to: '', active: true
+              });
+              res.saved = !!(saved && saved.ok);
+              A.state.promotions = await A.api('listPromotions');
+              res.listed = A.state.promotions.some((p) => p.name === 'Smoke happy hour');
+              A.go('sales'); await s(300);
+              A.state.cart.items = [];
+              const p = A.state.products.find((x) => x.active);
+              A.actions['pos-add']({ id: String(p.id) }, null, { preventDefault(){} });
+              await s(200);
+              const calc = A.computeCart(A.state.cart.items, A.state.cart.discount, A.state.cart.tax_override);
+              res.promoTotal = calc.promotion_total;
+              res.promoApplied = calc.promotion_total > 0 && !!calc.promotion_name;
+              A.actions['pos-clear']({}, null, {});
+              await s(150);
+              const ok = document.querySelector('[data-modal-ok]'); if (ok) ok.click();
+              await s(150);
+              const promo = A.state.promotions.find((p) => p.name === 'Smoke happy hour');
+              if (promo) await A.api('deletePromotion', promo.id);
+              await A.reloadReference();
+            } catch (e) { res.err = e.message; }
+            return res;
+          })()`,
+          'flow-promotions'
+        );
+
+        out.flowImport = await js(
+          `(async () => {
+            const A = window.App; const res = {};
+            try {
+              const code = 'SMOKE' + Date.now();
+              res.result = await A.api('importProducts', [[
+                { name: 'Smoke imported product', code, price: '1500', stock: '7', group: 'Smoke group' }
+              ]]);
+              await A.reloadCatalog();
+              const prod = (A.state.products || []).find((p) => p.code === code);
+              res.found = !!prod;
+              res.price = prod && prod.price;
+              res.stock = prod && prod.quantity;
+            } catch (e) { res.err = e.message; }
+            return res;
+          })()`,
+          'flow-import'
+        );
+
+        out.flowRounding = await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App; const res = {};
+            try {
+              A.go('sales'); await s(250);
+              A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
+              const p = (A.state.products || []).find((x) => x.active && !x.is_service && x.quantity > 0);
+              A.actions['pos-add']({ id: String(p.id) }, null, { preventDefault(){} });
+              await s(150);
+              A.actions['pos-pay']({}, null, {});
+              await s(200);
+              res.payment = !!document.querySelector('.pay2');
+              A.actions['pay-rounds']({}, null, {});
+              await s(200);
+              const form = document.querySelector('form[data-form="rounding"]');
+              res.modal = !!form;
+              if (form) {
+                const sel = form.querySelector('select[name="round_to"]');
+                sel.value = '100000';
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                await s(50);
+                res.preview = (document.getElementById('round-preview') || {}).textContent || '';
+                form.requestSubmit();
+                for (let i = 0; i < 60 && A.state.cart.rounding !== 100000; i++) await s(50);
+              }
+              res.applied = A.state.cart.rounding === 100000;
+              res.reopened = !!document.querySelector('.pay2');
+              const calc = A.computeCart(A.state.cart.items, A.state.cart.discount, A.state.cart.tax_override, A.state.cart.rounding);
+              res.clientTotal = calc.total;
+              res.clientRounding = calc.rounding_total;
+              await A.actions['pay-confirm']({}, null, {});
+              await s(500);
+              const doc = A.state.lastReceipt || {};
+              const receipt = document.querySelector('.receipt-paper');
+              res.docTotal = doc.total;
+              res.docRounding = doc.rounding_total;
+              res.match = doc.total === calc.total && doc.rounding_total === calc.rounding_total;
+              res.number = doc.number;
+              res.receipt = !!receipt;
+              res.receiptRounding = !!(receipt && /Pembulatan|Rounding/.test(receipt.textContent || ''));
+              res.cartCleared = !A.state.cart.items.length;
+              res.cartRounding = A.state.cart.rounding;
+              A.closeModal();
+              A.render();
+              await A.reloadCatalog();
+            } catch (e) { res.err = e.message; }
+            return res;
+          })()`,
+          'flow-rounding'
+        );
+
+        await js(
+          `(async () => {
+            const s = (ms) => new Promise((r) => setTimeout(r, ms));
+            const A = window.App;
+            A.go('sales'); await s(250);
+            A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
+            const p = (A.state.products || []).find((x) => x.active && !x.is_service && x.quantity > 0);
+            A.actions['pos-add']({ id: String(p.id) }, null, { preventDefault(){} });
+            await s(150);
+            A.actions['pos-pay']({}, null, {});
+            await s(200);
+            A.actions['pay-rounds']({}, null, {});
+            await s(200);
+            const sel = document.querySelector('form[data-form="rounding"] select[name="round_to"]');
+            if (sel) {
+              sel.value = '100000';
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            document.querySelectorAll('.toast').forEach((n) => n.remove());
+            return !!document.querySelector('form[data-form="rounding"]');
+          })()`,
+          'rounds-modal-shot'
+        );
+        await shot('18-rounding');
+        await js(
+          `(() => {
+            const A = window.App;
+            A.closeModal();
+            A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
+            A.state.pay = null;
+            A.render();
+            return true;
+          })()`,
+          'close-rounding'
+        );
+
+        out.flowDay = await js(
+          `(async () => {
+            const A = window.App; const res = {};
+            try {
+              const reg = (A.state.registers || []).find((r) => r.is_primary) || (A.state.registers || [])[0];
+              const cash = await A.api('addCash', ['in', 25000, 'Smoke float', A.state.user.id, reg && reg.id]);
+              res.cash = !!(cash && cash.ok);
+              A.state.day = await A.api('getDayState');
+              A.state.daySummary = await A.api('xReport');
+              res.dayOpen = !!A.state.day.register_open;
+              res.cashIn = A.state.daySummary && A.state.daySummary.cash_in;
+              const expected = A.state.daySummary ? A.state.daySummary.cash_expected : 0;
+              const closed = await A.api('closeDay', [A.state.user.id, expected / 100]);
+              res.closed = !!(closed && closed.ok);
+              res.zNumber = closed && closed.zreport && closed.zreport.number;
+              res.zDifference = closed && closed.zreport && closed.zreport.cash_difference;
+              const zs = await A.api('listZReports');
+              res.zCount = Array.isArray(zs) ? zs.length : 0;
+              await A.api('openDay', [0, A.state.user.id, A.todayKey()]);
+              A.state.day = await A.api('getDayState');
+              res.reopened = !!A.state.day.register_open;
+              A.go('sales');
+            } catch (e) { res.err = e.message; }
+            return res;
+          })()`,
+          'flow-day'
+        );
       } catch (e) {
         out.error = e.message;
         console.log('smoke error', e.message);
@@ -438,6 +723,36 @@ function buildMenu() {
       ],
     },
     {
+      label: 'Sales',
+      submenu: [
+        { label: 'New sale', click: () => mainWindow && mainWindow.webContents.send('menu', 'sales') },
+        { label: 'Cash in / out', click: () => mainWindow && mainWindow.webContents.send('menu', 'cash') },
+        { label: 'End of day (Z report)', click: () => mainWindow && mainWindow.webContents.send('menu', 'day') },
+        { label: 'X report', click: () => mainWindow && mainWindow.webContents.send('menu', 'x-report') },
+        { type: 'separator' },
+        { label: 'Sales history', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:documents') },
+      ],
+    },
+    {
+      label: 'Management',
+      submenu: [
+        { label: 'Dashboard', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:dashboard') },
+        { label: 'Documents', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:documents') },
+        { label: 'Products', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:products') },
+        { label: 'Stock', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:stock') },
+        { label: 'Reporting', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:reports') },
+        { label: 'Customers & Suppliers', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:customers') },
+        { label: 'Promotions & Actions', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:promotions') },
+        { label: 'Users & Security', click: () => mainWindow && mainWindow.webContents.send('menu', 'menu:users') },
+        { type: 'separator' },
+        { label: 'Payment types', click: () => mainWindow && mainWindow.webContents.send('menu', 'settings:tenders') },
+        { label: 'Countries', click: () => mainWindow && mainWindow.webContents.send('menu', 'settings:countries') },
+        { label: 'Tax rates', click: () => mainWindow && mainWindow.webContents.send('menu', 'settings:tax') },
+        { label: 'My company', click: () => mainWindow && mainWindow.webContents.send('menu', 'settings:company') },
+        { label: 'Cash registers', click: () => mainWindow && mainWindow.webContents.send('menu', 'settings:registers') },
+      ],
+    },
+    {
       label: 'View',
       submenu: [
         { role: 'reload' },
@@ -468,7 +783,7 @@ function buildMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Aroklon',
-              message: 'Aroklon 1.0.0',
+              message: 'Aroklon ' + app.getVersion(),
               detail:
                 'Offline point of sale for Windows.\n\nData is stored locally at:\n' +
                 db.meta().db_path +

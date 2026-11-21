@@ -65,9 +65,9 @@
 
   SH.modalFoot = (primary, opts = {}) => `
     <div class="modal-foot">
-      <button type="button" class="btn" data-modal-cancel>${esc(opts.cancel || 'Cancel')}</button>
+      <button type="button" class="btn danger" data-modal-cancel>${esc(opts.cancel || 'Cancel')}</button>
       ${opts.extra || ''}
-      <button type="submit" class="btn ${opts.danger ? 'danger' : 'primary'}">${primary}</button>
+      <button type="submit" class="btn ${opts.danger ? 'danger' : opts.okClass || 'good'}">${primary}</button>
     </div>`;
 
   SH.badge = (text, kind = 'gray') => `<span class="badge ${kind}">${text}</span>`;
@@ -147,6 +147,7 @@
       <div class="r-line"><span>${esc(t('Subtotal'))}</span><span>${money0(doc.subtotal)}</span></div>
       ${doc.discount_total ? `<div class="r-line"><span>${esc(t('Discount'))}</span><span>-${money0(doc.discount_total)}</span></div>` : ''}
       ${doc.tax_total ? `<div class="r-line"><span>${esc(t('Tax'))}</span><span>${money0(doc.tax_total)}</span></div>` : ''}
+      ${doc.rounding_total ? `<div class="r-line"><span>${esc(t('Rounding'))}</span><span>${doc.rounding_total > 0 ? '+' : '-'}${money0(Math.abs(doc.rounding_total))}</span></div>` : ''}
       <div class="r-line r-total"><span>${esc(t('TOTAL'))}</span><span>${money0(doc.total)}</span></div>
       <hr />
       ${payLines}
@@ -188,6 +189,7 @@
       ${row(esc(t('Subtotal')), money0(doc.subtotal))}
       ${doc.discount_total ? row(esc(t('Discount')), '-' + money0(doc.discount_total)) : ''}
       ${doc.tax_total ? row(esc(t('Tax')), money0(doc.tax_total)) : ''}
+      ${doc.rounding_total ? row(esc(t('Rounding')), `${doc.rounding_total > 0 ? '+' : '-'}${money0(Math.abs(doc.rounding_total))}`) : ''}
       <div class="r-line total"><span>${esc(t('TOTAL'))}</span><span>${money0(doc.total)}</span></div>
       <hr/>
       ${payments.map((p) => row(esc(p.payment_name || t('Payment')), money0(p.amount))).join('')}
@@ -224,7 +226,7 @@
 
   function cartCalc() {
     const c = A.state.cart;
-    return U.computeCart(c.items, activeDiscount(), c.tax_override);
+    return U.computeCart(c.items, activeDiscount(), c.tax_override, c.rounding);
   }
 
   function activeDiscount() {
@@ -394,13 +396,27 @@
           <div class="order-foot">
             <div class="sum-row"><span>${esc(t('Subtotal'))}</span><span class="mono">${money(calc.subtotal)}</span></div>
             ${
+              calc.promotion_name
+                ? `<div class="sum-row discount promo"><span>${icon('heart', 13)} ${esc(calc.promotion_name)}</span><span class="mono">-${money(
+                    calc.promotion_total
+                  )}</span></div>`
+                : ''
+            }
+            ${
               disc.value > 0
                 ? `<div class="sum-row discount"><span>${esc(t('Discount'))} (${esc(disc.type)}${
                     disc.customer ? ' · ' + esc(disc.customer) : ''
-                  })</span><span class="mono">-${money(calc.discount_total)}</span></div>`
+                  })</span><span class="mono">-${money(calc.discount_total - calc.promotion_total)}</span></div>`
                 : ''
             }
             <div class="sum-row"><span>${esc(t('Tax'))}</span><span class="mono">${money(calc.tax_total)}</span></div>
+            ${
+              calc.rounding_total
+                ? `<div class="sum-row"><span>${esc(t('Rounding'))}</span><span class="mono">${calc.rounding_total > 0 ? '+' : '-'}${money(
+                    Math.abs(calc.rounding_total)
+                  )}</span></div>`
+                : ''
+            }
             <div class="sum-row total"><span>${esc(t('Total'))}</span><span class="mono">${money(calc.total)}</span></div>
             <div class="row gap8" style="margin-top:10px">
               <button class="btn sm" data-action="pos-customer" style="max-width:190px;overflow:hidden;text-overflow:ellipsis">
@@ -430,6 +446,7 @@
     } else {
       cart.items.push({
         product_id: product.id,
+        group_id: product.group_id || null,
         name: product.name,
         code: product.code,
         price: product.price,
@@ -591,7 +608,7 @@
     if (!A.state.cart.items.length) return;
     const ok = await A.confirm({ title: 'Clear this sale?', message: 'All items will be removed.', confirmLabel: 'Clear', danger: true });
     if (!ok) return;
-    A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+    A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
     A.state.selectedLine = null;
     A.render();
     A.toast('Sale cleared');
@@ -600,7 +617,7 @@
   A.action('pos-hold', () => {
     if (!A.state.cart.items.length) return A.toast('Nothing to hold', 'warn');
     localStorage.setItem('aroklon.held', JSON.stringify(A.state.cart));
-    A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+    A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
     A.state.selectedLine = null;
     A.render();
     A.toast('Sale put on hold');
@@ -670,12 +687,14 @@
     A.closeModal();
     A.render();
     A.toast('Customer added to sale');
+    if (A.state.pay) drawPayment();
   });
 
   A.action('pos-remove-customer', () => {
     A.state.cart.customer_id = null;
     A.closeModal();
     A.render();
+    if (A.state.pay) drawPayment();
   });
 
   /* ------------------------------------------------------------- discount */
@@ -745,14 +764,20 @@
   }
 
   function payCalc() {
-    const total = cartCalc().total;
+    const calc = cartCalc();
+    const total = calc.total;
     const pay = A.state.pay;
     const splitTotal = pay.split.reduce((s, x) => s + x.amount, 0);
     const remaining = Math.max(total - splitTotal, 0);
-    return { total, splitTotal, remaining };
+    return { total, splitTotal, remaining, rounding: calc.rounding_total };
   }
 
   function startPayment() {
+    if (!A.state.day || !A.state.day.register_open) {
+      A.toast(t('Register is closed. Open the register before selling.'), 'warn', 4200);
+      A.go('day');
+      return;
+    }
     const calc = cartCalc();
     if (!calc.total) return A.toast('Add items first', 'warn');
     const cash = (A.state.paymentTypes || []).find((p) => p.kind === 'cash') || (A.state.paymentTypes || [])[0];
@@ -765,9 +790,11 @@
     drawPayment();
   }
 
+  A.drawPayment = drawPayment;
+
   function drawPayment() {
     const pay = A.state.pay;
-    const { total, remaining } = payCalc();
+    const { total, remaining, rounding } = payCalc();
     const tender = activeTender();
     const due = pay.mode === 'split' ? remaining : total;
     const tendered = pay.tendered;
@@ -812,45 +839,51 @@
       : '';
 
     A.modal(
-      `<div class="modal-head">
-        <div><h2>${esc(t('Payment'))}</h2><div class="sub">${esc(pay.mode === 'split' ? t('Split payment') : t('Take payment'))}</div></div>
+      `<div class="modal-head pay-head">
+        <div><h2>${esc(t('Actions'))}</h2><div class="sub">${esc(pay.mode === 'split' ? t('Split payment') : t('Take payment'))}</div></div>
         <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div>
       </div>
-      <div class="modal-body">
-        <div class="pay">
-          <div>
-            <div class="pay-total">
-              <div class="label">${esc(pay.mode === 'split' ? t('Remaining') : t('Amount due'))}</div>
-              <div class="amt">${money(due)}</div>
-              <div class="change"><span>${esc(t('Change'))}</span><b>${money(change)}</b></div>
-            </div>
-            <div class="tenders mt12">${tenderButtons}</div>
+      <div class="modal-body pay-body">
+        <div class="pay-actions">
+          <button type="button" class="pay-action" data-modal-cancel>${icon('close', 18)}<span>${esc(t('Cancel'))}</span></button>
+          <button type="button" class="pay-action" data-action="pay-discount">${icon('percent', 18)}<span>${esc(t('Discount'))}</span></button>
+          <button type="button" class="pay-action" data-action="pay-rounds">${icon('refresh', 18)}<span>${esc(t('Rounds'))}</span></button>
+          <button type="button" class="pay-action" data-action="pos-customer">${icon('customers', 18)}<span>${esc(t('Customer'))}</span></button>
+        </div>
+        <div class="pay2">
+          <div class="pay2-types">
+            <div class="label">${esc(t('Payment type'))}</div>
+            ${tenderButtons}
+            <button type="button" class="tender split-tile ${pay.mode === 'split' ? 'active' : ''}" data-action="${
+        pay.mode === 'split' ? 'pay-unsplit' : 'pay-split'
+      }">
+              ${icon('split', 17)} ${esc(pay.mode === 'split' ? t('Single payment') : t('Split payments'))}
+            </button>
             ${splitList}
-            <div class="field">
-              <label>${esc(pay.mode === 'split' ? t('Tender amount') : t('Amount received'))}</label>
-              <input id="pay-amount" class="input" value="${(tendered / 100).toFixed(0)}" readonly style="font-size:20px;font-weight:700" />
-            </div>
-            <div class="quick-cash">${quick}</div>
-            <div class="row gap8 mt12">
-              ${
-                pay.mode === 'single'
-                  ? `<button type="button" class="btn sm" data-action="pay-split">${icon('split', 14)} ${esc(t('Split payment'))}</button>`
-                  : `<button type="button" class="btn sm" data-action="pay-unsplit">${icon('back', 14)} ${esc(t('Back to single'))}</button>
-                     <button type="button" class="btn sm primary" data-action="pay-split-add">${icon('plus', 14)} ${esc(t('Add tender'))}</button>`
-              }
-            </div>
           </div>
-          <div>
-            <div class="keypad">${keypad}</div>
-            <button type="button" class="btn block mt12" data-action="pay-clear">${icon('refresh', 15)} ${esc(t('Clear amount'))}</button>
+          <div class="pay2-sheet">
+            <div class="label">${esc(t('Payment'))}</div>
+            ${rounding ? `<div class="pay2-row"><span>${esc(t('Rounding'))}:</span><b class="${rounding > 0 ? 'green' : 'blue'}">${rounding > 0 ? '+' : '-'}${money(Math.abs(rounding))}</b></div>` : ''}
+            <div class="pay2-row"><span>${esc(t('Total'))}:</span><b class="blue">${money(total)}</b></div>
+            <div class="pay2-row"><span>${esc(t('Paid'))}:</span><b class="paid">${money(tendered)}</b></div>
+            <div class="pay2-row"><span>${esc(t('Change'))}:</span><b class="green">${money(change)}</b></div>
+            <div class="quick-cash mt12">${quick}</div>
+            <div class="keypad mt12">${keypad}</div>
+            ${
+              pay.mode === 'split'
+                ? `<button type="button" class="btn sm primary block mt12" data-action="pay-split-add">${icon('plus', 14)} ${esc(
+                    t('Add tender')
+                  )}</button>`
+                : ''
+            }
           </div>
         </div>
       </div>
-      <div class="modal-foot">
-        <button type="button" class="btn" data-modal-cancel>${esc(t('Cancel'))}</button>
-        <button type="button" class="btn ${canCharge ? 'success' : ''}" data-action="pay-confirm" ${canCharge ? '' : 'disabled'}>
-          ${icon('check', 16)} ${esc(pay.mode === 'split' ? t('Complete payment') : t('Charge') + ' ' + money(due))}
+      <div class="modal-foot pay-foot">
+        <button type="button" class="btn good lg" data-action="pay-confirm" ${canCharge ? '' : 'disabled'}>
+          ${icon('check', 16)} ${esc(t('Continue'))}
         </button>
+        <button type="button" class="btn danger lg" data-modal-cancel>${icon('close', 16)} ${esc(t('Cancel'))}</button>
       </div>`,
       { size: 'wide' }
     );
@@ -859,6 +892,72 @@
   A.action('pay-tender', (ds) => {
     A.state.pay.tender_id = Number(ds.id);
     drawPayment();
+  });
+
+  A.action('pay-discount', () => {
+    if (!A.state.pay) return;
+    A.closeModal();
+    openDiscount();
+  });
+
+  function openRounding() {
+    const cart = A.state.cart;
+    if (!cart.items.length) return A.toast(t('Add items first'), 'warn');
+    const calc = cartCalc();
+    const inc = Math.max(Math.round(U.num(cart.rounding)), 0);
+    const rounded = inc
+      ? Math.max(inc, Math.round(calc.total_before_rounding / inc) * inc)
+      : calc.total_before_rounding;
+    const diff = rounded - calc.total_before_rounding;
+    const options = [
+      { value: '0', label: t('No rounding') },
+      { value: '10000', label: t('Nearest {amount}', { amount: money(10000) }) },
+      { value: '50000', label: t('Nearest {amount}', { amount: money(50000) }) },
+      { value: '100000', label: t('Nearest {amount}', { amount: money(100000) }) },
+    ];
+    A.modal(
+      `<form data-form="rounding">
+        ${SH.modalHead(t('Rounds'), t('Round the cash total to a simpler amount'))}
+        <div class="modal-body">
+          <div class="form-grid">
+            ${SH.field(t('Round to'), SH.select('round_to', options, String(inc), { dataChange: 'round-preview' }), { span: 2 })}
+          </div>
+          <div class="round-summary">
+            <div class="round-row"><span>${esc(t('Current total'))}</span><b class="mono">${money(calc.total_before_rounding)}</b></div>
+            <div class="round-row"><span>${esc(t('Rounded total'))}</span><b class="blue mono" id="round-preview">${money(rounded)}</b></div>
+            <div class="round-row"><span>${esc(t('Adjustment'))}</span><b class="${diff > 0 ? 'green' : diff < 0 ? 'blue' : 'muted'} mono" id="round-adjust">${diff > 0 ? '+' : diff < 0 ? '-' : ''}${money(
+        Math.abs(diff)
+      )}</b></div>
+          </div>
+          <p class="hint mt12">${esc(
+            t('The adjustment is saved with the sale and shows on the receipt. Change is calculated from the rounded total.')
+          )}</p>
+        </div>
+        ${SH.modalFoot(t('Apply rounding'))}
+      </form>`,
+      { size: '' }
+    );
+  }
+
+  A.action('pay-rounds', () => {
+    if (!A.state.pay) return;
+    A.closeModal();
+    openRounding();
+  });
+
+  A.action('change:round-preview', (ds, el) => {
+    if (A.state.route !== 'sales') return;
+    const base = cartCalc().total_before_rounding;
+    const inc = Math.max(Math.round(U.num(el.value)), 0);
+    const rounded = inc ? Math.max(inc, Math.round(base / inc) * inc) : base;
+    const diff = rounded - base;
+    const preview = document.getElementById('round-preview');
+    const adjust = document.getElementById('round-adjust');
+    if (preview) preview.textContent = money(rounded);
+    if (adjust) {
+      adjust.textContent = `${diff > 0 ? '+' : diff < 0 ? '-' : ''}${money(Math.abs(diff))}`;
+      adjust.className = `${diff > 0 ? 'green' : diff < 0 ? 'blue' : 'muted'} mono`;
+    }
   });
 
   A.action('pay-key', (ds) => {
@@ -947,16 +1046,17 @@
         })),
         discount: cart.discount,
         tax_override_percent: cart.tax_override != null && cart.tax_override !== '' ? cart.tax_override : null,
+        round_to: cart.rounding || 0,
         payments,
         notes: cart.notes || '',
       });
-      A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
       A.state.selectedLine = null;
       A.state.pay = null;
       A.state.lastReceipt = doc;
       A.closeModal();
       A.render();
-      A.toast(`Payment complete · ${money(doc.total)}`);
+      A.toast(`${t('Payment complete')} · ${money(doc.total)}`);
       showReceipt(doc);
       await A.reloadCatalog();
     } catch (e) {
@@ -1066,7 +1166,7 @@
           <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto">
             ${doc.items
               .map(
-                (it) => `<label class="row" style="padding:9px 12px;border-bottom:1px solid #eff2f7;cursor:pointer">
+                (it) => `<label class="row" style="padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer">
                   <input type="checkbox" name="item_ids" value="${it.id}" checked />
                   <span style="flex:1"><span class="strong">${esc(it.name_snapshot)}</span><br /><span class="small muted">${U.qty(
                     it.quantity
@@ -1089,6 +1189,350 @@
   }
 
   /* ---------------------------------------------------------------- cash */
+
+  function openCash(direction = 'in') {
+    const moves = A.state.cashMoves || [];
+    const day = A.state.day || {};
+    const initial = direction === 'out' ? 'out' : 'in';
+    if (!day.register_open) {
+      A.toast(t('Open the register before recording cash'), 'warn');
+      A.go('day');
+      return;
+    }
+    A.modal(
+      `<form data-form="cash-move" class="eod-form">
+        ${SH.modalHead(t('Cash in / out'), t('Record cash added to or removed from the drawer'))}
+        <div class="modal-body">
+          <div class="eod-tabs mb16">
+            <button type="button" class="eod-tab ${initial === 'in' ? 'active' : ''}" data-action="cash-direction" data-kind="in">${esc(
+        t('Cash in')
+      )}</button>
+            <button type="button" class="eod-tab ${initial === 'out' ? 'active' : ''}" data-action="cash-direction" data-kind="out">${esc(
+        t('Cash out')
+      )}</button>
+          </div>
+          <input type="hidden" name="kind" value="${initial}" id="cash-kind" />
+          <div class="form-grid">
+            ${SH.field(t('Amount'), SH.input('amount', '', { type: 'number', step: '0.01', min: '0', placeholder: '0', required: true }), { span: 2 })}
+            ${SH.field(t('Reason'), SH.input('reason', '', { placeholder: t('e.g. change fund, supplier payment'), required: true }), { span: 2 })}
+          </div>
+          <div class="divider"></div>
+          <div class="label mb8">${esc(t('Cash movements today'))}</div>
+          ${
+            moves.length
+              ? `<div class="eod-moves">${moves
+                  .map(
+                    (m) => `<div class="split-row"><span>${esc(m.reason)}<span class="small muted"> · ${esc(m.kind === 'in' ? t('Cash in') : t('Cash out'))}</span></span><span class="strong ${
+                      m.kind === 'in' ? 'pos' : 'neg'
+                    }">${m.kind === 'in' ? '+' : '-'}${money(m.amount)}</span></div>`
+                  )
+                  .join('')}</div>`
+              : `<p class="small muted">${esc(t('No cash movements today.'))}</p>`
+          }
+        </div>
+        ${SH.modalFoot(t('Save entry'), { danger: false, okClass: 'good' })}
+      </form>`,
+      { size: '' }
+    );
+  }
+
+  function cashWithDirection(direction) {
+    A.api('listCashMovements', [])
+      .then((m) => {
+        A.state.cashMoves = m;
+        openCash(direction);
+      })
+      .catch((e) => A.toast(e.message, 'bad'));
+  }
+
+  A.action('cash', () => cashWithDirection('in'));
+  A.action('cash-out', () => cashWithDirection('out'));
+
+  A.action('cash-direction', (ds) => {
+    const kind = ds.kind === 'out' ? 'out' : 'in';
+    const input = document.getElementById('cash-kind');
+    if (input) input.value = kind;
+    document.querySelectorAll('[data-cash-direction]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-cash-direction') === kind);
+    });
+  });
+
+  /* ---------------------------------------------------------------- day */
+
+  A.loader('day', async () => {
+    A.state.day = await A.api('getDayState');
+    A.state.cashMoves = await A.api('listCashMovements', []);
+    A.state.daySummary = A.state.day.register_open ? await A.api('xReport') : null;
+  });
+
+  A.screens.day = {
+    meta: { title: t('End of Day'), sub: t('Cash drawer, X report and register close') },
+    render() {
+      const day = A.state.day || {};
+      if (!day.register_open) {
+        return `<div class="card autocard" style="max-width:760px;margin:7vh auto">
+          <div class="card-head"><div class="head-ic">${icon('day', 22)}</div><div><h2>${esc(
+          t('Open the register')
+        )}</h2><div class="sub muted small">${esc(t('Enter the starting cash in the drawer to begin a business day'))}</div></div></div>
+          <form data-form="open-day">
+            <div class="card-body">
+              <div class="form-grid">
+                ${SH.field(t('Opening cash (float)'), SH.input('opening_cash', '0', { type: 'number', step: '0.01', min: '0', required: true }), {
+                  span: 2,
+                  hint: t('The cash you are putting into the drawer at the start of the day.'),
+                })}
+                ${SH.field(t('Business date'), SH.input('business_date', day.business_date || U.todayKey(), { type: 'date', required: true }))}
+                ${SH.field(
+                  t('Register'),
+                  SH.select(
+                    'register_id',
+                    (A.state.registers || []).map((r) => ({ value: r.id, label: r.name })),
+                    (A.state.registers || []).find((r) => r.is_primary)?.id
+                  )
+                )}
+              </div>
+              <div class="row mt20 eod-actions"><span class="spacer"></span><button class="btn ghost" type="button" data-action="nav" data-route="sales">${esc(
+                t('Cancel')
+              )}</button><button class="btn good lg" type="submit">${icon('day', 17)} ${esc(t('Open register'))}</button></div>
+            </div>
+          </form>
+        </div>`;
+      }
+
+      const s = A.state.daySummary;
+      return `<div class="eod-head">
+        <div>
+          <h2>${esc(t('End of Day'))}</h2>
+          <div class="small muted">${esc(t('Business date'))} <b data-notranslate>${esc(day.business_date || '')}</b> · ${esc(
+        t('Opened')
+      )} ${day.opened_at ? esc(fmtDate(day.opened_at, true)) : '—'} · ${esc(t('Float'))} ${money(day.opening_cash)}</div>
+        </div>
+        <div class="eod-actions">
+          <button class="btn" data-action="x-report">${icon('receipt', 15)} ${esc(t('X report'))}</button>
+          <button class="btn" data-action="cash">${icon('cash', 15)} ${esc(t('Cash in / out'))}</button>
+          <button class="btn danger" data-action="close-day">${icon('lock', 15)} ${esc(t('Close register'))}</button>
+        </div>
+      </div>
+      <div class="eod-tabs mb16">
+        <button class="eod-tab active" type="button">${esc(t('Day total'))}</button>
+        <button class="eod-tab" type="button" data-action="day-refresh">${icon('refresh', 13)} ${esc(t('Refresh'))}</button>
+      </div>
+      <div id="day-live">${dayLive(s)}</div>`;
+    },
+  };
+
+  function dayLive(s) {
+    if (!s) return `<div class="card"><div class="card-body muted">${esc(t('Loading…'))}</div></div>`;
+    return `<div class="stat-strip eod-stats">
+      <div class="stat"><div class="sl">${esc(t('Sales'))}</div><div class="sv">${money(s.sales_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Refunds'))}</div><div class="sv neg">${money(Math.abs(s.refunds_total))}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Net'))}</div><div class="sv pos">${money(s.net_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Transactions'))}</div><div class="sv">${s.sales_count}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Discounts'))}</div><div class="sv">${money(s.discount_total)}</div></div>
+      <div class="stat"><div class="sl">${esc(t('Cash expected'))}</div><div class="sv">${money(s.cash_expected)}</div></div>
+    </div>
+    <div class="grid mt16" style="grid-template-columns:1fr 1fr">
+      <div class="card"><div class="card-head"><h2>${esc(t('Tender breakdown'))}</h2></div><div class="card-body">
+        ${
+          s.tenders
+            .map(
+              (t) => `<div class="split-row"><span class="row gap8"><span class="badge gray">${esc(
+                t.name || '—'
+              )}</span></span><span class="strong mono">${money(t.net)}</span></div>`
+            )
+            .join('') || `<p class="muted small">${esc(t('No payments yet.'))}</p>`
+        }
+      </div></div>
+      <div class="card"><div class="card-head"><h2>${esc(t('Top items today'))}</h2></div><div class="card-body">
+        ${
+          s.items
+            .slice(0, 6)
+            .map(
+              (i) => `<div class="split-row"><span>${esc(i.name)} <span class="small muted">× ${U.qty(
+                i.qty_sold
+              )}</span></span><span class="strong mono">${money(i.sales_total)}</span></div>`
+            )
+            .join('') || `<p class="muted small">${esc(t('No items sold yet.'))}</p>`
+        }
+      </div></div>
+    </div>
+    <div class="card mt16"><div class="card-head"><h2>${esc(t('Cash movements today'))}</h2><div class="right"><button class="btn sm" data-action="cash">${icon(
+      'plus',
+      14
+    )} ${esc(t('Add entry'))}</button></div></div><div class="card-body">
+      ${
+        (A.state.cashMoves || [])
+          .map(
+            (m) =>
+              `<div class="split-row"><span>${esc(m.reason)} <span class="small muted">· ${esc(
+                fmtDate(m.occurred_at, true)
+              )}</span></span><span class="strong mono ${m.kind === 'in' ? 'pos' : 'neg'}">${
+                m.kind === 'in' ? '+' : '-'
+              }${money(m.amount)}</span></div>`
+          )
+          .join('') || `<p class="muted small">${esc(t('No cash movements today.'))}</p>`
+      }
+    </div></div>`;
+  }
+
+  A.action('day-refresh', async () => {
+    A.state.day = await A.api('getDayState');
+    A.state.cashMoves = await A.api('listCashMovements', []);
+    A.state.daySummary = await A.api('xReport');
+    A.render();
+  });
+
+  A.action('x-report', async () => {
+    const s = await A.tryApi('xReport', {}, 'Could not build X report');
+    if (!s) return;
+    const html = reportHtml(
+      t('X report') + ' — ' + t('Status'),
+      [
+        [t('Date'), s.date],
+        [t('Sales'), money(s.sales_total)],
+        [t('Refunds'), money(s.refunds_total)],
+        [t('Net'), money(s.net_total)],
+        [t('Transactions'), s.sales_count],
+        [t('Cash expected'), money(s.cash_expected)],
+      ],
+      ''
+    );
+    await window.api.preview(html);
+  });
+
+  A.action('close-day', async () => {
+    const s = A.state.daySummary || (await A.api('xReport'));
+    A.state.daySummary = s;
+    const expected = s ? s.cash_expected : 0;
+    A.modal(
+      `<form data-form="close-day" class="eod-form">
+        ${SH.modalHead(t('End of day'))}
+        <div class="modal-body">
+          <div class="eod-tiles">
+            <button type="button" class="eod-tile" data-action="cash-out">
+              <span class="eod-tile-ic">${icon('users', 26)}</span>
+              <span>${esc(t('Cash out'))}</span>
+            </button>
+            <button type="button" class="eod-tile" data-action="cash-out" disabled>
+              <span class="eod-tile-ic">${icon('customers', 26)}</span>
+              <span>${esc(t('Cash out all users'))}</span>
+            </button>
+            <button type="button" class="eod-tile active">
+              <span class="eod-tile-ic">${icon('logout', 26)}</span>
+              <span>${esc(t('Close register'))}</span>
+            </button>
+            <span class="spacer"></span>
+            <button type="button" class="eod-report" data-action="x-report">
+              <b>X</b><span>${esc(t('Report'))}</span>
+            </button>
+          </div>
+          <div class="eod-tabs mb12">
+            <span class="eod-tab">${esc(t('Open transactions'))} 0</span>
+            <span class="eod-tab active">${esc(t('Day total'))} ${esc(U.todayKey())}</span>
+          </div>
+          <div class="eod-grid">
+            <div class="eod-panel">
+              <div class="eod-summary">
+                <div><span>${esc(t('Sales'))}</span><b>${money(s ? s.sales_total : 0)}</b></div>
+                <div><span>${esc(t('Refunds'))}</span><b>${money(s ? Math.abs(s.refunds_total) : 0)}</b></div>
+                <div><span>${esc(t('Cash in'))}</span><b>${money(s ? s.cash_in : 0)}</b></div>
+                <div><span>${esc(t('Cash out'))}</span><b>${money(s ? s.cash_out : 0)}</b></div>
+                <div class="total"><span>${esc(t('Cash expected'))}</span><b>${money(expected)}</b></div>
+              </div>
+            </div>
+            <div class="eod-side">
+              <div class="label">${esc(t('Counted cash'))}</div>
+              <input class="input eod-count" name="counted_cash" type="number" step="0.01" min="0" required value="${(expected / 100).toFixed(
+                2
+              )}" />
+              <p class="hint">${esc(t('Enter the cash you counted in the drawer. A Z report will be saved.'))}</p>
+              <div class="eod-tenders">
+                ${(s ? s.tenders : [])
+                  .map(
+                    (t) => `<div class="split-row"><span>${esc(t.name || '—')}</span><span class="mono">${money(t.net)}</span></div>`
+                  )
+                  .join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot eod-foot">
+          <button type="submit" class="btn good">${icon('check', 15)} ${esc(t('Continue'))}</button>
+          <button type="button" class="btn danger" data-modal-cancel>${icon('close', 15)} ${esc(t('Cancel'))}</button>
+        </div>
+      </form>`,
+      { size: 'wide' }
+    );
+  });
+
+  function showZReport(z) {
+    A.modal(
+      `<div class="modal-head"><div><h2>${esc(t('Z report'))} ${esc(z.number)}</h2><div class="sub">${esc(
+        t('Closed')
+      )} ${esc(fmtDate(z.closed_at, true))}</div></div>
+        <div class="right"><button type="button" class="icon-btn" data-modal-cancel>${icon('close', 18)}</button></div></div>
+      <div class="modal-body">
+        <div class="receipt-preview" style="display:block;background:var(--surface-2)">
+          <div class="card z-card" style="max-width:560px;margin:0 auto"><div class="card-body">
+            <div class="stat-strip">
+              <div class="stat"><div class="sl">${esc(t('Net sales'))}</div><div class="sv">${money(z.total)}</div></div>
+              <div class="stat"><div class="sl">${esc(t('Transactions'))}</div><div class="sv">${z.sales_count}</div></div>
+              <div class="stat"><div class="sl">${esc(t('Cash expected'))}</div><div class="sv">${money(z.cash_expected)}</div></div>
+              <div class="stat"><div class="sl">${esc(t('Counted cash'))}</div><div class="sv">${money(
+                z.counted_cash == null ? z.cash_expected : z.counted_cash
+              )}</div></div>
+              <div class="stat"><div class="sl">${esc(t('Difference'))}</div><div class="sv ${
+                z.cash_difference < 0 ? 'neg' : z.cash_difference > 0 ? 'pos' : ''
+              }">${money(z.cash_difference || 0)}</div></div>
+            </div>
+            <div class="label mb8">${esc(t('Tenders'))}</div>
+            ${(z.tenders || [])
+              .map(
+                (t) => `<div class="split-row"><span>${esc(t.name || '—')}</span><span class="strong mono">${money(t.net)}</span></div>`
+              )
+              .join('')}
+          </div></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-cancel>${esc(t('Close'))}</button>
+        <button type="button" class="btn primary" data-action="z-print">${icon('print', 15)} ${esc(t('Print Z report'))}</button>
+      </div>`,
+      { size: '' }
+    );
+  }
+
+  A.showZReport = showZReport;
+
+  A.action('z-print', async () => {
+    const z = A.state.lastZ;
+    if (!z) return;
+    const lines = (z.tenders || [])
+      .map((t) => `<div class="r-line"><span>${esc(t.name)}</span><span>${(t.net / 100).toLocaleString(locale())}</span></div>`)
+      .join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+      @page{size:80mm auto;margin:4mm} body{font-family:Consolas,monospace;font-size:11.5px;width:72mm;margin:0;padding:6px 4px}
+      .r-center{text-align:center}.r-line{display:flex;justify-content:space-between}.muted{color:#555}hr{border:0;border-top:1px dashed #888;margin:7px 0}
+      .total{font-weight:700;font-size:13px}
+    </style></head><body>
+      <div class="r-center"><h2>${esc(A.state.company.name)}</h2><div>${esc(z.number)}</div><div>${esc(fmtDate(z.closed_at, true))}</div></div>
+      <hr/>
+      <div class="r-line"><span>Opening cash</span><span>${(z.opening_cash / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Cash in</span><span>${(z.cash_in / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Cash out</span><span>${(z.cash_out / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Sales</span><span>${z.sales_count}</span></div>
+      <div class="r-line"><span>Discounts</span><span>${(z.discount_total / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>Tax</span><span>${(z.tax_total / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line total"><span>NET SALES</span><span>${(z.total / 100).toLocaleString(locale())}</span></div>
+      <hr/>${lines}
+      <hr/>
+      <div class="r-line total"><span>CASH EXPECTED</span><span>${(z.cash_expected / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>COUNTED</span><span>${((z.counted_cash == null ? z.cash_expected : z.counted_cash) / 100).toLocaleString(locale())}</span></div>
+      <div class="r-line"><span>DIFFERENCE</span><span>${((z.cash_difference || 0) / 100).toLocaleString(locale())}</span></div>
+      <hr/><div class="r-center muted">Powered by Aroklon</div>
+    </body></html>`;
+    await SH.print(html, true);
+  });
 
   /* ----------------------------------------------------------- dashboard */
 
@@ -1142,7 +1586,7 @@
         <div class="card"><div class="card-head"><h2>Payment mix today</h2></div><div class="card-body">
           <div class="donut-wrap">
             <div style="width:132px;height:132px;border-radius:50%;background:conic-gradient(${stops || '#e2e8f0 0% 100%'});position:relative;display:grid;place-items:center;flex:0 0 auto">
-              <div style="width:92px;height:92px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center">
+              <div style="width:92px;height:92px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center">
                 <div><div class="small muted">Total</div><div class="strong" style="font-size:13px">${moneyShort(today.sales_total)}</div></div>
               </div>
             </div>
@@ -1158,27 +1602,28 @@
           </div>
         </div>
       </div>
+      </div>
 
       <div class="grid mt16" style="grid-template-columns:1fr 1fr">
         <div class="card"><div class="card-head"><h2>Best sellers today</h2></div><div class="card-body">
           ${d.top
             .map(
-              (item, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid #eff2f7">
+              (item, i) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
                 <span class="row gap12"><span class="badge info">${i + 1}</span><span class="strong">${esc(item.name)}</span></span>
                 <span class="small muted">${esc(t('{qty} sold', { qty: U.qty(item.qty) }))} · <span class="mono">${money(item.total)}</span></span>
               </div>`
             )
             .join('') || `<p class="muted small">${esc(t('No sales today yet.'))}</p>`}
         </div></div>
-        <div class="card"><div class="card-head"><h2>Low stock</h2><div class="right"><button class="btn sm" data-action="nav" data-route="stock">Open stock</button></div></div><div class="card-body">
+        <div class="card"><div class="card-head"><h2>${esc(t('Low stock'))}</h2><div class="right"><button class="btn sm" data-action="nav" data-route="stock">${esc(t('Open stock'))}</button></div></div><div class="card-body">
           ${d.low
             .map(
-              (p) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid #eff2f7">
+              (p) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
                 <span class="strong">${esc(p.name)}</span>
-                <span class="badge ${p.quantity <= 0 ? 'bad' : 'warn'}">${U.qty(p.quantity)} left</span>
+                <span class="badge ${p.quantity <= 0 ? 'bad' : 'warn'}">${esc(t('{qty} left', { qty: U.qty(p.quantity) }))}</span>
               </div>`
             )
-            .join('') || '<p class="muted small">Everything is well stocked.</p>'}
+            .join('') || `<p class="muted small">${esc(t('Everything is well stocked.'))}</p>`}
         </div></div>
       </div>`;
     },
@@ -1217,6 +1662,7 @@
           <div class="card-head"><div class="row gap8"><h2>${gid ? esc((groups.find((g) => String(g.id) === String(gid)) || {}).name || 'Products') : 'All products'}</h2><span class="badge gray">${list.length}</span></div>
             <div class="right">
               <button class="btn sm" data-action="products-refresh">${icon('refresh', 14)} Refresh</button>
+              <button class="btn sm" data-action="import-products">${icon('upload', 14)} ${esc(t('Import CSV'))}</button>
               <button class="btn primary sm" data-action="product-new">${icon('plus', 15)} New product</button>
             </div>
           </div>
@@ -1262,6 +1708,141 @@
     await A.reloadCatalog();
     A.render();
     A.toast('Catalogue refreshed');
+  });
+
+  /* --------------------------------------------------------- CSV import */
+
+  function parseCsv(text) {
+    const src = String(text || '').replace(/^\uFEFF/, '');
+    if (!src.trim()) return [];
+    const firstLine = src.split(/\r?\n/, 1)[0] || '';
+    const delimiter =
+      (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+    const rows = [];
+    let row = [];
+    let cur = '';
+    let quoted = false;
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i];
+      if (quoted) {
+        if (ch === '"' && src[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else if (ch === '"') quoted = false;
+        else cur += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === delimiter) {
+        row.push(cur);
+        cur = '';
+      } else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && src[i + 1] === '\n') i++;
+        row.push(cur);
+        cur = '';
+        if (row.some((c) => String(c).trim() !== '')) rows.push(row);
+        row = [];
+      } else cur += ch;
+    }
+    row.push(cur);
+    if (row.some((c) => String(c).trim() !== '')) rows.push(row);
+    if (rows.length < 2) return [];
+    const headers = rows.shift().map((h) => String(h).trim().toLowerCase().replace(/\s+/g, '_'));
+    return rows
+      .map((cells) => {
+        const obj = {};
+        headers.forEach((h, i) => {
+          if (h) obj[h] = cells[i] == null ? '' : String(cells[i]).trim();
+        });
+        return obj;
+      })
+      .filter((o) => Object.values(o).some((v) => String(v).trim() !== ''));
+  }
+
+  function csvTemplate() {
+    const csv =
+      'name,code,barcode,group,unit,cost,price,stock,low_stock,tax,active,service\\n' +
+      'Mineral Water 600ml,MW600,8991002100011,Drinks,pcs,1800,3000,48,10,11,1,0\\n' +
+      'Coffee,COF-01,,Drinks,pcs,5000,12000,20,5,11,1,0\\n';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'aroklon-products-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 800);
+  }
+
+  A.action('import-products', () => {
+    A.modal(
+      `<form data-form="import-products">
+        ${SH.modalHead(t('Import products from CSV'), t('Create products in bulk from a spreadsheet'))}
+        <div class="modal-body">
+          <p class="small muted">${esc(
+            t(
+              'Columns: name, code, barcode, group, unit, cost, price, stock, low_stock, tax, active, service. The name column is required; existing products are matched by code, barcode or name.'
+            )
+          )}</p>
+          <div class="field mt12"><label>${esc(t('CSV file'))}</label>
+            <input class="input" type="file" id="csv-file" accept=".csv,text/csv,text/plain" />
+          </div>
+          <div class="divider"></div>
+          <div class="field"><label>${esc(t('Or paste CSV text'))}</label>
+            <textarea class="input" name="csv_text" id="csv-text" rows="8" spellcheck="false" placeholder="name,code,price,stock&#10;Mineral Water,MW600,3000,48"></textarea>
+          </div>
+          <p class="hint">${esc(t('Comma and semicolon separated files both work. Stock is set to the value in the file.'))}</p>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn" data-modal-cancel>${esc(t('Cancel'))}</button>
+          <button type="button" class="btn" data-action="csv-template">${icon('download', 15)} ${esc(t('Download template'))}</button>
+          <button type="submit" class="btn good">${icon('upload', 15)} ${esc(t('Import'))}</button>
+        </div>
+      </form>`,
+      { size: '' }
+    );
+  });
+
+  A.action('csv-template', () => csvTemplate());
+
+  function readFileText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error(t('Could not read the file')));
+      reader.readAsText(file);
+    });
+  }
+
+  A.action('form:import-products', async (form) => {
+    const fd = new FormData(form);
+    const fileInput = document.getElementById('csv-file');
+    let text = String(fd.get('csv_text') || '');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      text = await readFileText(fileInput.files[0]);
+    }
+    const rows = parseCsv(text);
+    if (!rows.length) throw new Error(t('Choose a CSV file or paste at least one product row'));
+    const res = await A.api('importProducts', [rows]);
+    if (!res.ok) throw new Error(res.error || t('Import failed'));
+    A.closeModal();
+    await A.reloadCatalog();
+    A.render();
+    const summary = t('{created} created · {updated} updated · {skipped} skipped', {
+      created: res.created,
+      updated: res.updated,
+      skipped: res.skipped,
+    });
+    A.toast(summary, res.skipped ? 'warn' : 'good', 6000);
+    if (res.errors && res.errors.length) {
+      A.modal(
+        `${SH.modalHead(t('Import warnings'))}
+        <div class="modal-body"><p class="small muted">${esc(summary)}</p><div class="import-errors">${res.errors
+          .map((e) => `<div class="split-row"><span>${esc(e)}</span></div>`)
+          .join('')}</div></div>
+        <div class="modal-foot"><button class="btn primary" data-modal-cancel>${esc(t('Close'))}</button></div>`
+      );
+    }
   });
 
   A.action('group-new', async () => {
@@ -1615,7 +2196,13 @@
   /* ------------------------------------------------------------- keyboard */
 
   document.addEventListener('keydown', (e) => {
-    if (!A.state.user || A.state.route !== 'sales') return;
+    if (!A.state.user) return;
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'm') {
+      e.preventDefault();
+      if (!document.getElementById('modal-root').children.length) A.go('dashboard');
+      return;
+    }
+    if (A.state.route !== 'sales') return;
     if (document.getElementById('modal-root').children.length) return;
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -1678,6 +2265,10 @@
   });
 
   async function quickPay() {
+    if (!A.state.day || !A.state.day.register_open) {
+      A.toast(t('Register is closed. Open the register before selling.'), 'warn', 4200);
+      return A.go('day');
+    }
     if (!A.state.cart.items.length) return A.toast('Add items first', 'warn');
     const cash = (A.state.paymentTypes || []).find((p) => p.kind === 'cash' && p.active) || (A.state.paymentTypes || []).find((p) => p.active);
     if (!cash) return A.toast('No active payment type', 'bad');
@@ -1697,9 +2288,10 @@
         discount: A.state.cart.discount,
         tax_override_percent:
           A.state.cart.tax_override != null && A.state.cart.tax_override !== '' ? A.state.cart.tax_override : null,
+        round_to: A.state.cart.rounding || 0,
         payments: [{ payment_type_id: cash.id, amount: calc.total / 100, tendered: calc.total / 100 }],
       });
-      A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      A.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
       A.state.selectedLine = null;
       A.state.lastReceipt = doc;
       A.render();

@@ -1,6 +1,6 @@
 feature,area,priority,original,clone,notes
 Sign in with user + PIN,users,must,yes,yes,Owner/Manager/Cashier
-Ring a sale from barcode,code or name,sales,must,yes,yes,toggleable search modes
+"Ring a sale from barcode, code or name",sales,must,yes,yes,toggleable search modes
 Change quantity on an order line,sales,must,yes,yes,F4 or +/- controls
 Remove / void an order line,sales,must,yes,yes,Del
 Apply cart or item discount (fixed/percent),sales,must,yes,yes,tax after discount
@@ -9,7 +9,8 @@ Override tax on a sale,sales,must,yes,yes,percent override
 Take cash payment with change,sales,must,yes,yes,numeric keypad + quick cash
 Take card / custom payment types,sales,must,yes,yes,configurable
 Split payment across tenders,sales,must,yes,yes,
-Print / save a receipt,sales,must,yes,yes,custom header footer, Windows printer
+Cash rounding to 100/500/1000,payments,must,yes,yes,rounding saved on the sale; full refunds match
+"Print / save a receipt",sales,must,yes,yes,custom header footer, Windows printer
 Refund a sale (full or partial),sales,must,yes,yes,restock
 View sales history and reprint,sales,must,yes,yes,documents list
 Product search screen,sales,must,yes,yes,F3
@@ -22,10 +23,10 @@ Users and access levels,users,must,yes,yes,can only manage <= own level
 Payment types management,settings,must,yes,yes,
 Tax rates management,settings,must,yes,yes,multiple taxes per product
 Company details for receipts,settings,must,yes,yes,
-Cash in / cash out,cash,must,yes,skip,removed in Aroklon 1.0.5
-End of day (Z report),cash,must,yes,skip,removed in Aroklon 1.0.5
-X report (status without closing),cash,must,yes,skip,removed in Aroklon 1.0.5
-Open / close business day,cash,must,yes,skip,removed in Aroklon 1.0.5
+Cash in / cash out,cash,must,yes,yes,register required; reason + amount logged
+End of day (Z report),cash,must,yes,yes,counted cash + difference saved
+X report (status without closing),cash,must,yes,yes,print preview from the day screen
+Open / close business day,cash,must,yes,yes,float on open; sales blocked when closed
 Purchase document (stock in),documents,should,yes,yes,
 Inventory count with expected vs counted,documents,should,yes,yes,
 Loss and damage document,documents,should,yes,yes,
@@ -34,10 +35,10 @@ Document list with filters,documents,should,yes,yes,
 Dashboard with sales KPIs and charts,reporting,should,yes,yes,
 Reporting centre with print/save,reporting,should,yes,yes,
 Low-stock warnings,stock,should,yes,yes,
-CSV import products,catalogue,should,yes,no,not implemented in this slice
+CSV import products,catalogue,should,yes,yes,paste or file; create/update by code/barcode/name
 Loyalty cards,crm,should,yes,yes,
 Product images and colors (visual layout),sales,should,yes,yes,
-Promotions and happy hour,sales,could,yes,no,
+Promotions and happy hour,sales,could,yes,yes,cart/product/group; days/times/date range; auto at till
 Price lists per customer,pricing,could,yes,skip,paid plugin in original
 Print stations / kitchen routing,hardware,could,yes,skip,paid plugin in original
 Age-restricted product warning,sales,could,yes,yes,

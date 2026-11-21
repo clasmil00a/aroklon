@@ -14,11 +14,18 @@ runs locally — no account, no cloud, no subscription.
 - **Till** — product tiles, barcode/SKU/name search, quantity, line and cart
   discounts, tax, customer attach, hold/resume, refunds, quick pay.
 - **Payments** — configurable tenders, cash with automatic change, split
-  payments, numeric keypad and quick-cash buttons.
+  payments, cash rounding to 100/500/1,000, numeric keypad and quick-cash
+  buttons.
+- **Day & cash** — open the register with a starting float, cash in/out with a
+  reason, X report during the day, and an End of Day Z report with counted cash
+  and the variance. Selling is blocked while the register is closed.
+- **Promotions** — automatic happy-hour and cart/product/group discounts with
+  day, time, date-range and minimum-sale rules, applied at the till.
 - **Receipts** — company header/footer, logo-friendly layout, print to any
   Windows printer or save as PDF from the print dialog.
 - **Products** — groups, barcodes, cost/price, tax rates, low-stock alerts,
-  service items, age restrictions, images and colours.
+  service items, age restrictions, images and colours; CSV import from a file
+  or pasted spreadsheet rows.
 - **Stock** — quantities on hand, average cost, stock movements, adjustments,
   purchases, returns, loss & damage, inventory counts.
 - **Customers & suppliers** — contacts, loyalty cards, preset discounts,
@@ -26,9 +33,11 @@ runs locally — no account, no cloud, no subscription.
 - **Documents** — purchase, stock return, inventory count, loss & damage,
   proforma; searchable document list.
 - **Reports** — sales by day, product sales, payment mix, tax, customer sales,
-  stock valuation and low stock; print or export CSV.
+  stock valuation and low stock; X/Z register reports; print or export CSV.
 - **Users** — PIN sign-in with access levels (Owner / Manager / Cashier).
-- **Themes** — Modern (sidebar) and Classic (top menu bar + Management tree) layout, each with **Dark** (default), **Light** or **System** colour mode.
+- **Themes** — Classic (Aronium-style top menu bar + Management tree, default)
+  and Modern (sidebar) layout, each with **Dark** (default), **Light** or
+  **System** colour mode.
 - **Languages** — Bahasa Indonesia (default) and English, switchable at login or in Settings.
 - **Receipts** — white paper with dark text in every colour mode.
 - **Updates** — app-only patches (~1 MB) via Settings → Data → Check for updates, or `Update-Aroklon.bat`.
@@ -44,15 +53,37 @@ runs locally — no account, no cloud, no subscription.
 | F8 | Hold sale |
 | F10 | Payment |
 | F12 | Quick pay with default tender |
+| Ctrl+M | Management (Dashboard) |
 | Del | Remove selected line |
 | Esc | Deselect / close dialog |
+
+### Daily routine
+
+1. **Open register** — enter the float on the End of Day screen.
+2. **Sell** — the register status chip in the top bar stays green while open.
+3. **Cash in/out** — Menu → Cash in / out; every entry needs a reason.
+4. **X report** — Menu → X report prints the current takings without closing.
+5. **End of Day** — Menu → End of Day, count the drawer, review the variance,
+   then **Continue** to save the Z report and close the register.
+
+### Promotions and CSV import
+
+- **Promotions & Actions** (Management) creates automatic discounts for the
+  entire sale, one product or a product group. Set a percentage or fixed amount,
+  optional weekdays, a time window, a date range and a minimum sale total.
+- **Products → Import CSV** accepts a `.csv` file or pasted rows. Columns:
+  `name, code, barcode, group, unit, cost, price, stock, low_stock, tax, active,
+  service`. `name` is required; existing products match on code, barcode or name.
 
 ## First run
 
 The app seeds a small demo catalogue so you can try it immediately.
 
 1. Sign in (Owner / `1234`).
-2. Go to **Sales** and start ringing. There is no open/close register step.
+2. On the **End of Day** screen, enter the opening cash (float) and choose
+   **Open register**.
+3. Go to **Sales** and start ringing. Cash in/out, X report and close register
+   are in the top **Menu**.
 
 | User | PIN |
 | --- | --- |

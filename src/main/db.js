@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS document (
   total INTEGER DEFAULT 0,
   paid_total INTEGER DEFAULT 0,
   change_total INTEGER DEFAULT 0,
+  source_document_id INTEGER,
   notes TEXT,
   void_reason TEXT,
   created_at TEXT,
@@ -273,6 +274,23 @@ CREATE TABLE IF NOT EXISTS zreport (
   cash_expected INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS promotion (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'cart_percent',
+  scope TEXT NOT NULL DEFAULT 'cart',
+  target_id INTEGER,
+  value REAL DEFAULT 0,
+  min_total INTEGER DEFAULT 0,
+  days TEXT,
+  time_from TEXT,
+  time_to TEXT,
+  date_from TEXT,
+  date_to TEXT,
+  active INTEGER DEFAULT 1,
+  created_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS number_seq (
   key TEXT PRIMARY KEY,
   next INTEGER DEFAULT 1
@@ -284,6 +302,7 @@ CREATE INDEX IF NOT EXISTS idx_item_doc ON document_item(document_id);
 CREATE INDEX IF NOT EXISTS idx_pay_doc ON payment(document_id);
 CREATE INDEX IF NOT EXISTS idx_barcode_value ON barcode(value);
 CREATE INDEX IF NOT EXISTS idx_stock_movement ON stock_movement(product_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_active ON promotion(active);
 `;
 
 /* --------------------------------------------------------------- lifecycle */
@@ -297,6 +316,7 @@ async function init(userDataDir) {
   }
   db = buffer ? new SQL.Database(buffer) : new SQL.Database();
   db.run(SCHEMA);
+  migrate();
   seed();
   persist();
 }
@@ -339,7 +359,25 @@ function run(sql, params = []) {
   schedulePersist();
 }
 
+function ensureColumn(table, column, definition) {
+  const cols = all(`PRAGMA table_info(${table})`);
+  if (!cols.some((c) => c.name === column)) {
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function migrate() {
+  ensureColumn('document', 'promotion_id', 'INTEGER');
+  ensureColumn('document', 'promotion_name', 'TEXT');
+  ensureColumn('document', 'promotion_total', 'INTEGER DEFAULT 0');
+  ensureColumn('document', 'rounding_total', 'INTEGER DEFAULT 0');
+  ensureColumn('document', 'source_document_id', 'INTEGER');
+  ensureColumn('zreport', 'counted_cash', 'INTEGER');
+  ensureColumn('zreport', 'cash_difference', 'INTEGER DEFAULT 0');
+}
+
 function tx(fn) {
+  if (txDepth > 0) return fn();
   txDepth++;
   db.run('BEGIN');
   try {
@@ -1000,6 +1038,121 @@ function deleteProduct(id) {
   return { ok: true };
 }
 
+function parseImportNumber(value) {
+  let s = String(value == null ? '' : value).trim().replace(/[^\d.,-]/g, '');
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma >= 0 && lastDot >= 0) {
+    if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    const tail = s.slice(lastComma + 1);
+    s = tail.length === 3 && s.length > 4 ? s.replace(/,/g, '') : s.replace(',', '.');
+  } else if (lastDot >= 0) {
+    const tail = s.slice(lastDot + 1);
+    if (tail.length === 3 && s.length > 4) s = s.replace(/\./g, '');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function importProducts(rows) {
+  if (!Array.isArray(rows) || !rows.length) return { ok: false, error: 'No rows to import' };
+  if (rows.length > 5000) return { ok: false, error: 'Import at most 5,000 products at a time' };
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  const errors = [];
+  const groupCache = new Map(
+    all(`SELECT id, name FROM product_group`).map((g) => [String(g.name).toLowerCase(), g.id])
+  );
+  const taxRates = all(`SELECT * FROM tax_rate`);
+
+  tx(() => {
+    rows.forEach((raw, index) => {
+      const row = {};
+      for (const [k, v] of Object.entries(raw || {})) {
+        row[String(k).toLowerCase().trim().replace(/\s+/g, '_')] = v;
+      }
+      const name = String(row.name || row.product || row.description || '').trim();
+      if (!name) {
+        skipped++;
+        errors.push(`Row ${index + 1}: name is required`);
+        return;
+      }
+      const code = String(row.code || row.sku || '').trim();
+      const barcode = String(row.barcode || '').trim();
+      let existing = null;
+      if (code) existing = get(`SELECT * FROM product WHERE code=?`, [code]);
+      if (!existing && barcode) {
+        existing = get(`SELECT p.* FROM product p JOIN barcode b ON b.product_id=p.id WHERE b.value=? LIMIT 1`, [barcode]);
+      }
+      if (!existing && !code && !barcode) {
+        existing = get(`SELECT * FROM product WHERE lower(name)=lower(?)`, [name]);
+      }
+
+      let groupId = existing ? existing.group_id : null;
+      const groupName = String(row.group || row.category || row.group_name || '').trim();
+      if (groupName) {
+        const key = groupName.toLowerCase();
+        if (!groupCache.has(key)) {
+          run(`INSERT INTO product_group (name, color, sort_order) VALUES (?,?,?)`, [groupName, '#00a2e8', all(`SELECT id FROM product_group`).length + 1]);
+          groupCache.set(key, get(`SELECT last_insert_rowid() AS id`).id);
+        }
+        groupId = groupCache.get(key);
+      }
+
+      let taxIds = existing
+        ? all(`SELECT tax_rate_id FROM product_tax WHERE product_id=?`, [existing.id]).map((t) => t.tax_rate_id)
+        : taxRates.filter((t) => t.is_default).map((t) => t.id);
+      const taxText = String(row.tax || row.tax_percent || row.vat || '').trim();
+      if (taxText) {
+        const tax = taxRates.find(
+          (t) => String(t.name).toLowerCase() === taxText.toLowerCase() || String(num(t.percent)) === taxText
+        );
+        if (tax) taxIds = [tax.id];
+      }
+
+      const price = row.price != null ? parseImportNumber(row.price) : existing ? money(existing.price) : 0;
+      const cost = row.cost != null ? parseImportNumber(row.cost) : existing ? money(existing.cost) : 0;
+      const payload = {
+        id: existing ? existing.id : null,
+        name,
+        code,
+        unit: String(row.unit || (existing && existing.unit) || 'pcs'),
+        group_id: groupId,
+        active: row.active == null || String(row.active) === '' ? true : !/^(0|no|false|n)$/i.test(String(row.active)),
+        is_service: /^(1|yes|true|y)$/i.test(String(row.service || row.is_service || '')),
+        price,
+        cost,
+        price_incl_tax: existing ? !!existing.price_incl_tax : false,
+        price_change_allowed: existing ? !!existing.price_change_allowed : true,
+        color: existing ? existing.color : '#e2e8f0',
+        image: existing ? existing.image : null,
+        description: String(row.notes || (existing && existing.description) || ''),
+        low_stock: row.low_stock != null ? parseImportNumber(row.low_stock) : existing ? existing.low_stock : 0,
+        barcodes: barcode ? [barcode].concat(code ? [code] : []) : code ? [code] : [],
+        tax_rate_ids: taxIds,
+      };
+      const res = saveProduct(payload);
+      if (!res || !res.ok) {
+        skipped++;
+        errors.push(`Row ${index + 1}: ${(res && res.error) || 'could not save'}`);
+        return;
+      }
+      if (row.stock != null || row.quantity != null || row.qty != null) {
+        const stock = parseImportNumber(row.stock != null ? row.stock : row.quantity != null ? row.quantity : row.qty);
+        adjustStock(res.id, stock, 'import');
+      }
+      if (existing) updated++;
+      else created++;
+    });
+  });
+  persist();
+  return { ok: true, created, updated, skipped, errors: errors.slice(0, 25) };
+}
+
 /* ------------------------------------------------------------------- stock */
 
 function listStock(opts = {}) {
@@ -1206,6 +1359,9 @@ function effectiveRate(rates) {
 function computeSale(input) {
   const items = input.items || [];
   if (!items.length) throw new Error('Add at least one product to the sale');
+  if (getSetting('register_open') !== '1') {
+    throw new Error('Register is closed. Open the register before selling.');
+  }
 
   const allowNegative = getSetting('allow_negative_stock') === '1';
   const productCache = new Map();
@@ -1264,6 +1420,7 @@ function computeSale(input) {
       discount_value: num(it.discount_value),
       discount_total: disc,
       gross,
+      group_id: p.group_id || null,
       net_after_item: gross - disc,
       is_service: p.is_service,
       incl: !!p.price_incl_tax,
@@ -1279,6 +1436,11 @@ function computeSale(input) {
     else cartDisc = cents(discountInput.value);
     cartDisc = Math.min(Math.max(cartDisc, 0), afterItem);
   }
+
+  // Best active promotion (happy hour / cart or product action) stacks on top.
+  const promo = bestPromotion(lines, afterItem, Math.max(afterItem - cartDisc, 0));
+  if (promo.amount > 0) cartDisc += promo.amount;
+  cartDisc = Math.min(cartDisc, afterItem);
 
   const taxOverride =
     input.tax_override_percent != null && input.tax_override_percent !== ''
@@ -1327,12 +1489,25 @@ function computeSale(input) {
     }
   }
 
+  // Optional cash rounding, applied after tax on the whole sale.
+  const roundTo = Math.max(Math.round(num(input.round_to)), 0);
+  let roundingTotal = 0;
+  if (roundTo > 0 && total > 0) {
+    const rounded = Math.max(roundTo, Math.round(total / roundTo) * roundTo);
+    roundingTotal = rounded - total;
+    total = rounded;
+  }
+
   return {
     lines,
     subtotal: Math.round(subtotal),
     item_discount: Math.round(itemDiscount),
     cart_discount: Math.round(cartDisc),
     discount_total: Math.round(itemDiscount + cartDisc),
+    promotion_id: promo.promotion ? promo.promotion.id : null,
+    promotion_name: promo.promotion ? promo.promotion.name : null,
+    promotion_total: Math.round(promo.amount),
+    rounding_total: Math.round(roundingTotal),
     tax_total: taxTotal,
     total,
     tax_breakdown: [...breakdown.values()],
@@ -1372,9 +1547,10 @@ function createSale(input) {
 
     run(
       `INSERT INTO document (number, type, status, customer_id, user_id, register_id, doc_date,
-        stock_date, subtotal, item_discount, cart_discount, discount_total, tax_override_percent,
-        tax_total, tax_breakdown, total, paid_total, change_total, notes, created_at, closed_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        stock_date, subtotal, item_discount, cart_discount, discount_total, rounding_total,
+        tax_override_percent, tax_total, tax_breakdown, total, paid_total, change_total, notes,
+        created_at, closed_at, promotion_id, promotion_name, promotion_total)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         number,
         'sale',
@@ -1388,6 +1564,7 @@ function createSale(input) {
         calc.item_discount,
         calc.cart_discount,
         calc.discount_total,
+        calc.rounding_total,
         input.tax_override_percent != null && input.tax_override_percent !== ''
           ? num(input.tax_override_percent)
           : null,
@@ -1399,6 +1576,9 @@ function createSale(input) {
         input.notes || '',
         nowIso(),
         nowIso(),
+        calc.promotion_id,
+        calc.promotion_name,
+        calc.promotion_total,
       ]
     );
     const docId = get(`SELECT last_insert_rowid() AS id`).id;
@@ -1548,21 +1728,31 @@ function refundSale(documentId, opts = {}) {
     let tax = 0;
     let total = 0;
     for (const it of items) {
-      const share = original.total > 0 ? it.total / original.total : 0;
       subtotal += Math.round(it.quantity * it.unit_price);
-      tax += Math.round(it.tax_total * share);
+      tax += Math.round(it.tax_total);
       total += it.total;
       if (!it.product_id) continue;
       const p = get(`SELECT is_service FROM product WHERE id=?`, [it.product_id]);
       if (p && !p.is_service) applyStock(it.product_id, it.quantity, it.cost, null, 'in');
     }
 
+    // A full refund also returns the cash-rounding adjustment from the sale.
+    // Only the first refund can be "full", otherwise a later refund of the
+    // remaining lines would return the same rounding adjustment twice.
+    const priorRefunds = Number(
+      (get(`SELECT COUNT(*) AS n FROM document WHERE type='refund' AND source_document_id=?`, [documentId]) || {}).n || 0
+    );
+    const openItems = original.items.filter((i) => !i.voided);
+    const fullRefund = !priorRefunds && items.length === openItems.length;
+    const rounding = fullRefund ? num(original.rounding_total) : 0;
+    total += rounding;
+
     const number = nextNumber('R');
     run(
       `INSERT INTO document (number, type, status, customer_id, user_id, register_id, doc_date,
-        stock_date, subtotal, item_discount, cart_discount, discount_total, tax_total, total,
-        paid_total, change_total, notes, created_at, closed_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        stock_date, subtotal, item_discount, cart_discount, discount_total, rounding_total, tax_total, total,
+        paid_total, change_total, source_document_id, notes, created_at, closed_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         number,
         'refund',
@@ -1576,10 +1766,12 @@ function refundSale(documentId, opts = {}) {
         0,
         0,
         0,
+        -rounding,
         -tax,
         -total,
         -total,
         0,
+        documentId,
         opts.reason || `Refund of ${original.number}`,
         nowIso(),
         nowIso(),
@@ -1741,6 +1933,7 @@ function listCashMovements(registerId) {
 }
 
 function addCash(kind, amount, reason, userId, registerId) {
+  if (getSetting('register_open') !== '1') return { ok: false, error: 'Open the register before recording cash' };
   const amt = cents(amount);
   if (!(amt > 0)) return { ok: false, error: 'Enter an amount greater than zero' };
   if (!reason || !String(reason).trim()) return { ok: false, error: 'A reason is required' };
@@ -1848,7 +2041,7 @@ function daySummary(date) {
   };
 }
 
-function closeDay(userId) {
+function closeDay(userId, countedCash) {
   const state = getDayState();
   if (!state.register_open) return { ok: false, error: 'Register is not open' };
   const openSales = get(`SELECT COUNT(*) AS c FROM document WHERE type='sale' AND status='open'`);
@@ -1859,11 +2052,13 @@ function closeDay(userId) {
   return tx(() => {
     const summary = daySummary(state.business_date);
     const number = nextNumber('Z');
+    const counted = countedCash != null && countedCash !== '' ? cents(countedCash) : summary.cash_expected;
+    const difference = counted - summary.cash_expected;
     run(
       `INSERT INTO zreport (number, register_id, opened_at, closed_at, opened_by, closed_by,
         opening_cash, cash_in, cash_out, tendered_json, sales_count, returns_count, discount_total,
-        tax_total, total, items_json, cash_expected)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        tax_total, total, items_json, cash_expected, counted_cash, cash_difference)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         number,
         get(`SELECT id FROM register WHERE is_primary=1`).id,
@@ -1882,6 +2077,8 @@ function closeDay(userId) {
         summary.net_total,
         JSON.stringify(summary.items),
         summary.cash_expected,
+        counted,
+        difference,
       ]
     );
     const zid = get(`SELECT last_insert_rowid() AS id`).id;
@@ -1914,6 +2111,136 @@ function listZReports() {
 function xReport() {
   const state = getDayState();
   return daySummary(state.business_date);
+}
+
+/* ------------------------------------------------------------ promotions */
+
+const PROMO_KINDS = ['cart_percent', 'cart_fixed', 'item_percent', 'item_fixed'];
+
+function localDateKey(d = new Date()) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function promotionIsActive(p, now = new Date()) {
+  if (!p || !num(p.active)) return false;
+  const date = localDateKey(now);
+  if (p.date_from && date < String(p.date_from).slice(0, 10)) return false;
+  if (p.date_to && date > String(p.date_to).slice(0, 10)) return false;
+  const days = String(p.days || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (days.length && !days.includes(String(now.getDay()))) return false;
+  const time = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  if (p.time_from && time < p.time_from) return false;
+  if (p.time_to && time > p.time_to) return false;
+  return true;
+}
+
+function listPromotions() {
+  const now = new Date();
+  return all(`SELECT * FROM promotion ORDER BY active DESC, id DESC`).map((p) => ({
+    ...p,
+    active_now: promotionIsActive(p, now),
+    kind_label: {
+      cart_percent: 'Cart discount %',
+      cart_fixed: 'Cart discount amount',
+      item_percent: 'Product / group discount %',
+      item_fixed: 'Product / group discount amount',
+    }[p.kind] || p.kind,
+  }));
+}
+
+function savePromotion(p) {
+  const name = String(p.name || '').trim();
+  if (!name) return { ok: false, error: 'Promotion name is required' };
+  const kind = PROMO_KINDS.includes(p.kind) ? p.kind : 'cart_percent';
+  const scope = ['cart', 'all', 'group', 'product'].includes(p.scope) ? p.scope : kind.startsWith('cart') ? 'cart' : 'all';
+  const value = num(p.value);
+  if (value <= 0) return { ok: false, error: 'Enter a discount value greater than zero' };
+  if (kind.endsWith('percent') && value > 100) return { ok: false, error: 'Percentage cannot be greater than 100' };
+  const days = Array.isArray(p.days) ? p.days.join(',') : String(p.days || '');
+  const payload = {
+    name,
+    kind,
+    scope: kind.startsWith('cart') ? 'cart' : scope,
+    target_id: kind.startsWith('cart') || scope === 'all' ? null : p.target_id || null,
+    value,
+    min_total: cents(p.min_total || 0),
+    days,
+    time_from: p.time_from || null,
+    time_to: p.time_to || null,
+    date_from: p.date_from || null,
+    date_to: p.date_to || null,
+    active: p.active ? 1 : 0,
+  };
+  if (p.id) {
+    run(
+      `UPDATE promotion SET name=?, kind=?, scope=?, target_id=?, value=?, min_total=?, days=?, time_from=?,
+        time_to=?, date_from=?, date_to=?, active=? WHERE id=?`,
+      [
+        payload.name,
+        payload.kind,
+        payload.scope,
+        payload.target_id,
+        payload.value,
+        payload.min_total,
+        payload.days,
+        payload.time_from,
+        payload.time_to,
+        payload.date_from,
+        payload.date_to,
+        payload.active,
+        p.id,
+      ]
+    );
+  } else {
+    run(
+      `INSERT INTO promotion (name, kind, scope, target_id, value, min_total, days, time_from, time_to,
+        date_from, date_to, active, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        payload.name,
+        payload.kind,
+        payload.scope,
+        payload.target_id,
+        payload.value,
+        payload.min_total,
+        payload.days,
+        payload.time_from,
+        payload.time_to,
+        payload.date_from,
+        payload.date_to,
+        payload.active,
+        nowIso(),
+      ]
+    );
+  }
+  persist();
+  return { ok: true };
+}
+
+function deletePromotion(id) {
+  run(`DELETE FROM promotion WHERE id=?`, [id]);
+  persist();
+  return { ok: true };
+}
+
+function bestPromotion(lines, afterItem, base, now = new Date()) {
+  let best = { promotion: null, amount: 0 };
+  for (const p of all(`SELECT * FROM promotion WHERE active=1`)) {
+    if (!promotionIsActive(p, now)) continue;
+    if (num(p.min_total) > 0 && afterItem < num(p.min_total)) continue;
+    const matched = (lines || []).filter((l) => {
+      if (p.kind.startsWith('cart')) return true;
+      if (p.scope === 'product') return String(l.product_id) === String(p.target_id);
+      if (p.scope === 'group') return String(l.group_id) === String(p.target_id);
+      return true;
+    });
+    const matcher = p.kind.startsWith('cart') ? afterItem : matched.reduce((s, l) => s + num(l.net_after_item), 0);
+    let amount = 0;
+    if (p.kind.endsWith('percent')) amount = (matcher * num(p.value)) / 100;
+    else amount = cents(p.value);
+    amount = Math.min(Math.max(Math.round(amount), 0), base, matcher);
+    if (amount > best.amount) best = { promotion: p, amount };
+  }
+  return best;
 }
 
 /* -------------------------------------------------------------- dashboard */
@@ -1975,7 +2302,7 @@ function report(name, filters = {}) {
 
   if (name === 'sales_summary') {
     return all(
-      `SELECT substr(doc_date,1,10) AS date, COUNT(*) AS sales,
+      `SELECT substr(doc_date,1,10) AS date, COUNT(*) AS transactions,
           SUM(subtotal) AS subtotal, SUM(discount_total) AS discount,
           SUM(tax_total) AS tax, SUM(total) AS total
        FROM document WHERE type='sale' AND doc_date BETWEEN ? AND ?
@@ -2083,6 +2410,7 @@ function factoryReset() {
   const fresh = new SQL.Database();
   fresh.run(SCHEMA);
   db = fresh;
+  migrate();
   seed();
   persist();
   return { ok: true };
@@ -2155,6 +2483,10 @@ module.exports = {
   xReport,
   getZReport,
   listZReports,
+  listPromotions,
+  savePromotion,
+  deletePromotion,
+  importProducts,
   dashboard,
   report,
   backup,

@@ -149,7 +149,14 @@
   /* ---------------------------------------------------------------- menu */
 
   window.api.onMenu((action) => {
-    if (action === 'sales') A.go('sales');
+    if (action === 'day') A.go('day');
+    else if (action === 'cash' && A.actions.cash) A.actions.cash();
+    else if (action === 'sales') A.go('sales');
+    else if (action.startsWith('menu:')) A.go(action.slice(5));
+    else if (action.startsWith('settings:')) {
+      A.state.settingsTab = action.slice(9);
+      A.go('settings', { tab: action.slice(9) });
+    } else if (action === 'x-report' && A.actions['x-report']) A.actions['x-report']();
     else if (action === 'shortcuts') {
       A.toast('F2 discount · F3 search · F4 quantity · F8 hold · F10 payment · F12 quick pay · Del remove', 'good', 7000);
     } else if (action === 'check-update') {

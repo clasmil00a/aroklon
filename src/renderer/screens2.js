@@ -45,19 +45,354 @@
     if (A.state.reportId) await loadReport(A.state.reportId);
   });
 
+  A.loader('promotions', async () => {
+    await A.reloadCatalog();
+    A.state.promotions = await A.api('listPromotions');
+  });
+
+  const DAY_NAMES = [0, 1, 2, 3, 4, 5, 6].map((i) =>
+    new Date(2021, 7, 1 + i).toLocaleDateString(locale(), { weekday: 'short' })
+  );
+  const PROMO_KINDS = [
+    { value: 'cart_percent', label: 'Cart discount %' },
+    { value: 'cart_fixed', label: 'Cart discount amount' },
+    { value: 'item_percent', label: 'Product / group discount %' },
+    { value: 'item_fixed', label: 'Product / group discount amount' },
+  ];
+
+  function promoValueText(p) {
+    return String(p.kind).endsWith('percent') ? `${U.num(p.value)}%` : money(Math.round(U.num(p.value) * 100));
+  }
+
+  function promoTargetText(p) {
+    if (!p.kind || String(p.kind).startsWith('cart')) return t('Entire sale');
+    if (p.scope === 'group') {
+      const g = (A.state.groups || []).find((x) => String(x.id) === String(p.target_id));
+      return g ? g.name : t('All products');
+    }
+    if (p.scope === 'product') {
+      const prod = (A.state.products || []).find((x) => String(x.id) === String(p.target_id));
+      return prod ? prod.name : t('All products');
+    }
+    return t('All products');
+  }
+
+  function promoStatusText(p) {
+    if (!p.active) return { text: t('Disabled'), kind: 'gray' };
+    if (p.active_now) return { text: t('Active now'), kind: 'good' };
+    return { text: t('Scheduled'), kind: 'warn' };
+  }
+
+  function promoDaysText(p) {
+    const days = String(p.days || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (!days.length) return t('Every day');
+    return days.map((d) => DAY_NAMES[Number(d)] || d).join(', ');
+  }
+
+  function promoTimeText(p) {
+    if (!p.time_from && !p.time_to) return '';
+    return `${p.time_from || '00:00'}–${p.time_to || '23:59'}`;
+  }
+
+  A.state.promoFilter = A.state.promoFilter || 'all';
+
   A.screens.promotions = {
-    meta: { title: t('Promotions'), sub: t('Happy hour, bundles and rules') },
+    meta: { title: t('Promotions & Actions'), sub: t('Happy hour, cart and product discounts') },
     render() {
-      return `<div class="card">
-        <div class="card-head"><h2>Promotions &amp; actions</h2><div class="right"><span class="badge gray">Soon</span></div></div>
-        <div class="card-body">${SH.empty({
-          icon: 'tag',
-          title: 'Not included in this edition',
-          text: 'Promotions and happy-hour rules are planned for a future release. Cart discounts, item discounts, customer discounts and tax overrides are available today.',
-        })}</div>
+      const all = A.state.promotions || [];
+      const filter = A.state.promoFilter || 'all';
+      const visible = all.filter((p) =>
+        filter === 'active' ? p.active_now : filter === 'disabled' ? !p.active : filter === 'scheduled' ? p.active && !p.active_now : true
+      );
+      const count = (kind) =>
+        kind === 'active'
+          ? all.filter((p) => p.active_now).length
+          : kind === 'scheduled'
+          ? all.filter((p) => p.active && !p.active_now).length
+          : kind === 'disabled'
+          ? all.filter((p) => !p.active).length
+          : all.length;
+      return `<div class="page-head">
+        <div><h1>${esc(t('Promotions & Actions'))}</h1><p>${esc(
+        t('Automatic discounts applied at the till during the schedule you set.')
+      )}</p></div>
+        <div class="page-actions">
+          <button class="btn" data-action="promo-refresh">${icon('refresh', 15)} ${esc(t('Refresh'))}</button>
+          <button class="btn good" data-action="promo-new">${icon('plus', 15)} ${esc(t('New action'))}</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <div class="eod-tabs promo-tabs">
+            ${[
+              ['all', t('All')],
+              ['active', t('Active now')],
+              ['scheduled', t('Scheduled')],
+              ['disabled', t('Disabled')],
+            ]
+              .map(
+                ([key, label]) =>
+                  `<button class="eod-tab ${filter === key ? 'active' : ''}" data-action="promo-filter" data-filter="${key}">${esc(
+                    label
+                  )} <span class="cnt">${count(key)}</span></button>`
+              )
+              .join('')}
+          </div>
+          <div class="table-wrap">
+            ${
+              visible.length
+                ? `<table class="data promo-table"><thead><tr>
+                    <th>${esc(t('Name'))}</th><th>${esc(t('Discount'))}</th><th>${esc(t('Applies to'))}</th>
+                    <th>${esc(t('Schedule'))}</th><th>${esc(t('Status'))}</th><th class="num">${esc(t('Minimum'))}</th><th></th>
+                  </tr></thead><tbody>
+                  ${visible
+                    .map((p) => {
+                      const st = promoStatusText(p);
+                      const when = [promoDaysText(p), promoTimeText(p), p.date_from || p.date_to ? `${p.date_from || '…'} – ${p.date_to || '…'}` : '']
+                        .filter(Boolean)
+                        .join(' · ');
+                      return `<tr class="${p.active_now ? 'promo-live' : ''}">
+                        <td><div class="strong">${esc(p.name)}</div><div class="small muted">${esc(
+                        (PROMO_KINDS.find((k) => k.value === p.kind) || {}).label || p.kind
+                      )}</div></td>
+                        <td class="mono strong">${promoValueText(p)}</td>
+                        <td>${esc(promoTargetText(p))}</td>
+                        <td class="small">${esc(when)}</td>
+                        <td><span class="badge ${st.kind}">${esc(st.text)}</span></td>
+                        <td class="num mono">${p.min_total ? money(p.min_total) : '—'}</td>
+                        <td class="right">
+                          <button class="icon-btn" data-action="promo-toggle" data-id="${p.id}" title="${esc(
+                        p.active ? t('Disable') : t('Enable')
+                      )}">${icon(p.active ? 'pause' : 'check', 15)}</button>
+                          <button class="icon-btn" data-action="promo-edit" data-id="${p.id}" title="${esc(t('Edit'))}">${icon(
+                        'edit',
+                        15
+                      )}</button>
+                          <button class="icon-btn danger" data-action="promo-delete" data-id="${p.id}" title="${esc(
+                        t('Delete')
+                      )}">${icon('trash', 15)}</button>
+                        </td>
+                      </tr>`;
+                    })
+                    .join('')}
+                  </tbody></table>`
+                : SH.empty({
+                    icon: 'heart',
+                    title: filter === 'all' ? t('No promotions yet') : t('Nothing in this view'),
+                    text: t('Create a happy hour or cart discount and it will apply automatically at the till.'),
+                    action: `<button class="btn good" data-action="promo-new">${icon('plus', 15)} ${esc(t('New action'))}</button>`,
+                  })
+            }
+          </div>
+        </div>
       </div>`;
     },
   };
+
+  A.action('promo-refresh', async () => {
+    A.state.promotions = await A.api('listPromotions');
+    A.render();
+  });
+
+  A.action('promo-filter', (ds) => {
+    A.state.promoFilter = ds.filter || 'all';
+    A.render();
+  });
+
+  A.action('promo-new', () => openPromotionForm(null));
+
+  A.action('promo-edit', (ds) => {
+    const p = (A.state.promotions || []).find((x) => String(x.id) === String(ds.id));
+    if (p) openPromotionForm(p);
+  });
+
+  A.action('promo-toggle', async (ds) => {
+    const p = (A.state.promotions || []).find((x) => String(x.id) === String(ds.id));
+    if (!p) return;
+    const res = await A.api('savePromotion', {
+      id: p.id,
+      name: p.name,
+      kind: p.kind,
+      scope: p.scope,
+      target_id: p.target_id,
+      value: p.value,
+      min_total: (p.min_total || 0) / 100,
+      days: String(p.days || ''),
+      time_from: p.time_from,
+      time_to: p.time_to,
+      date_from: p.date_from,
+      date_to: p.date_to,
+      active: !p.active,
+    });
+    if (!res.ok) return A.toast(res.error || 'Could not update promotion', 'bad');
+    A.state.promotions = await A.api('listPromotions');
+    A.render();
+    A.toast(!p.active ? 'Promotion enabled' : 'Promotion disabled');
+  });
+
+  A.action('promo-delete', async (ds) => {
+    const p = (A.state.promotions || []).find((x) => String(x.id) === String(ds.id));
+    if (!p) return;
+    const ok = await A.confirm({
+      title: t('Delete promotion?'),
+      message: `<p class="small">${esc(p.name)}</p>`,
+      confirmLabel: t('Delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    await A.api('deletePromotion', p.id);
+    A.state.promotions = await A.api('listPromotions');
+    A.render();
+    A.toast('Promotion deleted');
+  });
+
+  A.action('change:promo-scope', (ds, el) => {
+    const scope = el.value;
+    const group = document.getElementById('promo-group-field');
+    const product = document.getElementById('promo-product-field');
+    if (group) group.style.display = scope === 'group' ? '' : 'none';
+    if (product) product.style.display = scope === 'product' ? '' : 'none';
+  });
+
+  function openPromotionForm(p) {
+    const isNew = !p;
+    p = p || {
+      name: '',
+      kind: 'cart_percent',
+      scope: 'cart',
+      target_id: null,
+      value: 10,
+      min_total: 0,
+      days: '',
+      time_from: '',
+      time_to: '',
+      date_from: '',
+      date_to: '',
+      active: true,
+    };
+    const itemKind = !String(p.kind).startsWith('cart');
+    const scope = itemKind ? p.scope || 'all' : 'cart';
+    const daySet = String(p.days || '')
+      .split(',')
+      .map((s) => s.trim());
+    const groupOptions = [{ value: '', label: t('All products') }].concat(
+      (A.state.groups || []).map((g) => ({ value: g.id, label: g.name }))
+    );
+    const productOptions = (A.state.products || [])
+      .filter((x) => x.active !== false)
+      .slice(0, 400)
+      .map((x) => ({ value: x.id, label: x.name }));
+    A.modal(
+      `<form data-form="save-promotion">
+        ${SH.modalHead(isNew ? t('New action') : t('Edit action'), t('Choose what the discount applies to and when it runs'))}
+        <input type="hidden" name="id" value="${p.id || ''}" />
+        <div class="modal-body">
+          <div class="form-grid">
+            ${SH.field(t('Name'), SH.input('name', p.name, { required: true, placeholder: t('e.g. Happy hour 20%') }), { span: 2 })}
+            ${SH.field(
+              t('Type'),
+              SH.select('kind', PROMO_KINDS, p.kind, { dataChange: 'promo-kind' }),
+              { span: 2 }
+            )}
+            <div id="promo-scope-field" class="field ${itemKind ? '' : 'hidden'}" style="${itemKind ? '' : 'display:none'}">
+              <label>${esc(t('Applies to'))}</label>
+              ${SH.select(
+                'scope',
+                [
+                  { value: 'all', label: t('All products') },
+                  { value: 'group', label: t('Product group') },
+                  { value: 'product', label: t('Single product') },
+                ],
+                scope,
+                { dataChange: 'promo-scope' }
+              )}
+            </div>
+            <div class="field" id="promo-value-field">
+              <label>${esc(t('Value'))}</label>
+              ${SH.input('value', p.value, { type: 'number', step: '0.01', min: '0', required: true })}
+              <div class="hint">${esc(t('Percent, or an amount in your currency.'))}</div>
+            </div>
+            <div id="promo-group-field" class="field" style="${scope === 'group' ? '' : 'display:none'}">
+              <label>${esc(t('Product group'))}</label>
+              ${SH.select('target_group', groupOptions, p.scope === 'group' ? p.target_id : '')}
+            </div>
+            <div id="promo-product-field" class="field" style="${scope === 'product' ? '' : 'display:none'}">
+              <label>${esc(t('Product'))}</label>
+              ${SH.select('target_product', productOptions, p.scope === 'product' ? p.target_id : '')}
+            </div>
+            ${SH.field(t('Minimum sale amount'), SH.input('min_total', (p.min_total || 0) / 100, { type: 'number', step: '0.01', min: '0' }))}
+            ${SH.field(t('Active'), `<label class="switch"><input type="checkbox" name="active" value="1" ${
+              p.active ? 'checked' : ''
+            } /><span class="track"></span><span>${esc(t('Apply this action'))}</span></label>`)}
+          </div>
+          <div class="divider"></div>
+          <div class="label mb8">${esc(t('When it runs'))}</div>
+          <div class="promo-days">
+            ${DAY_NAMES.map(
+              (label, i) =>
+                `<label class="promo-day"><input type="checkbox" name="days" value="${i}" ${
+                  daySet.includes(String(i)) ? 'checked' : ''
+                } /><span>${esc(label)}</span></label>`
+            ).join('')}
+          </div>
+          <div class="form-grid mt12">
+            ${SH.field(t('From time'), SH.input('time_from', p.time_from || '', { type: 'time' }))}
+            ${SH.field(t('To time'), SH.input('time_to', p.time_to || '', { type: 'time' }))}
+            ${SH.field(t('Start date'), SH.input('date_from', p.date_from || '', { type: 'date' }))}
+            ${SH.field(t('End date'), SH.input('date_to', p.date_to || '', { type: 'date' }))}
+          </div>
+          <p class="hint mt8">${esc(t('Leave days, times and dates blank for an always-on action.'))}</p>
+        </div>
+        ${SH.modalFoot(isNew ? t('Create action') : t('Save changes'))}
+      </form>`,
+      { size: '' }
+    );
+  }
+
+  A.action('change:promo-kind', (ds, el) => {
+    const itemKind = !String(el.value).startsWith('cart');
+    const scopeField = document.getElementById('promo-scope-field');
+    if (scopeField) scopeField.style.display = itemKind ? '' : 'none';
+    if (itemKind) {
+      const scope = (document.querySelector('[name="scope"]') || {}).value || 'all';
+      const group = document.getElementById('promo-group-field');
+      const product = document.getElementById('promo-product-field');
+      if (group) group.style.display = scope === 'group' ? '' : 'none';
+      if (product) product.style.display = scope === 'product' ? '' : 'none';
+    }
+  });
+
+  A.action('form:save-promotion', async (form) => {
+    const fd = new FormData(form);
+    const kind = String(fd.get('kind') || 'cart_percent');
+    const isCart = kind.startsWith('cart');
+    const scope = isCart ? 'cart' : String(fd.get('scope') || 'all');
+    let targetId = null;
+    if (!isCart && scope === 'group') targetId = Number(fd.get('target_group')) || null;
+    if (!isCart && scope === 'product') targetId = Number(fd.get('target_product')) || null;
+    if (!isCart && scope !== 'all' && !targetId) throw new Error(t('Choose what the action applies to'));
+    const payload = {
+      id: fd.get('id') ? Number(fd.get('id')) : null,
+      name: String(fd.get('name') || '').trim(),
+      kind,
+      scope,
+      target_id: targetId,
+      value: U.num(fd.get('value')),
+      min_total: U.num(fd.get('min_total')),
+      days: fd.getAll('days'),
+      time_from: String(fd.get('time_from') || ''),
+      time_to: String(fd.get('time_to') || ''),
+      date_from: String(fd.get('date_from') || ''),
+      date_to: String(fd.get('date_to') || ''),
+      active: fd.get('active') === '1',
+    };
+    const res = await A.api('savePromotion', payload);
+    if (!res.ok) throw new Error(res.error || t('Could not save the action'));
+    A.closeModal();
+    A.state.promotions = await A.api('listPromotions');
+    A.render();
+    A.toast(payload.id ? 'Promotion updated' : 'Promotion created');
+  });
 
   /* ------------------------------------------------------------ documents */
 
@@ -566,7 +901,7 @@
     );
   }
   function isCountKey(k) {
-    return /^(sales_count|returns_count|qty_sold|qty_returned|quantity|count|txns|qty)$/i.test(k);
+    return /^(sales_count|returns_count|qty_sold|qty_returned|quantity|count|txns|transactions|qty)$/i.test(k);
   }
   function labelKey(k) {
     return k
@@ -576,7 +911,10 @@
   }
   function fmtCell(k, v) {
     if (v == null || v === '') return '—';
-    if (/date|time/i.test(k) && typeof v === 'string') return fmtDate(v, true);
+    if (/date|time/i.test(k) && typeof v === 'string') {
+      const hasTime = /T\d{2}:\d{2}|^\d{2}:\d{2}/.test(v);
+      return fmtDate(v, hasTime);
+    }
     if (isCountKey(k)) return String(v);
     if (isMoneyKey(k)) return money(Math.round(U.num(v)));
     return v;
@@ -1095,6 +1433,85 @@
     A.closeModal();
     A.render();
     A.toast('Discount applied');
+    if (A.state.pay && A.drawPayment) A.drawPayment();
+  });
+
+  A.action('form:rounding', (form) => {
+    const fd = new FormData(form);
+    A.state.cart.rounding = Math.max(Math.round(U.num(fd.get('round_to'))), 0);
+    const cust = (A.state.customers || []).find((c) => String(c.id) === String(A.state.cart.customer_id));
+    const discount =
+      cust && cust.discount_type && U.num(cust.discount_value) > 0
+        ? { type: cust.discount_type, value: cust.discount_value }
+        : A.state.cart.discount;
+    const total = U.computeCart(A.state.cart.items, discount, A.state.cart.tax_override, A.state.cart.rounding).total;
+    if (A.state.pay) A.state.pay.tendered = A.state.pay.mode === 'split' ? Math.max(total - A.state.pay.split.reduce((s, x) => s + x.amount, 0), 0) : total;
+    A.closeModal();
+    A.render();
+    A.toast('Rounding applied');
+    if (A.state.pay && A.drawPayment) A.drawPayment();
+  });
+
+  A.action('form:cash-move', async (form) => {
+    const fd = new FormData(form);
+    const kind = String(fd.get('kind') || 'in');
+    const amount = U.num(fd.get('amount'));
+    const reason = String(fd.get('reason') || '').trim();
+    const res = await A.api('addCash', [
+      kind,
+      amount,
+      reason,
+      A.state.user.id,
+      (A.state.registers || []).find((r) => r.is_primary)?.id,
+    ]);
+    if (!res.ok) throw new Error(res.error);
+    A.closeModal();
+    A.state.cashMoves = await A.api('listCashMovements', []);
+    A.state.daySummary = A.state.day.register_open ? await A.api('xReport') : A.state.daySummary;
+    A.toast(kind === 'in' ? 'Cash added to drawer' : 'Cash removed from drawer');
+    A.render();
+  });
+
+  A.action('form:open-day', async (form) => {
+    const fd = new FormData(form);
+    const cash = U.num(fd.get('opening_cash'));
+    const date = String(fd.get('business_date') || U.todayKey());
+    const reg = fd.get('register_id') ? Number(fd.get('register_id')) : undefined;
+    if (reg) {
+      const cur = (A.state.registers || []).find((r) => r.id === reg);
+      if (cur) {
+        await A.api('saveRegister', {
+          id: cur.id,
+          name: cur.name,
+          code: cur.code,
+          printer: cur.printer,
+          drawer: cur.drawer,
+          is_primary: true,
+        });
+      }
+    }
+    const res = await A.api('openDay', [cash, A.state.user.id, date]);
+    if (!res.ok) throw new Error(res.error);
+    A.state.day = await A.api('getDayState');
+    A.state.daySummary = await A.api('xReport');
+    A.state.registers = await A.api('listRegisters');
+    A.toast('Register opened. Have a good day!');
+    A.render();
+  });
+
+  A.action('form:close-day', async (form) => {
+    const fd = new FormData(form);
+    const counted = U.num(fd.get('counted_cash'));
+    const res = await A.api('closeDay', [A.state.user.id, counted]);
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Could not close the register');
+    A.closeModal();
+    A.state.lastZ = res.zreport;
+    A.state.day = await A.api('getDayState');
+    A.state.daySummary = null;
+    A.state.cashMoves = [];
+    A.render();
+    if (res.zreport && A.showZReport) A.showZReport(res.zreport);
+    A.toast('Register closed. Z report saved.', 'good');
   });
 
   A.action('form:do-refund', async (form) => {
@@ -1112,7 +1529,7 @@
     A.state.lastReceipt = doc;
     await A.reloadCatalog();
     A.render();
-    A.toast(`Refund complete · ${money(Math.abs(doc.total))}`);
+    A.toast(`${t('Refund complete')} · ${money(Math.abs(doc.total))}`);
     showRefundReceipt(doc);
   });
 

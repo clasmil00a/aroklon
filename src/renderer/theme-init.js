@@ -4,7 +4,7 @@
 (function () {
   try {
     const mode = localStorage.getItem('aroklon.mode') || 'dark';
-    const layout = localStorage.getItem('aroklon.layout') || 'modern';
+    const layout = localStorage.getItem('aroklon.layout') || 'classic';
     const lang = localStorage.getItem('aroklon.lang') || 'id';
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const effective = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;

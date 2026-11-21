@@ -277,7 +277,10 @@ StockMovement, CashRegister 1-n Document / CashMovement / ZReport.
 
 ## Feature matrix
 
-See `features.csv`. Must: 17, should: 10, could: 7, skip: 4.
+See `features.csv`. 53 features: 28 must, 11 should, 14 could. 44 are
+implemented; 7 are deliberately skipped (paid plugins, Pro/multi-register,
+trademark); 2 optional extensions (loyalty points/gift cards, multi-currency)
+are not part of the core build.
 
 ## Out of scope (cannot or should not be cloned)
 

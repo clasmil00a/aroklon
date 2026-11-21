@@ -32,6 +32,10 @@
     right: '<path d="m9 6 6 6-6 6"/>',
     barcode: '<path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>',
     tag: '<path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
+    heart: '<path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21l8.8-8.3a5 5 0 0 0 0-7.1Z"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    percent: '<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+    pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
     split: '<path d="M8 3 4 7l4 4"/><path d="M4 7h8a6 6 0 0 1 6 6v1"/><path d="m16 21 4-4-4-4"/><path d="M20 17H11"/>',
     warning: '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/>',
     save: '<path d="M5 3h11l4 4v14H5z"/><path d="M8 3v6h7V3"/><path d="M8 21v-7h8v7"/>',
@@ -99,7 +103,7 @@
 
   function fmtDate(iso, withTime = false) {
     if (!iso) return '—';
-    const d = new Date(iso);
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? new Date(iso + 'T00:00:00') : new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
     const date = d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
     if (!withTime) return date;
@@ -134,7 +138,7 @@
   }
 
   /* Client-side mirror of the server sale calculation, for instant totals. */
-  function computeCart(items, discount, taxOverride) {
+  function computeCart(items, discount, taxOverride, roundTo) {
     let subtotal = 0;
     let itemDiscTotal = 0;
     const lines = (items || []).map((it, i) => {
@@ -164,6 +168,9 @@
       cartDisc = Math.min(Math.max(cartDisc, 0), afterItem);
     }
 
+    const promo = bestPromotion(lines, afterItem, Math.max(afterItem - cartDisc, 0));
+    if (promo.amount > 0) cartDisc = Math.min(cartDisc + promo.amount, afterItem);
+
     let taxTotal = 0;
     let total = 0;
     lines.forEach((l) => {
@@ -179,15 +186,59 @@
       total += l.total;
     });
 
+    const totalBeforeRounding = total;
+    const increment = Math.max(Math.round(num(roundTo)), 0);
+    let roundingTotal = 0;
+    if (increment > 0 && total > 0) {
+      const rounded = Math.max(increment, Math.round(total / increment) * increment);
+      roundingTotal = rounded - total;
+      total = rounded;
+    }
+
     return {
       lines,
       subtotal: Math.round(subtotal),
       item_discount: Math.round(itemDiscTotal),
       cart_discount: Math.round(cartDisc),
       discount_total: Math.round(itemDiscTotal + cartDisc),
+      promotion_name: promo.promotion ? promo.promotion.name : null,
+      promotion_total: Math.round(promo.amount),
+      rounding_total: Math.round(roundingTotal),
       tax_total: taxTotal,
+      total_before_rounding: totalBeforeRounding,
       total,
     };
+  }
+
+  /* Mirrors the promotion engine in db.js so the till total matches the sale. */
+  function bestPromotion(lines, afterItem, base, now = new Date()) {
+    const promos = (window.App && window.App.state && window.App.state.promotions) || [];
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const timeKey = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    let best = { promotion: null, amount: 0 };
+    for (const p of promos) {
+      if (!p || !num(p.active)) continue;
+      if (p.date_from && dateKey < String(p.date_from).slice(0, 10)) continue;
+      if (p.date_to && dateKey > String(p.date_to).slice(0, 10)) continue;
+      const days = String(p.days || '').split(',').map((s) => s.trim()).filter(Boolean);
+      if (days.length && !days.includes(String(now.getDay()))) continue;
+      if (p.time_from && timeKey < p.time_from) continue;
+      if (p.time_to && timeKey > p.time_to) continue;
+      if (num(p.min_total) > 0 && afterItem < num(p.min_total)) continue;
+      const isCart = String(p.kind || '').startsWith('cart');
+      const matched = (lines || []).filter((l) => {
+        if (isCart) return true;
+        if (p.scope === 'product') return String(l.product_id) === String(p.target_id);
+        if (p.scope === 'group') return String(l.group_id) === String(p.target_id);
+        return true;
+      });
+      const matcher = isCart ? afterItem : matched.reduce((s, l) => s + num(l.net_after_item), 0);
+      let amount = String(p.kind || '').endsWith('percent') ? (matcher * num(p.value)) / 100 : Math.round(num(p.value) * 100);
+      amount = Math.min(Math.max(Math.round(amount), 0), base, matcher);
+      if (amount > best.amount) best = { promotion: p, amount };
+    }
+    return best;
   }
 
   /* ------------------------------------------------------------- toasts */
@@ -307,6 +358,11 @@
       params: {},
       company: { symbol: 'Rp', currency: 'IDR', name: 'Aroklon Store' },
       settings: {},
+      day: { register_open: false, business_date: '', opening_cash: 0 },
+      daySummary: null,
+      cashMoves: [],
+      lastZ: null,
+      promotions: [],
       products: [],
       groups: [],
       customers: [],
@@ -318,17 +374,17 @@
       catalogSearch: '',
       catalogMode: 'name',
       groupFilter: null,
-      cart: { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' },
+      cart: { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' },
       selectedLine: null,
       pay: null,
       report: null,
       theme: (() => {
         try {
           const saved = localStorage.getItem('aroklon.layout') || localStorage.getItem('aroklon.theme');
-          const initial = saved || document.documentElement.dataset.layout;
-          return initial === 'classic' ? 'classic' : 'modern';
+          const initial = saved || document.documentElement.dataset.layout || 'classic';
+          return initial === 'modern' ? 'modern' : 'classic';
         } catch (e) {
-          return 'modern';
+          return 'classic';
         }
       })(),
       mode: (() => {
@@ -524,7 +580,7 @@
       const showTree = management.includes(this.state.route);
       return `
         <div class="shell shell-classic">
-          ${this._classicMenu()}
+          ${this._classicMenu(meta)}
           <div class="classic-body">
             ${showTree ? this._classicTree() : ''}
             <div class="main">
@@ -535,72 +591,67 @@
         </div>`;
     },
 
-    _classicMenu() {
+    _classicMenu(meta = {}) {
       const route = this.state.route;
       const theme = this.state.theme;
       const dark = document.documentElement.dataset.mode === 'dark';
-      const mgmt = [
-        ['documents', 'Documents', 'documents'],
-        ['products', 'Products', 'products'],
-        ['stock', 'Stock', 'stock'],
-        ['reports', 'Reporting', 'reports'],
-        ['customers', 'Customers & Suppliers', 'customers'],
-        ['promotions', 'Promotions', 'tag'],
-        ['users', 'Users & Security', 'users'],
-      ];
+      const day = this.state.day || {};
+      const user = this.state.user || {};
+      const reg = (this.state.registers || []).find((r) => r.is_primary) || (this.state.registers || [])[0] || {};
+      const routeLabel = meta.title || 'Point of Sale';
       return `<header class="classic-menubar">
+        <details class="cmb-menu cmb-main">
+          <summary class="cmb-menu-toggle" title="${esc(t('Menu'))}">
+            ${icon('menu', 20)}<span class="cmb-menu-label">${esc(t('Menu'))}</span>${icon('down', 11)}
+          </summary>
+          <div class="cmb-popup cmb-main-popup">
+            <div class="cmb-popup-head">
+              <span class="cmb-popup-avatar">${icon('store', 17)}</span>
+              <div><b>${esc(t('Point of Sale'))}</b><span data-notranslate>${esc(user.name || '')}</span></div>
+            </div>
+            <button class="cmb-item ${route === 'dashboard' ? 'active' : ''}" data-action="nav" data-route="dashboard">${icon('dashboard', 17)}<span>${esc(
+              t('Management')
+            )}</span><span class="cmb-key">${esc(t('Ctrl+M'))}</span></button>
+            <button class="cmb-item" data-action="nav" data-route="documents">${icon('documents', 17)}<span>${esc(
+              t('View sales history')
+            )}</span></button>
+            <button class="cmb-item" data-action="nav" data-route="sales">${icon('sales', 17)}<span>${esc(
+              t('New sale')
+            )}</span><span class="cmb-key">F1</span></button>
+            <div class="cmb-sep"></div>
+            <button class="cmb-item" data-action="cash">${icon('cash', 17)}<span>${esc(t('Cash in / out'))}</span></button>
+            <button class="cmb-item" data-action="nav" data-route="day">${icon('lock', 17)}<span>${esc(t('End of day'))}</span></button>
+            <button class="cmb-item" data-action="x-report">${icon('receipt', 17)}<span>${esc(t('X report'))}</span></button>
+            <div class="cmb-sep"></div>
+            <button class="cmb-item" data-action="shortcuts">${icon('info', 17)}<span>${esc(t('Keyboard shortcuts'))}</span></button>
+            <button class="cmb-item" data-action="about">${icon('info', 17)}<span>${esc(t('User info'))}</span></button>
+            <button class="cmb-item" data-action="logout">${icon('logout', 17)}<span>${esc(t('Sign out'))}</span></button>
+          </div>
+        </details>
         <div class="cmb-brand">
-          <span class="cmb-logo">${icon('store', 18)}</span>
+          <span class="cmb-logo">${icon('store', 16)}</span>
           <span class="cmb-name">Aroklon</span>
         </div>
-        <nav class="cmb-nav">
-          <button class="cmb-btn ${route === 'sales' ? 'active' : ''}" data-action="nav" data-route="sales">${icon('sales', 15)}<span>${esc(t('Sales'))}</span></button>
-          <button class="cmb-btn ${route === 'dashboard' ? 'active' : ''}" data-action="nav" data-route="dashboard">${icon('dashboard', 15)}<span>${esc(
-            t('Dashboard')
-          )}</span></button>
-          <details class="cmb-menu">
-            <summary class="cmb-btn">${icon('products', 15)}<span>${esc(t('Management'))}</span>${icon('down', 12)}</summary>
-            <div class="cmb-popup">
-              ${mgmt
-                .map(
-                  ([r, label, ic]) =>
-                    `<button class="cmb-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
-                      ic,
-                      15
-                    )}<span>${esc(t(label))}</span></button>`
-                )
-                .join('')}
-              <div class="cmb-sep"></div>
-              <button class="cmb-item" data-action="nav-settings" data-tab="tenders">${icon('cash', 15)}<span>${esc(t('Payment types'))}</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="countries">${icon('globe', 15)}<span>${esc(t('Countries'))}</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="tax">${icon('tag', 15)}<span>${esc(t('Tax rates'))}</span></button>
-              <button class="cmb-item" data-action="nav-settings" data-tab="company">${icon('store', 15)}<span>${esc(t('My company'))}</span></button>
-            </div>
-          </details>
-
-          <button class="cmb-btn ${route === 'settings' ? 'active' : ''}" data-action="nav" data-route="settings">${icon('settings', 15)}<span>${esc(
-            t('Settings')
-          )}</span></button>
-          <details class="cmb-menu">
-            <summary class="cmb-btn">${icon('info', 15)}<span>${esc(t('Help'))}</span>${icon('down', 12)}</summary>
-            <div class="cmb-popup">
-              <button class="cmb-item" data-action="shortcuts">${icon('info', 15)}<span>${esc(t('Keyboard shortcuts'))}</span></button>
-              <button class="cmb-item" data-action="check-update">${icon('refresh', 15)}<span>${esc(t('Check for updates'))}</span></button>
-              <button class="cmb-item" data-action="about">${icon('info', 15)}<span>${esc(t('About Aroklon'))}</span></button>
-            </div>
-          </details>
-        </nav>
+        <div class="cmb-route-title">
+          <span>${esc(routeLabel)}</span>
+          <small data-notranslate>${esc(user.name || '')}</small>
+        </div>
         <div class="cmb-right">
-          <span class="cmb-chip">${icon('store', 13)} ${esc((this.state.registers || []).find((r) => r.is_primary)?.name || t('Register'))}</span>
-          <span class="cmb-chip" data-notranslate>${icon('users', 13)} ${esc(this.state.user.name)}</span>
-          <button class="cmb-btn" data-action="toggle-mode" title="${esc(t(dark ? 'Light' : 'Dark'))}">${icon(
+          <button class="cmb-status ${day.register_open ? 'open' : 'closed'}" data-action="nav" data-route="day" title="${esc(
+            t('Open / close business day')
+          )}">
+            <span class="dot"></span>${esc(t(day.register_open ? 'Register open' : 'Register closed'))}
+          </button>
+          <button class="cmb-icon" data-action="cash" title="${esc(t('Cash in / out'))}">${icon('cash', 16)}</button>
+          <span class="cmb-chip">${icon('store', 13)} ${esc(reg.name || t('Register'))}</span>
+          <span class="cmb-chip cmb-date" data-notranslate>${icon('day', 13)} ${esc(day.business_date || U.todayKey())}</span>
+          <span class="cmb-chip" data-notranslate>${icon('users', 13)} ${esc(user.name || '')}</span>
+          <button class="cmb-icon" data-action="toggle-mode" title="${esc(t(dark ? 'Light' : 'Dark'))}">${icon(
             dark ? 'day' : 'moon',
-            14
-          )}<span>${esc(t(dark ? 'Light' : 'Dark'))}</span></button>
-          <button class="cmb-btn" data-action="toggle-theme" title="${esc(t('Theme'))}">${icon('settings', 14)}<span>${esc(
-            t(theme === 'classic' ? 'Modern' : 'Classic')
-          )}</span></button>
-          <button class="cmb-btn" data-action="logout" title="${esc(t('Sign out'))}">${icon('logout', 14)}<span>${esc(t('Sign out'))}</span></button>
+            16
+          )}</button>
+          <button class="cmb-icon" data-action="toggle-theme" title="${esc(t('Theme'))}">${icon('settings', 16)}</button>
+          <button class="cmb-icon" data-action="logout" title="${esc(t('Sign out'))}">${icon('logout', 16)}</button>
         </div>
       </header>`;
     },
@@ -611,29 +662,36 @@
       const item = (r, label, ic) =>
         `<button class="ct-item ${route === r ? 'active' : ''}" data-action="nav" data-route="${r}">${icon(
           ic,
-          15
+          17
         )}<span>${esc(t(label))}</span></button>`;
       const sitem = (key, label, ic) =>
         `<button class="ct-item ${route === 'settings' && tab === key ? 'active' : ''}" data-action="nav-settings" data-tab="${key}">${icon(
           ic,
-          15
+          17
         )}<span>${esc(t(label))}</span></button>`;
       return `<aside class="classic-tree">
-        <div class="ct-head">Management</div>
-        ${item('dashboard', 'Dashboard', 'dashboard')}
-        ${item('documents', 'Documents', 'documents')}
-        ${item('products', 'Products', 'products')}
-        ${item('stock', 'Stock', 'stock')}
-        ${item('reports', 'Reporting', 'reports')}
-        ${item('customers', 'Customers & Suppliers', 'customers')}
-        ${item('promotions', 'Promotions', 'tag')}
-        <div class="ct-sep"></div>
-        <div class="ct-label">Setup</div>
-        ${sitem('company', 'My company', 'store')}
-        ${sitem('tax', 'Tax rates', 'tag')}
-        ${sitem('tenders', 'Payment types', 'cash')}
-        ${sitem('countries', 'Countries', 'globe')}
-        ${item('users', 'Users & Security', 'users')}
+        <button class="ct-head" data-action="nav" data-route="sales" title="${esc(t('Back to sales'))}">
+          ${icon('back', 19)}<span>${esc(t('Management'))}</span>
+        </button>
+        <div class="ct-list">
+          ${item('dashboard', 'Dashboard', 'dashboard')}
+          ${item('documents', 'Documents', 'documents')}
+          ${item('products', 'Products', 'products')}
+          ${item('stock', 'Stock', 'stock')}
+          ${item('reports', 'Reporting', 'reports')}
+          ${item('customers', 'Customers & Suppliers', 'customers')}
+          ${item('promotions', 'Promotions & Actions', 'heart')}
+          ${item('users', 'Users & Security', 'users')}
+          <div class="ct-sep"></div>
+          ${sitem('tenders', 'Payment Types', 'cash')}
+          ${sitem('countries', 'Countries', 'globe')}
+          ${sitem('tax', 'Tax Rates', 'percent')}
+          ${sitem('company', 'My Company', 'store')}
+          ${sitem('registers', 'Cash Registers', 'products')}
+          <div class="ct-sep"></div>
+          ${item('day', 'End of Day', 'lock')}
+          ${sitem('prefs', 'Options', 'settings')}
+        </div>
       </aside>`;
     },
 
@@ -669,12 +727,14 @@
     },
 
     async reloadReference() {
-      const [users, paymentTypes, taxRates, registers, countries, company, meta] = await Promise.all([
+      const [users, paymentTypes, taxRates, registers, countries, day, promotions, company, meta] = await Promise.all([
         this.api('listUsers'),
         this.api('listPaymentTypes'),
         this.api('listTaxRates'),
         this.api('listRegisters'),
         this.api('listCountries'),
+        this.api('getDayState'),
+        this.api('listPromotions'),
         this.api('getCompany'),
         window.api.meta(),
       ]);
@@ -683,6 +743,8 @@
       this.state.taxRates = taxRates;
       this.state.registers = registers;
       this.state.countries = countries;
+      this.state.day = day;
+      this.state.promotions = promotions;
       this.state.company = company;
       this.state.meta = meta;
     },
@@ -695,19 +757,24 @@
       await this.reloadReference();
       await this.reloadCatalog();
       this.state.pay = null;
-      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
-      this.state.route = 'sales';
+      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
+      const day = this.state.day || {};
+      this.state.route = day.register_open ? 'sales' : 'day';
       this.render();
+      if (this.state.route === 'day') {
+        const loader = this.loaders.day;
+        if (loader) Promise.resolve(loader({})).then(() => this.render());
+      }
       setTimeout(() => {
-        const el = document.getElementById('pos-search');
+        const el = document.getElementById(this.state.route === 'day' ? 'opening-cash' : 'pos-search');
         if (el) el.focus();
-      }, 40);
+      }, 60);
     },
 
     logout() {
       this.state.user = null;
       localStorage.removeItem('aroklon.user');
-      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, notes: '' };
+      this.state.cart = { items: [], customer_id: null, discount: { type: 'percent', value: 0 }, rounding: 0, notes: '' };
       this.render();
     },
 
