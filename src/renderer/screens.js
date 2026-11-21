@@ -1504,6 +1504,7 @@
                           p.quantity
                         )}</span>`}</td>
                         <td class="right"><div class="row gap8" style="justify-content:flex-end">
+                          ${!p.is_service ? `<button class="btn sm" data-action="product-stock" data-id="${p.id}" title="${esc(t('Adjust stock'))}">${icon('stock', 14)} ${esc(t('Stock'))}</button>` : ''}
                           <button class="icon-btn" data-action="product-edit" data-id="${p.id}" title="Edit">${icon('edit', 16)}</button>
                           <button class="icon-btn" data-action="product-delete" data-id="${p.id}" title="Delete" style="color:var(--bad)">${icon('trash', 16)}</button>
                         </div></td>
@@ -1960,9 +1961,7 @@
     A.render();
   });
 
-  A.action('stock-adjust', (ds) => {
-    const s = (A.state.stock || []).find((x) => String(x.id) === String(ds.id));
-    if (!s) return;
+  function openStockAdjust(s) {
     A.modal(
       `<form data-form="stock-adjust">
         <input type="hidden" name="product_id" value="${s.id}" />
@@ -1977,6 +1976,17 @@
       </form>`,
       { size: '' }
     );
+  }
+
+  A.action('stock-adjust', (ds) => {
+    const s = (A.state.stock || []).find((x) => String(x.id) === String(ds.id));
+    if (s) openStockAdjust(s);
+  });
+
+  // Shortcut from the Products list: change the quantity on hand only.
+  A.action('product-stock', (ds) => {
+    const p = (A.state.products || []).find((x) => String(x.id) === String(ds.id));
+    if (p) openStockAdjust(p);
   });
 
   A.action('form:stock-adjust', async (form) => {

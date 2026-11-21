@@ -18,7 +18,8 @@ runs locally — no account, no cloud, no subscription.
 - **Receipts** — company header/footer, logo-friendly layout, print to any
   Windows printer or save as PDF from the print dialog.
 - **Products** — groups, barcodes, cost/price, tax rates, low-stock alerts,
-  service items, age restrictions, images and colours.
+  service items, age restrictions, images and colours. Each row has a **Stock**
+  shortcut to change the quantity on hand without leaving the page.
 - **Units of measure** — sell one product in several units (pcs, box, kg…) with
   a conversion factor and an optional price per unit; stock stays in the base
   unit. Barcodes can be tied to a unit, and a default unit speeds up ringing.

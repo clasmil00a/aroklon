@@ -53,6 +53,7 @@
     Prev: 'Sebelumnya',
     Next: 'Berikutnya',
     'Low stock only': 'Hanya stok menipis',
+    'Adjust stock': 'Sesuaikan stok',
     'No matching stock': 'Stok tidak cocok',
     'Try another search or filter.': 'Coba pencarian atau filter lain.',
     'Nothing matches this search.': 'Tidak ada yang cocok dengan pencarian ini.',

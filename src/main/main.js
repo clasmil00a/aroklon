@@ -747,6 +747,26 @@ function createWindow() {
                   const panel = document.querySelector('[data-tab-panel="set-' + tab + '"]');
                   res.tabs[tab] = !!panel && panel.style.display !== 'none';
                 }
+
+                A.go('products'); await s(450);
+                const stockBtn = document.querySelector('[data-action="product-stock"]');
+                res.prodStockBtn = !!stockBtn;
+                if (stockBtn) {
+                  const id = Number(stockBtn.dataset.id);
+                  const before = (await A.api('listProducts', {})).find((x) => x.id === id).quantity;
+                  stockBtn.click(); await s(350);
+                  const form = document.querySelector('form[data-form="stock-adjust"]');
+                  res.prodStockForm = !!form;
+                  if (form) {
+                    form.querySelector('[name="quantity"]').value = String(before + 7);
+                    form.querySelector('[name="reason"]').value = 'smoke';
+                    form.requestSubmit();
+                    await s(1000);
+                  }
+                  const after = (await A.api('listProducts', {})).find((x) => x.id === id).quantity;
+                  res.prodStockDelta = after - before;
+                  res.prodStockClosed = !document.querySelector('form[data-form="stock-adjust"]');
+                }
               } catch (e) { res.err = e.message; }
               return res;
             })()`,
