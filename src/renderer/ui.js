@@ -330,6 +330,7 @@
       groupFilter: null,
       productSearch: '',
       productPage: 1,
+      docFiltersInit: false,
       stockSearch: '',
       stockPage: 1,
       stockLowOnly: false,

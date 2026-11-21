@@ -25,7 +25,16 @@
   });
 
   A.loader('documents', async () => {
-    A.state.documents = await A.api('listDocuments', A.state.docFilters || {});
+    if (!A.state.docFilters) A.state.docFilters = { type: '', status: '', from: '', to: '', number: '' };
+    if (!A.state.docFiltersInit) {
+      if (!A.state.docFilters.from && !A.state.docFilters.to) {
+        const today = U.todayKey();
+        A.state.docFilters.from = today;
+        A.state.docFilters.to = today;
+      }
+      A.state.docFiltersInit = true;
+    }
+    A.state.documents = await A.api('listDocuments', A.state.docFilters);
   });
 
   A.loader('customers', async () => {
@@ -99,8 +108,7 @@
               { value: 'partial', label: t('Partial') },
               { value: 'open', label: t('Open') },
             ], f.status, { dataChange: 'doc-filter', dataKey: 'status' })}</div>
-            <div class="field"><label>From</label>${SH.dateField('from', f.from, { dataChange: 'doc-filter', dataKey: 'from', id: 'doc-from', rangeWith: 'doc-to' })}</div>
-            <div class="field"><label>To</label>${SH.dateField('to', f.to, { dataChange: 'doc-filter', dataKey: 'to', id: 'doc-to', rangeWith: 'doc-from' })}</div>
+            <div class="field" style="min-width:240px"><label>${esc(t('Period'))}</label>${SH.rangeField(f.from, f.to, { id: 'doc-range', dataChange: 'doc-filter' })}</div>
             <div class="field" style="flex:1;min-width:150px"><label>Number</label><input class="input" data-change="doc-filter" data-key="number" value="${attr(f.number)}" placeholder="Search number" /></div>
             <button class="btn" data-action="docs-refresh">${icon('filter', 14)} Apply</button>
             ${f.type || f.status || f.from || f.to || f.number ? '<button class="btn ghost" data-action="doc-clear-filters">Clear</button>' : ''}
@@ -800,8 +808,7 @@
           <div class="card-head">
             <h2>${esc((reports.find((r) => r.id === rep) || {}).name || 'Report')}</h2>
             <div class="right">
-              ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<div style="width:150px">${SH.dateField('from', A.state.reportFilters.from, { dataChange: 'report-filter', dataKey: 'from', id: 'rep-from', rangeWith: 'rep-to' })}</div>
-              <div style="width:150px">${SH.dateField('to', A.state.reportFilters.to, { dataChange: 'report-filter', dataKey: 'to', id: 'rep-to', rangeWith: 'rep-from' })}</div>
+              ${rep !== 'stock_valuation' && rep !== 'low_stock' && rep !== 'z_reports' ? `<div style="min-width:220px">${SH.rangeField(A.state.reportFilters.from, A.state.reportFilters.to, { id: 'rep-range', dataChange: 'report-filter' })}</div>
               <button class="btn sm" data-action="report-load">${icon('refresh', 14)} ${esc(t('Run'))}</button>` : ''}
               <button class="btn sm" data-action="report-print">${icon('print', 14)} Print</button>
               <button class="btn sm" data-action="report-csv">${icon('download', 14)} CSV</button>

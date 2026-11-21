@@ -66,6 +66,8 @@
     'This year': 'Tahun ini',
     'Last year': 'Tahun lalu',
     'Pick a start date, then an end date': 'Pilih tanggal awal, lalu tanggal akhir',
+    'Preset ranges': 'Pilihan periode',
+    'Select date range': 'Pilih rentang tanggal',
     'Next month': 'Bulan berikutnya',
     Prev: 'Sebelumnya',
     Next: 'Berikutnya',

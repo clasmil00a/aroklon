@@ -792,11 +792,12 @@ function createWindow() {
               const A = window.App; const res = {};
               try {
                 A.go('documents'); await s(550);
-                const from = document.getElementById('doc-from');
-                const to = document.getElementById('doc-to');
+                const from = document.getElementById('doc-range-from');
+                const to = document.getElementById('doc-range-to');
                 res.hidden = !!from && !!to;
-                const btn = document.querySelector('[data-action="date-open"][data-target="doc-from"]');
+                const btn = document.querySelector('[data-action="date-open"][data-target="doc-range-from"]');
                 res.btn = !!btn;
+                res.label = btn ? btn.innerText.replace(/\s+/g, ' ').trim() : '';
                 if (btn) btn.click();
                 await s(350);
                 res.range = !!document.querySelector('.cal-pop.range');
@@ -818,7 +819,7 @@ function createWindow() {
                 res.to = to ? to.value : null;
                 res.closed = !document.querySelector('.cal-pop');
 
-                const btn2 = document.querySelector('[data-action="date-open"][data-target="doc-from"]');
+                const btn2 = document.querySelector('[data-action="date-open"][data-target="doc-range-from"]');
                 if (btn2) btn2.click();
                 await s(300);
                 res.presetBefore = [...document.querySelectorAll('.cal-value')].map((e) => e.textContent);
@@ -830,8 +831,8 @@ function createWindow() {
                 const ok2 = document.querySelector('[data-cal-nav="ok"]');
                 if (ok2) ok2.click();
                 await s(300);
-                const from2 = document.getElementById('doc-from');
-                const to2 = document.getElementById('doc-to');
+                const from2 = document.getElementById('doc-range-from');
+                const to2 = document.getElementById('doc-range-to');
                 res.presetFrom = from2 ? from2.value : null;
                 res.presetTo = to2 ? to2.value : null;
 
