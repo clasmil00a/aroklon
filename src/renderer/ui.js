@@ -905,7 +905,7 @@
                 .join('')}
             </div>
           </div>
-          <div class="login-foot">${esc(t('Aroklon 1.0.5 · Local database · No account required'))}</div>
+          <div class="login-foot">${esc(t('Aroklon 1.1.0 · Local database · No account required'))}</div>
         </div>
         <div class="login-panel">
           <div class="login-card">
