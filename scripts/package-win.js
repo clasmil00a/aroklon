@@ -198,7 +198,12 @@ function makeZip(zipPath, folder, cwd) {
       `Login pertama kali:\n` +
       `  Owner   - PIN 1234\n` +
       `  Cashier - PIN 1111\n\n` +
-      `Langsung bisa jualan setelah login. Tidak perlu buka/tutup register.\n\n` +
+      `Setelah login:\n` +
+      `  1. Buka register di menu Tutup Hari, isi uang awal (float).\n` +
+      `  2. Mulai jualan di menu Penjualan.\n` +
+      `  3. Akhiri hari dengan Tutup register untuk menyimpan laporan Z.\n\n` +
+      `Tersedia juga kas masuk/keluar, laporan X/Z, promosi, import produk CSV,\n` +
+      `dan pembulatan tunai Rp 100/500/1.000.\n\n` +
       `Data disimpan otomatis di folder pengguna Windows (SQLite).\n` +
       `Backup tersedia di menu Settings > Data.\n\n` +
       `Update aplikasi: Settings > Data > Check for updates.\n` +
