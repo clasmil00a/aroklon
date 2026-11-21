@@ -1192,7 +1192,7 @@
                   <div class="strong mb8">Till behaviour</div>
                   ${SH.checkbox('allow_negative_stock', 'Allow selling when stock is zero or negative', s.allow_negative_stock === '1')}
                   ${SH.checkbox('ask_qty', 'Ask for quantity when adding a product', s.ask_qty !== '0')}
-                  <div class="field mt16"><label>Product layout</label>${SH.select('layout', [
+                  <div class="field mt16"><label>Product layout</label>${SH.select('product_layout', [
                     { value: 'grid', label: 'Grid (visual tiles)' },
                     { value: 'list', label: 'List (compact rows)' },
                   ], s.layout || 'grid')}</div>
@@ -1567,7 +1567,7 @@
     const fd = new FormData(form);
     await A.api('setSetting', ['allow_negative_stock', fd.get('allow_negative_stock') === '1' ? '1' : '0']);
     await A.api('setSetting', ['ask_qty', fd.get('ask_qty') === '1' ? '1' : '0']);
-    await A.api('setSetting', ['layout', String(fd.get('layout') || 'grid')]);
+    await A.api('setSetting', ['layout', String(fd.get('product_layout') || 'grid')]);
     await A.api('setSetting', ['default_tax_percent', String(U.num(fd.get('default_tax_percent')))]);
     A.state.settings = await A.api('getSettings');
     A.render();
