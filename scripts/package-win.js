@@ -229,7 +229,7 @@ try {
   $headers = @{ 'User-Agent' = 'Aroklon-Updater'; 'Accept' = 'application/vnd.github+json' }
   if ($channel -eq 'tes') {
     $list = Invoke-RestMethod "https://api.github.com/repos/$repo/releases?per_page=20" -Headers $headers
-    $release = $list | Where-Object { $_.prerelease -eq $true -and -not $_.draft } | Select-Object -First 1
+    $release = $list | Where-Object { $_.prerelease -eq $true -and -not $_.draft -and $_.tag_name -match '-tes\\.\\d+$' } | Sort-Object -Property @{ Expression = { [version]($_.tag_name -replace '^v','' -replace '-tes.*','') } }, @{ Expression = { if ($_.tag_name -match '-tes\\.(\\d+)$') { [int]$matches[1] } else { 0 } } } -Descending | Select-Object -First 1
     if (-not $release) { throw 'Belum ada rilis tes (prerelease) di GitHub' }
   } else {
     $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers

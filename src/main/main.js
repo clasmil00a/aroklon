@@ -1048,7 +1048,7 @@ const UPDATE_HEADERS = { 'User-Agent': 'Aroklon-Updater', Accept: 'application/v
 // The stable build tracks the newest normal release; the test build tracks the
 // newest prerelease. GitHub's "latest" endpoint skips prereleases, so the test
 // channel has to list releases and pick the first prerelease itself.
-const RELEASE_LIST_API = `https://api.github.com/repos/${REPO}/releases?per_page=20`;
+const RELEASE_LIST_API = `https://api.github.com/repos/${REPO}/releases?per_page=50`;
 const RELEASE_LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 
 function compareVersions(a, b) {
@@ -1088,7 +1088,11 @@ async function getLatestMeta() {
   let rel;
   if (IS_TEST) {
     const list = await fetchJson(RELEASE_LIST_API);
-    rel = (Array.isArray(list) ? list : []).find((r) => r && r.prerelease === true && r.draft !== true);
+    // GitHub returns releases newest-first by creation, but creation order is
+    // not the same as version order. Pick the highest -tes.N tag explicitly.
+    rel = (Array.isArray(list) ? list : [])
+      .filter((r) => r && r.prerelease === true && r.draft !== true && /-tes\./i.test(r.tag_name || ''))
+      .sort((a, b) => compareTestTags(b.tag_name, a.tag_name))[0];
     if (!rel) throw new Error('Belum ada rilis tes (prerelease) di GitHub');
   } else {
     rel = await fetchJson(RELEASE_LATEST_API);
