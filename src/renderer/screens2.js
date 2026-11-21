@@ -447,13 +447,12 @@
     if (!doc) return;
     const reason = await A.prompt({
       title: `Delete ${doc.number || 'document'}?`,
-      label: t('Reason'),
+      label: `${t('Reason')} (${t('Optional')})`,
       value: '',
       confirmLabel: t('Delete'),
     });
     if (reason == null) return;
     const clean = String(reason).trim();
-    if (!clean) return A.toast(t('A reason is required'), 'warn');
     const ok = await A.confirm({
       title: `Delete ${doc.number || 'document'}?`,
       message: `<p class="small">${esc(t('Stock will be returned and the document will be removed. This cannot be undone.'))}</p>`,

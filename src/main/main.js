@@ -782,7 +782,7 @@ function createWindow() {
                 const reason = document.querySelector('#prompt-input');
                 res.prompt = !!reason;
                 if (reason) {
-                  reason.value = 'test cancel';
+                  reason.value = '';
                   reason.dispatchEvent(new Event('input', { bubbles: true }));
                   const ok = document.querySelector('[data-modal-ok]');
                   if (ok) ok.click();

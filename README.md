@@ -34,7 +34,7 @@ runs locally — no account, no cloud, no subscription.
   balances.
 - **Documents** — purchase, stock return, inventory count, loss & damage,
   proforma; searchable document list. Any document can be edited, or deleted
-  with stock returned and a reason recorded in an audit log.
+  with stock returned and an optional reason recorded in an audit log.
 - **Document permissions** — Owner can always edit/delete documents; other
   users can be granted **Can edit documents** and/or **Can delete documents**
   in Settings → Users.
@@ -159,8 +159,8 @@ hand, so old documents are not replayed.
 
 Open **Documents**, find the document, then use **Edit** or **Delete**:
 
-- **Delete** returns the stock movement, removes the document and asks for a
-  reason. The reason, number, total and items are kept in an audit table.
+- **Delete** returns the stock movement and removes the document. A reason is
+  optional and, when given, is kept in the audit log. The reason, number, total and items are kept in an audit table.
   A sale that already has a refund cannot be deleted until that refund is
   deleted.
 - **Edit** replaces the items and recalculates stock and totals. For a paid

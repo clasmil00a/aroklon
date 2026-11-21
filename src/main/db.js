@@ -2363,7 +2363,6 @@ function deleteDocument(documentId, opts = {}) {
     return { ok: false, error: 'You do not have permission to delete documents.' };
   }
   const reason = String(opts.reason || '').trim();
-  if (!reason) return { ok: false, error: 'A reason is required' };
 
   if (doc.type === 'sale') {
     const refund = get(
